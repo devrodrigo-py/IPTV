@@ -1,0 +1,103 @@
+{
+  "@@locale": "pt",
+  "appTitle": "Nebula IPTV",
+  "@appTitle": {
+    "description": "The application title"
+  },
+  "home": "Início",
+  "@home": {
+    "description": "Home navigation label"
+  },
+  "channels": "Canais",
+  "@channels": {
+    "description": "Channels navigation label"
+  },
+  "favorites": "Favoritos",
+  "@favorites": {
+    "description": "Favorites navigation label"
+  },
+  "history": "Histórico",
+  "@history": {
+    "description": "History navigation label"
+  },
+  "settings": "Configurações",
+  "@settings": {
+    "description": "Settings navigation label"
+  },
+  "search": "Buscar",
+  "@search": {
+    "description": "Search label"
+  },
+  "playlists": "Fontes",
+  "@playlists": {
+    "description": "Playlists/sources navigation label"
+  },
+  "epg": "Programação",
+  "@epg": {
+    "description": "EPG navigation label"
+  },
+  "errorGeneric": "Ocorreu um erro inesperado.",
+  "@errorGeneric": {
+    "description": "Generic error message"
+  },
+  "errorNetwork": "Sem conexão com a internet.",
+  "@errorNetwork": {
+    "description": "Network error message"
+  },
+  "retry": "Tentar novamente",
+  "@retry": {
+    "description": "Retry button label"
+  },
+  "noContent": "Nenhum conteúdo disponível.",
+  "@noContent": {
+    "description": "Empty state message"
+  },
+  "loading": "Carregando...",
+  "@loading": {
+    "description": "Loading state message"
+  },
+  "homeEmptyMessage": "Importe uma playlist para começar",
+  "@homeEmptyMessage": {
+    "description": "Message shown on home when no playlists are configured"
+  },
+  "settingsTheme": "Tema",
+  "@settingsTheme": {
+    "description": "Theme setting label"
+  },
+  "settingsThemeDark": "Escuro",
+  "@settingsThemeDark": {
+    "description": "Dark theme option"
+  },
+  "settingsLanguage": "Idioma",
+  "@settingsLanguage": {
+    "description": "Language setting label"
+  },
+  "settingsLanguagePtBr": "Português (BR)",
+  "@settingsLanguagePtBr": {
+    "description": "Portuguese language option"
+  },
+  "settingsGeneral": "Geral",
+  "@settingsGeneral": {
+    "description": "General settings section"
+  },
+  "settingsAbout": "Sobre",
+  "@settingsAbout": {
+    "description": "About settings section"
+  },
+  "settingsCache": "Cache",
+  "@settingsCache": {
+    "description": "Cache settings section"
+  },
+  "settingsExportImport": "Dados",
+  "@settingsExportImport": {
+    "description": "Export/Import settings section"
+  },
+  "exportSuccess": "Dados exportados com sucesso",
+  "@exportSuccess": {
+    "description": "Export success message"
+  },
+  "importSuccess": "Dados importados com sucesso",
+  "@importSuccess": {
+    "description": "Import success message"
+  }
+}
