@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:nebula_iptv/core/errors/app_failure.dart';
 import 'package:nebula_iptv/core/network/dio_client.dart';
 import 'package:nebula_iptv/core/result/result.dart';
@@ -7,7 +5,8 @@ import 'package:nebula_iptv/data/datasources/m3u/m3u_parser.dart';
 
 /// Data source responsible for fetching and parsing M3U playlists.
 ///
-/// Supports fetching from URL or reading from a local file.
+/// Supports fetching from URL. File import is available only on
+/// native platforms (handled by the UI layer).
 class M3uDataSource {
   final DioClient _client;
   final M3uParser _parser;
@@ -54,23 +53,15 @@ class M3uDataSource {
     );
   }
 
-  /// Parses an M3U playlist from a local file path.
-  Future<Result<M3uParseResult>> readFromFile(String filePath) async {
+  /// Parses an M3U playlist from file content (platform-agnostic).
+  Future<Result<M3uParseResult>> readFromContent(String content) async {
+    if (content.isEmpty) {
+      return const Failure(
+        PlaylistParseFailure(message: 'O arquivo está vazio.'),
+      );
+    }
+
     try {
-      final file = File(filePath);
-      if (!file.existsSync()) {
-        return const Failure(
-          PlaylistParseFailure(message: 'Arquivo não encontrado.'),
-        );
-      }
-
-      final content = await file.readAsString();
-      if (content.isEmpty) {
-        return const Failure(
-          PlaylistParseFailure(message: 'O arquivo está vazio.'),
-        );
-      }
-
       final result = _parser.parse(content);
       if (result.entries.isEmpty) {
         return const Failure(
@@ -80,10 +71,10 @@ class M3uDataSource {
         );
       }
       return Success(result);
-    } on FileSystemException catch (e) {
+    } catch (e) {
       return Failure(
         PlaylistParseFailure(
-          message: 'Erro ao ler o arquivo.',
+          message: 'Erro ao interpretar o conteúdo.',
           originalError: e,
         ),
       );

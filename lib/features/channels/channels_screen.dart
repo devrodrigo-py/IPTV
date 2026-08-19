@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nebula_iptv/features/player/player_screen.dart';
 import 'package:nebula_iptv/core/widgets/empty_view.dart';
 import 'package:nebula_iptv/core/widgets/error_view.dart';
 import 'package:nebula_iptv/core/widgets/loading_view.dart';
@@ -94,7 +95,15 @@ class ChannelsScreen extends ConsumerWidget {
           channel: channel,
           isFavorite: isFavorite,
           onTap: () {
-            // Player navigation will be added in Phase 6
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => PlayerScreen(
+                  channelName: channel.name,
+                  streamUrl: channel.streamUrl,
+                  logoUrl: channel.logoUrl,
+                ),
+              ),
+            );
           },
           onFavoriteToggle: () {
             ref.read(channelsScreenProvider.notifier).toggleFavorite(

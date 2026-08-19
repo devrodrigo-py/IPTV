@@ -31,6 +31,12 @@ dependencies:
   media_kit_video: ^1.2.4
   media_kit_libs_video: ^1.0.4
 
+  # Web Video Player (fallback for web platform)
+  video_player: ^2.9.1
+
+  # File Picker (cross-platform)
+  file_picker: ^8.0.0
+
   # Logging
   logger: ^2.3.0
 

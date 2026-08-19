@@ -63,7 +63,7 @@ class PlaylistImportRepository {
     required String filePath,
     String? epgUrl,
   }) async {
-    final parseResult = await _m3uDataSource.readFromFile(filePath);
+    final parseResult = await _m3uDataSource.readFromContent(filePath);
     return parseResult.when(
       success: (result) => _persistPlaylist(
         name: name,
