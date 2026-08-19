@@ -4,7 +4,7 @@ import 'package:nebula_iptv/core/errors/app_failure.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/core/result/result.dart';
 import 'package:nebula_iptv/domain/services/video_player_service.dart';
-import 'package:video_player/video_player.dart';
+import 'package:video_player/video_player.dart' hide VideoTrack;
 
 /// Web implementation of [VideoPlayerService] using video_player package.
 ///
