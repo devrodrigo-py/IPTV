@@ -5,6 +5,8 @@ import 'package:nebula_iptv/features/player/player_screen.dart';
 import 'package:nebula_iptv/core/widgets/empty_view.dart';
 import 'package:nebula_iptv/core/widgets/error_view.dart';
 import 'package:nebula_iptv/core/widgets/loading_view.dart';
+import 'package:nebula_iptv/core/theme/app_colors.dart';
+import 'package:nebula_iptv/features/multiview/multiview_channel_picker.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/features/channels/widgets/channel_list_tile.dart';
 import 'package:nebula_iptv/features/channels/widgets/channel_search_bar.dart';
@@ -26,13 +28,29 @@ class ChannelsScreen extends ConsumerWidget {
 
     return Column(
       children: [
-        // Search bar
+        // Search bar + Multiview button
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: ChannelSearchBar(
-            onChanged: (query) {
-              ref.read(channelsScreenProvider.notifier).search(query);
-            },
+          child: Row(
+            children: [
+              Expanded(
+                child: ChannelSearchBar(
+                  onChanged: (query) {
+                    ref.read(channelsScreenProvider.notifier).search(query);
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: () => _openMultiview(context),
+                icon: const Icon(Icons.grid_view_rounded),
+                tooltip: 'Multiview',
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                  foregroundColor: AppColors.primary,
+                ),
+              ),
+            ],
           ),
         ),
 
@@ -119,6 +137,13 @@ class ChannelsScreen extends ConsumerWidget {
           },
         );
       },
+    );
+  }
+
+  void _openMultiview(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => const MultiviewChannelPicker(),
     );
   }
 }

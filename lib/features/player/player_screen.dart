@@ -248,6 +248,31 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
               (ref.read(playerProvider).playbackState.volume - 0.1)
                   .clamp(0.0, 1.0),
             );
+      case LogicalKeyboardKey.arrowLeft:
+        // Seek -10s
+        final service = ref.read(videoPlayerServiceProvider);
+        if (service is MediaKitPlayerService && service.player != null) {
+          final pos = service.player!.state.position;
+          final target = pos - const Duration(seconds: 10);
+          service.player!.seek(target < Duration.zero ? Duration.zero : target);
+        }
+      case LogicalKeyboardKey.arrowRight:
+        // Seek +10s
+        final service = ref.read(videoPlayerServiceProvider);
+        if (service is MediaKitPlayerService && service.player != null) {
+          final pos = service.player!.state.position;
+          service.player!.seek(pos + const Duration(seconds: 10));
+        }
+      case LogicalKeyboardKey.keyF:
+        // Toggle fullscreen (maximize/restore window)
+        // Not implemented without window_manager — placeholder
+        break;
+      case LogicalKeyboardKey.keyM:
+        // Mute toggle
+        final currentVol = ref.read(playerProvider).playbackState.volume;
+        ref.read(playerProvider.notifier).setVolume(currentVol > 0 ? 0.0 : 1.0);
+      default:
+        break;
     }
   }
 }

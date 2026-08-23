@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:nebula_iptv/features/shell/shell_screen.dart';
+import 'package:nebula_iptv/features/profiles/profile_gate_screen.dart';
 
 /// Application route paths.
 abstract final class AppRoutes {
@@ -15,6 +16,10 @@ final appRouter = GoRouter(
   routes: [
     GoRoute(
       path: AppRoutes.home,
+      builder: (context, state) => const ProfileGateScreen(),
+    ),
+    GoRoute(
+      path: '/app',
       builder: (context, state) => const ShellScreen(),
     ),
   ],

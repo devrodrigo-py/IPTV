@@ -76,6 +76,13 @@ class VodItem {
   String? get displayRating =>
       tmdbRating != null ? tmdbRating!.toStringAsFixed(1) : rating;
 
+  /// Extracts the short category name (after "Filmes | " prefix).
+  String get shortCategory {
+    if (categoryName == null) return 'Outros';
+    final parts = categoryName!.split('|');
+    return parts.length > 1 ? parts.last.trim() : categoryName!.trim();
+  }
+
   VodItem copyWithEnrichment({
     String? tmdbPosterUrl,
     String? tmdbBackdropUrl,
@@ -156,6 +163,12 @@ class VodScreenState {
   final bool isLoading;
   final AppFailure? failure;
 
+  /// Categorized movies for Netflix-style rows.
+  final Map<String, List<VodItem>> categorizedMovies;
+
+  /// Hero banner items (movies with posters).
+  final List<VodItem> heroItems;
+
   const VodScreenState({
     this.allMovies = const [],
     this.filteredMovies = const [],
@@ -164,6 +177,8 @@ class VodScreenState {
     this.searchQuery = '',
     this.isLoading = true,
     this.failure,
+    this.categorizedMovies = const {},
+    this.heroItems = const [],
   });
 
   VodScreenState copyWith({
@@ -176,6 +191,8 @@ class VodScreenState {
     bool? isLoading,
     AppFailure? failure,
     bool clearFailure = false,
+    Map<String, List<VodItem>>? categorizedMovies,
+    List<VodItem>? heroItems,
   }) {
     return VodScreenState(
       allMovies: allMovies ?? this.allMovies,
@@ -187,6 +204,8 @@ class VodScreenState {
       searchQuery: searchQuery ?? this.searchQuery,
       isLoading: isLoading ?? this.isLoading,
       failure: clearFailure ? null : (failure ?? this.failure),
+      categorizedMovies: categorizedMovies ?? this.categorizedMovies,
+      heroItems: heroItems ?? this.heroItems,
     );
   }
 }
@@ -198,10 +217,6 @@ final vodScreenProvider =
 );
 
 /// Notifier that manages VOD browsing state with metadata enrichment.
-///
-/// Uses MetadataEnrichmentService (TMDB + TVMaze → MediaWork) for
-/// on-demand enrichment and falls back to the legacy tmdb_cache for
-/// items enriched before the MediaWork migration.
 class VodScreenNotifier extends StateNotifier<VodScreenState> {
   final Ref _ref;
   Timer? _debounce;
@@ -256,6 +271,7 @@ class VodScreenNotifier extends StateNotifier<VodScreenState> {
         return item;
       }).toList();
 
+      // Build categories
       final categories = vodChannels
           .map((v) => v.categoryName)
           .where((c) => c != null && c.isNotEmpty)
@@ -264,12 +280,36 @@ class VodScreenNotifier extends StateNotifier<VodScreenState> {
           .toList()
         ..sort();
 
+      // Build categorized map for Netflix rows
+      final categorizedMovies = <String, List<VodItem>>{};
+      for (final movie in vodChannels) {
+        final cat = movie.shortCategory;
+        categorizedMovies.putIfAbsent(cat, () => []).add(movie);
+      }
+
+      // Pick hero items: movies with poster images, prefer enriched ones
+      final moviesWithPoster = vodChannels
+          .where((m) => m.displayPosterUrl != null && m.displayPosterUrl!.isNotEmpty)
+          .toList();
+      List<VodItem> heroItems;
+      if (moviesWithPoster.length >= 5) {
+        moviesWithPoster.shuffle();
+        heroItems = moviesWithPoster.take(5).toList();
+      } else if (moviesWithPoster.isNotEmpty) {
+        heroItems = moviesWithPoster.take(5).toList();
+      } else {
+        // Fallback: pick first 5 movies
+        heroItems = vodChannels.take(5).toList();
+      }
+
       state = state.copyWith(
         allMovies: vodChannels,
         filteredMovies: vodChannels,
         categories: categories,
         isLoading: false,
         clearFailure: true,
+        categorizedMovies: categorizedMovies,
+        heroItems: heroItems,
       );
     } catch (e) {
       state = state.copyWith(
@@ -283,12 +323,6 @@ class VodScreenNotifier extends StateNotifier<VodScreenState> {
   }
 
   /// Enriches a single movie with metadata (called on-demand).
-  ///
-  /// Uses the new MetadataEnrichmentService which:
-  /// 1. Normalizes the movie name
-  /// 2. Checks for existing MediaWork match
-  /// 3. Queries TMDB (primary) or TVMaze (fallback)
-  /// 4. Persists result in MediaWork table + ContentAlias
   Future<VodItem?> enrichMovie(VodItem movie) async {
     if (movie.isEnriched) return movie;
 
@@ -297,9 +331,6 @@ class VodScreenNotifier extends StateNotifier<VodScreenState> {
       final mediaWork = await enrichmentService.enrichMovie(movie.name);
       if (mediaWork == null) return null;
 
-      // Build enriched item from MediaWork data
-      // (MediaWorkEntry in ContentMatchingService is lightweight;
-      //  we need to read the full row for metadata fields)
       final fullRow = await _getMediaWorkMetadata(mediaWork.id);
 
       final enriched = movie.copyWithEnrichment(
@@ -329,7 +360,6 @@ class VodScreenNotifier extends StateNotifier<VodScreenState> {
 
       return enriched;
     } catch (e) {
-      // Enrichment failure should never block the UI
       return null;
     }
   }

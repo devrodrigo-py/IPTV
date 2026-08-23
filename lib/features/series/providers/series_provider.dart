@@ -72,6 +72,13 @@ class SeriesItem {
   /// Returns the best available overview.
   String? get displayOverview => tmdbOverview ?? plot;
 
+  /// Extracts the short category name (after "Series | " prefix).
+  String get shortCategory {
+    if (categoryName == null) return 'Outros';
+    final parts = categoryName!.split('|');
+    return parts.length > 1 ? parts.last.trim() : categoryName!.trim();
+  }
+
   SeriesItem copyWithTmdb({
     String? tmdbPosterUrl,
     String? tmdbBackdropUrl,
@@ -195,6 +202,12 @@ class SeriesScreenState {
   final bool isLoading;
   final AppFailure? failure;
 
+  /// Categorized series for Netflix-style rows.
+  final Map<String, List<SeriesItem>> categorizedSeries;
+
+  /// Hero banner items (series with posters).
+  final List<SeriesItem> heroItems;
+
   const SeriesScreenState({
     this.allSeries = const [],
     this.filteredSeries = const [],
@@ -203,6 +216,8 @@ class SeriesScreenState {
     this.searchQuery = '',
     this.isLoading = true,
     this.failure,
+    this.categorizedSeries = const {},
+    this.heroItems = const [],
   });
 
   SeriesScreenState copyWith({
@@ -215,6 +230,8 @@ class SeriesScreenState {
     bool? isLoading,
     AppFailure? failure,
     bool clearFailure = false,
+    Map<String, List<SeriesItem>>? categorizedSeries,
+    List<SeriesItem>? heroItems,
   }) {
     return SeriesScreenState(
       allSeries: allSeries ?? this.allSeries,
@@ -226,6 +243,8 @@ class SeriesScreenState {
       searchQuery: searchQuery ?? this.searchQuery,
       isLoading: isLoading ?? this.isLoading,
       failure: clearFailure ? null : (failure ?? this.failure),
+      categorizedSeries: categorizedSeries ?? this.categorizedSeries,
+      heroItems: heroItems ?? this.heroItems,
     );
   }
 }
@@ -350,12 +369,35 @@ class SeriesScreenNotifier extends StateNotifier<SeriesScreenState> {
           .toList()
         ..sort();
 
+      // Build categorized map for Netflix rows
+      final categorizedSeries = <String, List<SeriesItem>>{};
+      for (final series in seriesChannels) {
+        final cat = series.shortCategory;
+        categorizedSeries.putIfAbsent(cat, () => []).add(series);
+      }
+
+      // Pick hero items: series with poster images
+      final seriesWithPoster = seriesChannels
+          .where((s) => s.displayPosterUrl != null && s.displayPosterUrl!.isNotEmpty)
+          .toList();
+      List<SeriesItem> heroItems;
+      if (seriesWithPoster.length >= 5) {
+        seriesWithPoster.shuffle();
+        heroItems = seriesWithPoster.take(5).toList();
+      } else if (seriesWithPoster.isNotEmpty) {
+        heroItems = seriesWithPoster.take(5).toList();
+      } else {
+        heroItems = seriesChannels.take(5).toList();
+      }
+
       state = state.copyWith(
         allSeries: seriesChannels,
         filteredSeries: seriesChannels,
         categories: categories,
         isLoading: false,
         clearFailure: true,
+        categorizedSeries: categorizedSeries,
+        heroItems: heroItems,
       );
     } catch (e) {
       state = state.copyWith(

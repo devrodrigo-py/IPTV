@@ -7,6 +7,8 @@ import 'package:nebula_iptv/data/database/daos/playlists_dao.dart';
 import 'package:nebula_iptv/data/database/daos/series_dao.dart';
 import 'package:nebula_iptv/data/database/daos/health_check_dao.dart';
 import 'package:nebula_iptv/data/database/daos/media_work_dao.dart';
+import 'package:nebula_iptv/data/database/daos/profile_dao.dart';
+import 'package:nebula_iptv/data/database/daos/shortcut_dao.dart';
 import 'package:nebula_iptv/data/database/daos/channel_group_dao.dart';
 import 'package:nebula_iptv/data/database/daos/tmdb_cache_dao.dart';
 import 'package:nebula_iptv/data/database/daos/vod_dao.dart';
@@ -21,6 +23,7 @@ import 'package:nebula_iptv/data/database/tables/health_check_tables.dart';
 import 'package:nebula_iptv/data/database/tables/playlists_table.dart';
 import 'package:nebula_iptv/data/database/tables/seasons_table.dart';
 import 'package:nebula_iptv/data/database/tables/series_table.dart';
+import 'package:nebula_iptv/data/database/tables/profile_tables.dart';
 import 'package:nebula_iptv/data/database/tables/vod_table.dart';
 import 'package:nebula_iptv/data/database/tables/watch_history_table.dart';
 import 'package:nebula_iptv/data/database/tables/watch_stats_table.dart';
@@ -63,7 +66,7 @@ class AppDatabase extends _$AppDatabase {
       const DriftDatabaseOptions(storeDateTimeAsText: true);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   // Manual DAO getters (not using @DriftAccessor to avoid codegen issues)
   CategoryCacheDao get categoryCacheDao => CategoryCacheDao(this);
@@ -75,6 +78,8 @@ class AppDatabase extends _$AppDatabase {
   ChannelGroupDao get channelGroupDao => ChannelGroupDao(this);
   WatchStatsDao get watchStatsDao => WatchStatsDao(this);
   SearchAliasesDao get searchAliasesDao => SearchAliasesDao(this);
+  ProfileDao get profileDao => ProfileDao(this);
+  ShortcutDao get shortcutDao => ShortcutDao(this);
 
   @override
   MigrationStrategy get migration {
@@ -96,6 +101,8 @@ class AppDatabase extends _$AppDatabase {
         // Create watch stats tables (Etapa 3)
         await _createWatchStatsTables();
         await _createSearchAliasesTables();
+        // Create profile & shortcuts tables (Etapa 6)
+        await _createProfileTables();
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 2) {
@@ -129,6 +136,9 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 8) {
           await _createSearchAliasesTables();
+        }
+        if (from < 9) {
+          await _createProfileTables();
         }
       },
     );
@@ -210,6 +220,26 @@ class AppDatabase extends _$AppDatabase {
     await customStatement(SearchAliasesTable.createTable);
     await customStatement(SearchAliasesTable.createIndex);
     await customStatement(SearchAliasesTable.createChannelIndex);
+  }
+
+  /// Creates profile and shortcuts tables (Etapa 6).
+  Future<void> _createProfileTables() async {
+    await customStatement(ProfileSql.createProfiles);
+    await customStatement(ProfileSql.createUserShortcuts);
+    await customStatement(ProfileSql.insertDefaultProfile);
+
+    // Add profile_id to existing tables
+    for (final alterSql in ProfileSql.alterStatements) {
+      try {
+        await customStatement(alterSql);
+      } catch (_) {
+        // Column may already exist — ignore
+      }
+    }
+
+    for (final indexSql in ProfileSql.createIndexes) {
+      await customStatement(indexSql);
+    }
   }
 
   Future<void> _createTmdbCacheTable() async {
