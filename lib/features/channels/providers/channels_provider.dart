@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/errors/app_failure.dart';
 import 'package:nebula_iptv/data/database/app_database.dart';
+import 'package:nebula_iptv/data/database/tables/channels_table.dart';
+import 'package:nebula_iptv/core/logging/app_logger.dart';
 
 /// State for the channels screen.
 class ChannelsScreenState {
@@ -73,17 +75,24 @@ class ChannelsScreenNotifier extends StateNotifier<ChannelsScreenState> {
     _loadChannels();
   }
 
-  /// Loads all active channels and groups.
+  /// Loads all active channels and groups, filtering duplicates.
   Future<void> _loadChannels() async {
     try {
       final db = _ref.read(databaseProvider);
-      final channels = await db.channelsDao.getAllActiveChannels();
+      final allChannels = await db.channelsDao.getAllActiveChannels();
+      // Only show live channels (xtream/m3u) — VOD and Series have their own screens
+      final channels = allChannels
+          .where((c) => c.sourceType == ChannelSourceType.xtream || c.sourceType == ChannelSourceType.m3u)
+          .toList();
       final groups = await db.channelsDao.getDistinctGroups();
       final favoriteIds = await db.favoritesDao.getFavoriteChannelIds();
 
+      // Apply deduplication: keep only primary channel per group
+      final dedupChannels = await _filterDuplicates(db, channels);
+
       state = state.copyWith(
-        allChannels: channels,
-        filteredChannels: channels,
+        allChannels: dedupChannels,
+        filteredChannels: dedupChannels,
         groups: groups,
         favoriteIds: favoriteIds,
         isLoading: false,
@@ -97,6 +106,52 @@ class ChannelsScreenNotifier extends StateNotifier<ChannelsScreenState> {
           originalError: e,
         ),
       );
+    }
+  }
+
+  /// Filters out duplicate channels using channel_groups.
+  /// Keeps only the primary_channel_id from each group.
+  Future<List<Channel>> _filterDuplicates(AppDatabase db, List<Channel> channels) async {
+    try {
+      // Get primary channel IDs and all grouped channel IDs
+      final groupRows = await db.customSelect(
+        'SELECT g.primary_channel_id, m.channel_id '
+        'FROM channel_groups g '
+        'INNER JOIN channel_group_members m ON m.group_id = g.id '
+        'WHERE g.primary_channel_id IS NOT NULL',
+      ).get();
+
+      appLogger.d('[Dedup UI] Found ${groupRows.length} group member rows');
+
+      if (groupRows.isEmpty) return channels;
+
+      // Build sets
+      final primaryIds = <int>{};
+      final allGroupedIds = <int>{};
+      for (final row in groupRows) {
+        final primaryId = row.read<int>('primary_channel_id');
+        final memberId = row.read<int>('channel_id');
+        primaryIds.add(primaryId);
+        allGroupedIds.add(memberId);
+      }
+
+      appLogger.d(
+        '[Dedup UI] ${primaryIds.length} primary, ${allGroupedIds.length} grouped total, '
+        '${channels.length} channels before filter',
+      );
+
+      // Keep channels that are: not in any group, OR are the primary of their group
+      final filtered = channels.where((c) {
+        if (!allGroupedIds.contains(c.id)) return true; // not grouped
+        return primaryIds.contains(c.id); // is primary
+      }).toList();
+
+      appLogger.d('[Dedup UI] ${filtered.length} channels after filter');
+      return filtered;
+    } catch (e) {
+      appLogger.w('[Dedup UI] Filter failed: $e');
+      // If dedup query fails, return all channels
+      return channels;
     }
   }
 

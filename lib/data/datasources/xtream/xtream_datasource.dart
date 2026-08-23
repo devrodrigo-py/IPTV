@@ -5,12 +5,16 @@ import 'package:nebula_iptv/data/datasources/xtream/xtream_models.dart';
 
 /// Data source for Xtream Codes API interactions.
 ///
-/// Handles authentication, fetching categories, and live streams
-/// via the player_api.php endpoint (spec §12).
+/// Handles authentication, fetching categories, live streams,
+/// VOD (movies), and series via the player_api.php endpoint (spec §12).
 class XtreamDataSource {
   final DioClient _client;
 
   XtreamDataSource({required DioClient client}) : _client = client;
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Authentication
+  // ───────────────────────────────────────────────────────────────────────────
 
   /// Authenticates with an Xtream server and validates the account.
   ///
@@ -87,6 +91,10 @@ class XtreamDataSource {
     );
   }
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // Live Streams
+  // ───────────────────────────────────────────────────────────────────────────
+
   /// Fetches live stream categories.
   Future<Result<List<XtreamCategory>>> getLiveCategories({
     required String serverUrl,
@@ -94,34 +102,12 @@ class XtreamDataSource {
     required String password,
     int? portOverride,
   }) async {
-    final baseUrl = _buildBaseUrl(serverUrl, portOverride);
-    final url = '$baseUrl/player_api.php'
-        '?username=$username&password=$password'
-        '&action=get_live_categories';
-
-    final response = await _client.get<List<dynamic>>(url);
-
-    return response.when(
-      success: (res) {
-        final data = res.data;
-        if (data == null) return const Success([]);
-
-        try {
-          final categories = data
-              .cast<Map<String, dynamic>>()
-              .map(XtreamCategory.fromJson)
-              .toList();
-          return Success(categories);
-        } catch (e) {
-          return Failure(
-            PlaylistParseFailure(
-              message: 'Erro ao interpretar categorias.',
-              originalError: e,
-            ),
-          );
-        }
-      },
-      failure: (f) => Failure(f),
+    return _fetchCategories(
+      serverUrl: serverUrl,
+      username: username,
+      password: password,
+      portOverride: portOverride,
+      action: 'get_live_categories',
     );
   }
 
@@ -168,6 +154,218 @@ class XtreamDataSource {
     );
   }
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // VOD (Movies)
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /// Fetches VOD (movie) categories.
+  Future<Result<List<XtreamCategory>>> getVodCategories({
+    required String serverUrl,
+    required String username,
+    required String password,
+    int? portOverride,
+  }) async {
+    return _fetchCategories(
+      serverUrl: serverUrl,
+      username: username,
+      password: password,
+      portOverride: portOverride,
+      action: 'get_vod_categories',
+    );
+  }
+
+  /// Fetches VOD streams (all or by category).
+  Future<Result<List<XtreamVodStream>>> getVodStreams({
+    required String serverUrl,
+    required String username,
+    required String password,
+    int? portOverride,
+    String? categoryId,
+  }) async {
+    final baseUrl = _buildBaseUrl(serverUrl, portOverride);
+    var url = '$baseUrl/player_api.php'
+        '?username=$username&password=$password'
+        '&action=get_vod_streams';
+
+    if (categoryId != null && categoryId.isNotEmpty) {
+      url += '&category_id=$categoryId';
+    }
+
+    final response = await _client.get<List<dynamic>>(url);
+
+    return response.when(
+      success: (res) {
+        final data = res.data;
+        if (data == null) return const Success([]);
+
+        try {
+          final streams = data
+              .cast<Map<String, dynamic>>()
+              .map(XtreamVodStream.fromJson)
+              .toList();
+          return Success(streams);
+        } catch (e) {
+          return Failure(
+            PlaylistParseFailure(
+              message: 'Erro ao interpretar lista de filmes.',
+              originalError: e,
+            ),
+          );
+        }
+      },
+      failure: (f) => Failure(f),
+    );
+  }
+
+  /// Fetches detailed info for a specific VOD item.
+  Future<Result<XtreamVodInfo>> getVodInfo({
+    required String serverUrl,
+    required String username,
+    required String password,
+    required int vodId,
+    int? portOverride,
+  }) async {
+    final baseUrl = _buildBaseUrl(serverUrl, portOverride);
+    final url = '$baseUrl/player_api.php'
+        '?username=$username&password=$password'
+        '&action=get_vod_info&vod_id=$vodId';
+
+    final response = await _client.get<Map<String, dynamic>>(url);
+
+    return response.when(
+      success: (res) {
+        final data = res.data;
+        if (data == null) {
+          return const Failure(
+            PlaylistParseFailure(
+              message: 'Informações do filme não encontradas.',
+            ),
+          );
+        }
+
+        try {
+          return Success(XtreamVodInfo.fromJson(data));
+        } catch (e) {
+          return Failure(
+            PlaylistParseFailure(
+              message: 'Erro ao interpretar informações do filme.',
+              originalError: e,
+            ),
+          );
+        }
+      },
+      failure: (f) => Failure(f),
+    );
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Series
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /// Fetches series categories.
+  Future<Result<List<XtreamCategory>>> getSeriesCategories({
+    required String serverUrl,
+    required String username,
+    required String password,
+    int? portOverride,
+  }) async {
+    return _fetchCategories(
+      serverUrl: serverUrl,
+      username: username,
+      password: password,
+      portOverride: portOverride,
+      action: 'get_series_categories',
+    );
+  }
+
+  /// Fetches series list (all or by category).
+  Future<Result<List<XtreamSeries>>> getSeries({
+    required String serverUrl,
+    required String username,
+    required String password,
+    int? portOverride,
+    String? categoryId,
+  }) async {
+    final baseUrl = _buildBaseUrl(serverUrl, portOverride);
+    var url = '$baseUrl/player_api.php'
+        '?username=$username&password=$password'
+        '&action=get_series';
+
+    if (categoryId != null && categoryId.isNotEmpty) {
+      url += '&category_id=$categoryId';
+    }
+
+    final response = await _client.get<List<dynamic>>(url);
+
+    return response.when(
+      success: (res) {
+        final data = res.data;
+        if (data == null) return const Success([]);
+
+        try {
+          final series = data
+              .cast<Map<String, dynamic>>()
+              .map(XtreamSeries.fromJson)
+              .toList();
+          return Success(series);
+        } catch (e) {
+          return Failure(
+            PlaylistParseFailure(
+              message: 'Erro ao interpretar lista de séries.',
+              originalError: e,
+            ),
+          );
+        }
+      },
+      failure: (f) => Failure(f),
+    );
+  }
+
+  /// Fetches detailed info for a specific series (seasons + episodes).
+  Future<Result<XtreamSeriesInfo>> getSeriesInfo({
+    required String serverUrl,
+    required String username,
+    required String password,
+    required int seriesId,
+    int? portOverride,
+  }) async {
+    final baseUrl = _buildBaseUrl(serverUrl, portOverride);
+    final url = '$baseUrl/player_api.php'
+        '?username=$username&password=$password'
+        '&action=get_series_info&series_id=$seriesId';
+
+    final response = await _client.get<Map<String, dynamic>>(url);
+
+    return response.when(
+      success: (res) {
+        final data = res.data;
+        if (data == null) {
+          return const Failure(
+            PlaylistParseFailure(
+              message: 'Informações da série não encontradas.',
+            ),
+          );
+        }
+
+        try {
+          return Success(XtreamSeriesInfo.fromJson(data));
+        } catch (e) {
+          return Failure(
+            PlaylistParseFailure(
+              message: 'Erro ao interpretar informações da série.',
+              originalError: e,
+            ),
+          );
+        }
+      },
+      failure: (f) => Failure(f),
+    );
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Stream URL Builders
+  // ───────────────────────────────────────────────────────────────────────────
+
   /// Builds the stream URL for a live channel (spec §12).
   ///
   /// Format: http(s)://host:port/live/user/pass/streamId.ext
@@ -181,6 +379,79 @@ class XtreamDataSource {
   }) {
     final baseUrl = _buildBaseUrl(serverUrl, portOverride);
     return '$baseUrl/live/$username/$password/$streamId.$extension';
+  }
+
+  /// Builds the stream URL for a VOD (movie).
+  ///
+  /// Format: http(s)://host:port/movie/user/pass/streamId.ext
+  String buildVodStreamUrl({
+    required String serverUrl,
+    required String username,
+    required String password,
+    required int streamId,
+    int? portOverride,
+    String extension = 'mp4',
+  }) {
+    final baseUrl = _buildBaseUrl(serverUrl, portOverride);
+    return '$baseUrl/movie/$username/$password/$streamId.$extension';
+  }
+
+  /// Builds the stream URL for a series episode.
+  ///
+  /// Format: http(s)://host:port/series/user/pass/episodeId.ext
+  String buildSeriesStreamUrl({
+    required String serverUrl,
+    required String username,
+    required String password,
+    required String episodeId,
+    int? portOverride,
+    String extension = 'mp4',
+  }) {
+    final baseUrl = _buildBaseUrl(serverUrl, portOverride);
+    return '$baseUrl/series/$username/$password/$episodeId.$extension';
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Private Helpers
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /// Generic category fetcher (all category endpoints share the same format).
+  Future<Result<List<XtreamCategory>>> _fetchCategories({
+    required String serverUrl,
+    required String username,
+    required String password,
+    required String action,
+    int? portOverride,
+  }) async {
+    final baseUrl = _buildBaseUrl(serverUrl, portOverride);
+    final url = '$baseUrl/player_api.php'
+        '?username=$username&password=$password'
+        '&action=$action';
+
+    final response = await _client.get<List<dynamic>>(url);
+
+    return response.when(
+      success: (res) {
+        final data = res.data;
+        if (data == null) return const Success([]);
+
+        try {
+          final categories = data
+              .cast<Map<String, dynamic>>()
+              .map(XtreamCategory.fromJson)
+              .toList();
+          return Success(categories);
+        } catch (e) {
+          return Failure(
+            PlaylistParseFailure(
+              message: 'Erro ao interpretar categorias.',
+              originalError: e,
+            ),
+          );
+        }
+      },
+      failure: (f) => Failure(f),
+    );
   }
 
   /// Builds the base URL with optional port override.

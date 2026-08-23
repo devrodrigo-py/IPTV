@@ -8,6 +8,8 @@ import 'package:nebula_iptv/data/database/tables/channels_table.dart';
 import 'package:nebula_iptv/data/database/tables/playlists_table.dart';
 import 'package:nebula_iptv/data/datasources/xtream/xtream_datasource.dart';
 import 'package:nebula_iptv/data/datasources/xtream/xtream_models.dart';
+import 'package:nebula_iptv/data/repositories/series_import_repository.dart';
+import 'package:nebula_iptv/data/repositories/vod_import_repository.dart';
 import 'package:nebula_iptv/data/repositories/playlist_import_repository.dart';
 
 /// Repository for importing and syncing Xtream Codes playlists.
@@ -15,6 +17,8 @@ class XtreamImportRepository {
   final AppDatabase _db;
   final XtreamDataSource _xtreamDataSource;
   final CredentialStore _credentialStore;
+  late final VodImportRepository _vodImportRepository;
+  late final SeriesImportRepository _seriesImportRepository;
 
   XtreamImportRepository({
     required AppDatabase db,
@@ -22,9 +26,21 @@ class XtreamImportRepository {
     required CredentialStore credentialStore,
   })  : _db = db,
         _xtreamDataSource = xtreamDataSource,
-        _credentialStore = credentialStore;
+        _credentialStore = credentialStore {
+    _vodImportRepository = VodImportRepository(
+      db: db,
+      xtreamDataSource: xtreamDataSource,
+      credentialStore: credentialStore,
+    );
+    _seriesImportRepository = SeriesImportRepository(
+      db: db,
+      xtreamDataSource: xtreamDataSource,
+      credentialStore: credentialStore,
+    );
+  }
 
   /// Imports a new Xtream source.
+  /// Also imports VOD and series content in parallel.
   Future<Result<PlaylistImportResult>> importXtream({
     required String name,
     required String serverUrl,
@@ -182,6 +198,24 @@ class XtreamImportRepository {
         ),
       );
 
+      // Fetch category names to resolve numeric IDs
+      final categoryMap = await _fetchLiveCategoryMap(
+        serverUrl: serverUrl,
+        username: username,
+        password: userPass,
+        portOverride: portOverride,
+      );
+
+      // Cache categories for future resolution
+      if (categoryMap.isNotEmpty) {
+        await _db.categoryCacheDao.ensureTable();
+        await _db.categoryCacheDao.upsertCategories(
+          playlistId: playlistId,
+          categoryMap: categoryMap,
+          sourceType: 'live',
+        );
+      }
+
       final companions = _streamsToCompanions(
         streams: streams,
         playlistId: playlistId,
@@ -189,6 +223,7 @@ class XtreamImportRepository {
         username: username,
         userPass: userPass,
         portOverride: portOverride,
+        categoryMap: categoryMap,
       );
 
       await _db.channelsDao.insertChannels(companions);
@@ -196,6 +231,16 @@ class XtreamImportRepository {
       appLogger.i(
         'Imported Xtream "$name": ${companions.length} channels',
       );
+
+      // Import VOD and series in the background (non-blocking)
+      _importVodAndSeriesInBackground(
+        playlistId: playlistId,
+        serverUrl: serverUrl,
+        username: username,
+        password: userPass,
+        portOverride: portOverride,
+      );
+
 
       return Success(
         PlaylistImportResult(
@@ -225,6 +270,24 @@ class XtreamImportRepository {
     int? portOverride,
   }) async {
     try {
+      // Fetch category names
+      final categoryMap = await _fetchLiveCategoryMap(
+        serverUrl: serverUrl,
+        username: username,
+        password: userPass,
+        portOverride: portOverride,
+      );
+
+      // Cache categories
+      if (categoryMap.isNotEmpty) {
+        await _db.categoryCacheDao.ensureTable();
+        await _db.categoryCacheDao.upsertCategories(
+          playlistId: playlistId,
+          categoryMap: categoryMap,
+          sourceType: 'live',
+        );
+      }
+
       final existing = await _db.channelsDao.getChannelsByPlaylist(playlistId);
 
       final existingBySourceId = <String, Channel>{};
@@ -281,7 +344,7 @@ class XtreamImportRepository {
               sourceType: ChannelSourceType.xtream,
               sourceId: Value(sourceId),
               logoUrl: Value(stream.streamIcon),
-              groupName: Value(stream.categoryId),
+              groupName: Value(categoryMap[stream.categoryId] ?? stream.categoryId),
               tvgId: Value(stream.epgChannelId),
             ),
           );
@@ -313,6 +376,16 @@ class XtreamImportRepository {
         'Refreshed Xtream $playlistId: +$added, ~$updated, -$deactivated',
       );
 
+      // Also refresh VOD and series
+      _importVodAndSeriesInBackground(
+        playlistId: playlistId,
+        serverUrl: serverUrl,
+        username: username,
+        password: userPass,
+        portOverride: portOverride,
+      );
+
+
       return Success(
         PlaylistImportResult(
           playlistId: playlistId,
@@ -343,6 +416,7 @@ class XtreamImportRepository {
     required String username,
     required String userPass,
     int? portOverride,
+    Map<String, String> categoryMap = const {},
   }) {
     return streams.map((stream) {
       final streamUrl = _xtreamDataSource.buildStreamUrl(
@@ -361,9 +435,71 @@ class XtreamImportRepository {
         sourceType: ChannelSourceType.xtream,
         sourceId: Value(stream.streamId.toString()),
         logoUrl: Value(stream.streamIcon),
-        groupName: Value(stream.categoryId),
+        groupName: Value(categoryMap[stream.categoryId] ?? stream.categoryId),
         tvgId: Value(stream.epgChannelId),
       );
     }).toList();
+  }
+
+  /// Imports VOD and series content in the background.
+  /// Failures are logged but don't affect the main import result.
+  void _importVodAndSeriesInBackground({
+    required int playlistId,
+    required String serverUrl,
+    required String username,
+    required String password,
+    int? portOverride,
+  }) {
+    // Import VOD
+    _vodImportRepository.importVod(
+      playlistId: playlistId,
+      serverUrl: serverUrl,
+      username: username,
+      password: password,
+      portOverride: portOverride,
+    ).then((result) => result.when(
+      success: (r) => appLogger.i('VOD import: +${r.moviesAdded} movies'),
+      failure: (f) => appLogger.w('VOD import failed: ${f.message}'),
+    ));
+
+    // Import series
+    _seriesImportRepository.importSeries(
+      playlistId: playlistId,
+      serverUrl: serverUrl,
+      username: username,
+      password: password,
+      portOverride: portOverride,
+    ).then((result) => result.when(
+      success: (r) => appLogger.i('Series import: +${r.seriesAdded} series'),
+      failure: (f) => appLogger.w('Series import failed: ${f.message}'),
+    ));
+  }
+
+  /// Fetches live categories from Xtream API and returns a map of id → name.
+  /// Returns empty map on failure (non-blocking).
+  Future<Map<String, String>> _fetchLiveCategoryMap({
+    required String serverUrl,
+    required String username,
+    required String password,
+    int? portOverride,
+  }) async {
+    final categoryMap = <String, String>{};
+    try {
+      final result = await _xtreamDataSource.getLiveCategories(
+        serverUrl: serverUrl,
+        username: username,
+        password: password,
+        portOverride: portOverride,
+      );
+      result.when(
+        success: (categories) {
+          for (final cat in categories) {
+            categoryMap[cat.categoryId] = cat.categoryName;
+          }
+        },
+        failure: (_) {},
+      );
+    } catch (_) {}
+    return categoryMap;
   }
 }

@@ -1,83 +1,127 @@
+import 'package:drift/drift.dart' hide Column;
+import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
-import 'package:nebula_iptv/core/widgets/empty_view.dart';
-import 'package:nebula_iptv/core/widgets/error_view.dart';
-import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
 import 'package:nebula_iptv/core/widgets/loading_view.dart';
-import 'package:nebula_iptv/data/database/app_database.dart';
-import 'package:nebula_iptv/features/history/providers/history_provider.dart';
-import 'package:nebula_iptv/l10n/app_localizations.dart';
+import 'package:nebula_iptv/data/database/app_database.dart' hide SeriesItem;
+import 'package:nebula_iptv/domain/providers/watch_providers.dart';
+import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
+import 'package:nebula_iptv/features/player/player_screen.dart';
+import 'package:nebula_iptv/features/series/series_detail_screen.dart';
+import 'package:nebula_iptv/features/series/providers/series_provider.dart' show SeriesItem;
+import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
 
-/// History screen displaying recently watched channels.
+/// History screen — shows recent viewing activity.
 ///
-/// Shows watch entries ordered by most recent, with duration info
-/// and options to clear individual entries or all history.
-class HistoryScreen extends ConsumerWidget {
+/// Tabs: Todos | Canais | Filmes | Séries
+class HistoryScreen extends ConsumerStatefulWidget {
   const HistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final state = ref.watch(historyScreenProvider);
+  ConsumerState<HistoryScreen> createState() => _HistoryScreenState();
+}
 
-    if (state.isLoading) return const LoadingView();
+class _HistoryScreenState extends ConsumerState<HistoryScreen> {
+  String _selectedFilter = 'all';
 
-    if (state.failure != null) {
-      return ErrorView(
-        failure: state.failure!,
-        onRetry: () => ref.read(historyScreenProvider.notifier).loadHistory(),
-      );
-    }
+  static const _filters = [
+    ('all', 'Todos'),
+    ('live', 'Canais'),
+    ('vod', 'Filmes'),
+    ('series', 'Séries'),
+  ];
 
-    if (state.entries.isEmpty) {
-      return const EmptyView(
-        icon: Icons.history_rounded,
-        message: 'Nenhum canal assistido ainda',
-      );
-    }
+  @override
+  Widget build(BuildContext context) {
+    final historyAsync = ref.watch(watchHistoryProvider(
+      _selectedFilter == 'all' ? null : _selectedFilter,
+    ));
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header with clear button
+        // Title
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Row(
-            children: [
-              Text(l10n.history, style: AppTypography.title),
-              const Spacer(),
-              FocusableWidget(
-                onPressed: () => _confirmClearAll(context, ref),
-                borderRadius: BorderRadius.circular(8),
-                builder: (context, isFocused) => Text(
-                  'Limpar tudo',
-                  style: AppTypography.label.copyWith(
-                    color:
-                        isFocused ? AppColors.primary : AppColors.textSecondary,
+          child: Text('Histórico', style: AppTypography.headline),
+        ),
+
+        // Filter chips
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _filters.map((filter) {
+                final isSelected = _selectedFilter == filter.$1;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    label: Text(filter.$2),
+                    selected: isSelected,
+                    onSelected: (_) {
+                      setState(() => _selectedFilter = filter.$1);
+                    },
+                    selectedColor: AppColors.primary,
+                    backgroundColor: AppColors.surface,
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.white : AppColors.textSecondary,
+                    ),
+                    checkmarkColor: Colors.white,
                   ),
-                ),
-              ),
-            ],
+                );
+              }).toList(),
+            ),
           ),
         ),
 
+        const SizedBox(height: 8),
+
         // History list
         Expanded(
-          child: ListView.builder(
-            itemCount: state.entries.length,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemBuilder: (context, index) {
-              final entry = state.entries[index];
-              return _HistoryTile(
-                entry: entry,
-                onTap: () {
-                  // Navigate to player with this channel (Phase 6 integration)
-                },
-                onDelete: () {
-                  ref.read(historyScreenProvider.notifier).deleteEntry(
-                        entry.id,
-                      );
+          child: historyAsync.when(
+            loading: () => const LoadingView(),
+            error: (e, _) => Center(
+              child: Text(
+                'Erro ao carregar histórico',
+                style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+              ),
+            ),
+            data: (entries) {
+              if (entries.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.history_rounded,
+                        size: 48,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Nenhum histórico ainda.\nComece a assistir para ver seu histórico aqui.',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.body.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: entries.length,
+                itemBuilder: (context, index) {
+                  final entry = entries[index];
+                  return _HistoryTile(
+                    entry: entry,
+                    onTap: () => _playEntry(entry),
+                  );
                 },
               );
             },
@@ -87,129 +131,224 @@ class HistoryScreen extends ConsumerWidget {
     );
   }
 
-  void _confirmClearAll(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text('Limpar histórico'),
-        content: const Text('Deseja remover todo o histórico de reprodução?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancelar'),
+  void _playEntry(Map<String, dynamic> entry) async {
+    final streamUrl = entry['stream_url'] as String?;
+    final name = entry['content_name'] as String? ??
+        entry['channel_name'] as String? ??
+        'Canal';
+    final contentType = entry['content_type'] as String? ?? 'live';
+    final channelId = entry['channel_id'] as int? ?? 0;
+    final thumbnailUrl = entry['thumbnail_url'] as String?;
+
+    // Series: navigate to detail screen
+    if (contentType == 'series') {
+      try {
+        final db = ref.read(databaseProvider);
+        // Series are stored in channels table with source_type='series'
+        final chRows = await db.customSelect(
+          'SELECT * FROM channels WHERE id = ?',
+          variables: [Variable.withInt(channelId)],
+        ).get();
+        if (chRows.isNotEmpty && mounted) {
+          final ch = chRows.first;
+          final seriesItem = SeriesItem(
+            id: ch.read<int>('id'),
+            playlistId: ch.read<int>('playlist_id'),
+            name: ch.read<String>('name'),
+            coverUrl: ch.readNullable<String>('logo_url'),
+            categoryName: ch.readNullable<String>('group_name'),
+            sourceId: ch.readNullable<String>('source_id'),
+          );
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => SeriesDetailScreen(series: seriesItem),
+          ));
+        }
+      } catch (e, st) {
+        appLogger.e('[History] Error opening series: $e\n$st');
+      }
+      return;
+    }
+
+    if (streamUrl == null || streamUrl.isEmpty) return;
+
+    final progressPercent = (entry['progress_percent'] as num?)?.toDouble() ?? 0.0;
+    final totalDurationMs = entry['total_duration_ms'] as int? ?? 0;
+    final watchedDurationMs = entry['watched_duration_ms'] as int? ?? 0;
+    final seekToMs = (progressPercent > 0 && totalDurationMs > 0)
+        ? (progressPercent * totalDurationMs).round()
+        : watchedDurationMs;
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PlayerScreen(
+          channelName: name,
+          streamUrl: streamUrl,
+          contentInfo: WatchContentInfo(
+            channelId: channelId,
+            name: name,
+            contentType: contentType,
+            thumbnailUrl: thumbnailUrl,
           ),
-          TextButton(
-            onPressed: () {
-              ref.read(historyScreenProvider.notifier).clearAll();
-              Navigator.of(ctx).pop();
-            },
-            child: const Text(
-              'Limpar',
-              style: TextStyle(color: AppColors.error),
-            ),
-          ),
-        ],
+          seekToMs: seekToMs > 5000 ? seekToMs : null,
+        ),
       ),
     );
   }
 }
 
-/// Single history entry tile.
+/// A single history entry tile.
 class _HistoryTile extends StatelessWidget {
-  final WatchHistoryEntry entry;
+  final Map<String, dynamic> entry;
   final VoidCallback onTap;
-  final VoidCallback onDelete;
 
-  const _HistoryTile({
-    required this.entry,
-    required this.onTap,
-    required this.onDelete,
-  });
+  const _HistoryTile({required this.entry, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: FocusableWidget(
-        onPressed: onTap,
-        borderRadius: const BorderRadius.all(Radius.circular(10)),
-        builder: (context, isFocused) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: isFocused ? AppColors.surfaceElevated : AppColors.surface,
-            borderRadius: const BorderRadius.all(Radius.circular(10)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceElevated,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.play_circle_outline_rounded,
-                  size: 20,
-                  color: AppColors.textSecondary,
-                ),
+    final name = entry['content_name'] as String? ??
+        entry['channel_name'] as String? ??
+        'Canal';
+    final logoUrl = entry['thumbnail_url'] as String? ??
+        entry['logo_url'] as String?;
+    final contentType = entry['content_type'] as String? ?? 'live';
+    final progressPercent = (entry['progress_percent'] as num?)?.toDouble() ?? 0.0;
+    final watchedMs = entry['watched_duration_ms'] as int? ?? 0;
+    final lastWatched = entry['last_watched_at'] as String?;
+    final episodeTitle = entry['episode_title'] as String?;
+    final seasonNumber = entry['season_number'] as int?;
+    final episodeNumber = entry['episode_number'] as int?;
+
+    // Format time ago
+    final timeAgo = _formatTimeAgo(lastWatched);
+
+    // Build subtitle
+    String subtitle = '';
+    if (contentType == 'series' && seasonNumber != null && episodeNumber != null) {
+      subtitle = 'T$seasonNumber E$episodeNumber';
+      if (episodeTitle != null) subtitle += ' • $episodeTitle';
+    } else if (contentType == 'live') {
+      subtitle = _formatDuration(watchedMs);
+    }
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            // Thumbnail/logo
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(8),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+              child: logoUrl != null && logoUrl.isNotEmpty
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        logoUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.live_tv_rounded,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    )
+                  : Icon(
+                      _getIcon(contentType),
+                      color: AppColors.textSecondary,
+                    ),
+            ),
+            const SizedBox(width: 12),
+
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: AppTypography.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (subtitle.isNotEmpty)
                     Text(
-                      'Canal #${entry.channelId}',
-                      style: AppTypography.body,
+                      subtitle,
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 2),
+                  if (timeAgo.isNotEmpty)
                     Text(
-                      _formatDuration(entry.watchedDurationMs),
-                      style: AppTypography.caption,
+                      timeAgo,
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                      ),
+                    ),
+                  // Progress bar for VOD/series
+                  if (contentType != 'live' && progressPercent > 0) ...[
+                    const SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(2),
+                      child: LinearProgressIndicator(
+                        value: progressPercent,
+                        backgroundColor: AppColors.surface,
+                        color: AppColors.primary,
+                        minHeight: 3,
+                      ),
                     ),
                   ],
-                ),
+                ],
               ),
-              Text(
-                _formatTimeAgo(entry.lastWatchedAt),
-                style: AppTypography.caption,
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(
-                  Icons.close_rounded,
-                  size: 18,
-                  color: AppColors.textSecondary,
-                ),
-                onPressed: onDelete,
-                splashRadius: 16,
-              ),
-            ],
-          ),
+            ),
+
+            // Play icon
+            const Icon(
+              Icons.play_circle_outline_rounded,
+              color: AppColors.primary,
+            ),
+          ],
         ),
       ),
     );
   }
 
-  String _formatDuration(int ms) {
-    final minutes = ms ~/ 60000;
-    if (minutes < 1) return 'Menos de 1 min';
-    if (minutes < 60) return '$minutes min assistidos';
-    final hours = minutes ~/ 60;
-    final remainingMin = minutes % 60;
-    return '${hours}h ${remainingMin}min assistidos';
+  IconData _getIcon(String contentType) {
+    return switch (contentType) {
+      'vod' => Icons.movie_rounded,
+      'series' => Icons.tv_rounded,
+      _ => Icons.live_tv_rounded,
+    };
   }
 
-  String _formatTimeAgo(DateTime date) {
-    final diff = DateTime.now().difference(date);
-    if (diff.inMinutes < 1) return 'Agora';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} min atrás';
-    if (diff.inHours < 24) return '${diff.inHours}h atrás';
-    if (diff.inDays < 7) return '${diff.inDays}d atrás';
-    return '${date.day}/${date.month}';
+  String _formatTimeAgo(String? dateStr) {
+    if (dateStr == null) return '';
+    try {
+      final date = DateTime.parse(dateStr);
+      final diff = DateTime.now().difference(date);
+      if (diff.inMinutes < 1) return 'Agora';
+      if (diff.inMinutes < 60) return 'Há ${diff.inMinutes} min';
+      if (diff.inHours < 24) return 'Há ${diff.inHours}h';
+      if (diff.inDays < 7) return 'Há ${diff.inDays} dias';
+      return '${date.day}/${date.month}/${date.year}';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  String _formatDuration(int ms) {
+    if (ms <= 0) return '';
+    final minutes = ms ~/ 60000;
+    if (minutes < 60) return '${minutes}min assistidos';
+    final hours = minutes ~/ 60;
+    final remaining = minutes % 60;
+    return '${hours}h ${remaining}min assistidos';
   }
 }

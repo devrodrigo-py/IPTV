@@ -5,6 +5,8 @@ import 'package:nebula_iptv/data/database/tables/playlists_table.dart';
 enum ChannelSourceType {
   m3u,
   xtream,
+  vod,
+  series,
 }
 
 /// SQLite table definition for channels.

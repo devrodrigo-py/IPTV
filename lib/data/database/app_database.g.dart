@@ -3,13 +3,37 @@
 part of 'app_database.dart';
 
 // ignore_for_file: type=lint
+mixin _$PlaylistsDaoMixin on DatabaseAccessor<AppDatabase> {
+  $PlaylistsTable get playlists => attachedDatabase.playlists;
+}
+mixin _$ChannelsDaoMixin on DatabaseAccessor<AppDatabase> {
+  $ChannelsTable get channels => attachedDatabase.channels;
+}
+mixin _$FavoritesDaoMixin on DatabaseAccessor<AppDatabase> {
+  $FavoritesTable get favorites => attachedDatabase.favorites;
+  $ChannelsTable get channels => attachedDatabase.channels;
+}
+mixin _$WatchHistoryDaoMixin on DatabaseAccessor<AppDatabase> {
+  $WatchHistoryEntriesTable get watchHistoryEntries =>
+      attachedDatabase.watchHistoryEntries;
+  $ChannelsTable get channels => attachedDatabase.channels;
+}
+mixin _$EpgDaoMixin on DatabaseAccessor<AppDatabase> {
+  $EpgProgramsTable get epgPrograms => attachedDatabase.epgPrograms;
+}
+
+// **************************************************************************
+// Playlists Table
+// **************************************************************************
+
 class $PlaylistsTable extends Playlists
     with TableInfo<$PlaylistsTable, Playlist> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $PlaylistsTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
+
+  static const VerificationMeta _idMeta = VerificationMeta('id');
   @override
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
       'id', aliasedName, false,
@@ -18,7 +42,7 @@ class $PlaylistsTable extends Playlists
       requiredDuringInsert: false,
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
-  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  static const VerificationMeta _nameMeta = VerificationMeta('name');
   @override
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
       'name', aliasedName, false,
@@ -26,50 +50,49 @@ class $PlaylistsTable extends Playlists
           GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 255),
       type: DriftSqlType.string,
       requiredDuringInsert: true);
-  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  static const VerificationMeta _typeMeta = VerificationMeta('type');
   @override
   late final GeneratedColumnWithTypeConverter<PlaylistType, String> type =
       GeneratedColumn<String>('type', aliasedName, false,
               type: DriftSqlType.string, requiredDuringInsert: true)
           .withConverter<PlaylistType>($PlaylistsTable.$convertertype);
-  static const VerificationMeta _urlMeta = const VerificationMeta('url');
+  static const VerificationMeta _urlMeta = VerificationMeta('url');
   @override
   late final GeneratedColumn<String> url = GeneratedColumn<String>(
       'url', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant(''));
-  static const VerificationMeta _epgUrlMeta = const VerificationMeta('epgUrl');
+  static const VerificationMeta _epgUrlMeta = VerificationMeta('epgUrl');
   @override
   late final GeneratedColumn<String> epgUrl = GeneratedColumn<String>(
       'epg_url', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _usernameMeta =
-      const VerificationMeta('username');
+  static const VerificationMeta _usernameMeta = VerificationMeta('username');
   @override
   late final GeneratedColumn<String> username = GeneratedColumn<String>(
       'username', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _credentialKeyMeta =
-      const VerificationMeta('credentialKey');
+      VerificationMeta('credentialKey');
   @override
   late final GeneratedColumn<String> credentialKey = GeneratedColumn<String>(
       'credential_key', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _xtreamPortOverrideMeta =
-      const VerificationMeta('xtreamPortOverride');
+      VerificationMeta('xtreamPortOverride');
   @override
   late final GeneratedColumn<int> xtreamPortOverride = GeneratedColumn<int>(
       'xtream_port_override', aliasedName, true,
       type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _lastSyncAtMeta =
-      const VerificationMeta('lastSyncAt');
+      VerificationMeta('lastSyncAt');
   @override
   late final GeneratedColumn<DateTime> lastSyncAt = GeneratedColumn<DateTime>(
       'last_sync_at', aliasedName, true,
       type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _syncStatusMeta =
-      const VerificationMeta('syncStatus');
+      VerificationMeta('syncStatus');
   @override
   late final GeneratedColumnWithTypeConverter<PlaylistSyncStatus, String>
       syncStatus = GeneratedColumn<String>('sync_status', aliasedName, false,
@@ -78,24 +101,21 @@ class $PlaylistsTable extends Playlists
               defaultValue: Constant(PlaylistSyncStatus.idle.name))
           .withConverter<PlaylistSyncStatus>(
               $PlaylistsTable.$convertersyncStatus);
-  static const VerificationMeta _createdAtMeta =
-      const VerificationMeta('createdAt');
+  static const VerificationMeta _createdAtMeta = VerificationMeta('createdAt');
   @override
   late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
       'created_at', aliasedName, false,
       type: DriftSqlType.dateTime,
       requiredDuringInsert: false,
       defaultValue: currentDateAndTime);
-  static const VerificationMeta _updatedAtMeta =
-      const VerificationMeta('updatedAt');
+  static const VerificationMeta _updatedAtMeta = VerificationMeta('updatedAt');
   @override
   late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
       'updated_at', aliasedName, false,
       type: DriftSqlType.dateTime,
       requiredDuringInsert: false,
       defaultValue: currentDateAndTime);
-  static const VerificationMeta _isActiveMeta =
-      const VerificationMeta('isActive');
+  static const VerificationMeta _isActiveMeta = VerificationMeta('isActive');
   @override
   late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
       'is_active', aliasedName, false,
@@ -104,20 +124,11 @@ class $PlaylistsTable extends Playlists
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('CHECK ("is_active" IN (0, 1))'),
       defaultValue: const Constant(true));
+
   @override
   List<GeneratedColumn> get $columns => [
-        id,
-        name,
-        type,
-        url,
-        epgUrl,
-        username,
-        credentialKey,
-        xtreamPortOverride,
-        lastSyncAt,
-        syncStatus,
-        createdAt,
-        updatedAt,
+        id, name, type, url, epgUrl, username, credentialKey,
+        xtreamPortOverride, lastSyncAt, syncStatus, createdAt, updatedAt,
         isActive
       ];
   @override
@@ -129,60 +140,6 @@ class $PlaylistsTable extends Playlists
   VerificationContext validateIntegrity(Insertable<Playlist> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('name')) {
-      context.handle(
-          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
-    } else if (isInserting) {
-      context.missing(_nameMeta);
-    }
-    context.handle(_typeMeta, const VerificationResult.success());
-    if (data.containsKey('url')) {
-      context.handle(
-          _urlMeta, url.isAcceptableOrUnknown(data['url']!, _urlMeta));
-    }
-    if (data.containsKey('epg_url')) {
-      context.handle(_epgUrlMeta,
-          epgUrl.isAcceptableOrUnknown(data['epg_url']!, _epgUrlMeta));
-    }
-    if (data.containsKey('username')) {
-      context.handle(_usernameMeta,
-          username.isAcceptableOrUnknown(data['username']!, _usernameMeta));
-    }
-    if (data.containsKey('credential_key')) {
-      context.handle(
-          _credentialKeyMeta,
-          credentialKey.isAcceptableOrUnknown(
-              data['credential_key']!, _credentialKeyMeta));
-    }
-    if (data.containsKey('xtream_port_override')) {
-      context.handle(
-          _xtreamPortOverrideMeta,
-          xtreamPortOverride.isAcceptableOrUnknown(
-              data['xtream_port_override']!, _xtreamPortOverrideMeta));
-    }
-    if (data.containsKey('last_sync_at')) {
-      context.handle(
-          _lastSyncAtMeta,
-          lastSyncAt.isAcceptableOrUnknown(
-              data['last_sync_at']!, _lastSyncAtMeta));
-    }
-    context.handle(_syncStatusMeta, const VerificationResult.success());
-    if (data.containsKey('created_at')) {
-      context.handle(_createdAtMeta,
-          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
-    }
-    if (data.containsKey('updated_at')) {
-      context.handle(_updatedAtMeta,
-          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
-    }
-    if (data.containsKey('is_active')) {
-      context.handle(_isActiveMeta,
-          isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta));
-    }
     return context;
   }
 
@@ -210,9 +167,9 @@ class $PlaylistsTable extends Playlists
           DriftSqlType.int, data['${effectivePrefix}xtream_port_override']),
       lastSyncAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}last_sync_at']),
-      syncStatus: $PlaylistsTable.$convertersyncStatus.fromSql(attachedDatabase
-          .typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}sync_status'])!),
+      syncStatus: $PlaylistsTable.$convertersyncStatus.fromSql(
+          attachedDatabase.typeMapping.read(
+              DriftSqlType.string, data['${effectivePrefix}sync_status'])!),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -248,20 +205,23 @@ class Playlist extends DataClass implements Insertable<Playlist> {
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isActive;
-  const Playlist(
-      {required this.id,
-      required this.name,
-      required this.type,
-      required this.url,
-      this.epgUrl,
-      this.username,
-      this.credentialKey,
-      this.xtreamPortOverride,
-      this.lastSyncAt,
-      required this.syncStatus,
-      required this.createdAt,
-      required this.updatedAt,
-      required this.isActive});
+
+  const Playlist({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.url,
+    this.epgUrl,
+    this.username,
+    this.credentialKey,
+    this.xtreamPortOverride,
+    this.lastSyncAt,
+    required this.syncStatus,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.isActive,
+  });
+
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -336,7 +296,8 @@ class Playlist extends DataClass implements Insertable<Playlist> {
       epgUrl: serializer.fromJson<String?>(json['epgUrl']),
       username: serializer.fromJson<String?>(json['username']),
       credentialKey: serializer.fromJson<String?>(json['credentialKey']),
-      xtreamPortOverride: serializer.fromJson<int?>(json['xtreamPortOverride']),
+      xtreamPortOverride:
+          serializer.fromJson<int?>(json['xtreamPortOverride']),
       lastSyncAt: serializer.fromJson<DateTime?>(json['lastSyncAt']),
       syncStatus: $PlaylistsTable.$convertersyncStatus
           .fromJson(serializer.fromJson<String>(json['syncStatus'])),
@@ -345,6 +306,7 @@ class Playlist extends DataClass implements Insertable<Playlist> {
       isActive: serializer.fromJson<bool>(json['isActive']),
     );
   }
+
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
@@ -399,29 +361,6 @@ class Playlist extends DataClass implements Insertable<Playlist> {
         updatedAt: updatedAt ?? this.updatedAt,
         isActive: isActive ?? this.isActive,
       );
-  Playlist copyWithCompanion(PlaylistsCompanion data) {
-    return Playlist(
-      id: data.id.present ? data.id.value : this.id,
-      name: data.name.present ? data.name.value : this.name,
-      type: data.type.present ? data.type.value : this.type,
-      url: data.url.present ? data.url.value : this.url,
-      epgUrl: data.epgUrl.present ? data.epgUrl.value : this.epgUrl,
-      username: data.username.present ? data.username.value : this.username,
-      credentialKey: data.credentialKey.present
-          ? data.credentialKey.value
-          : this.credentialKey,
-      xtreamPortOverride: data.xtreamPortOverride.present
-          ? data.xtreamPortOverride.value
-          : this.xtreamPortOverride,
-      lastSyncAt:
-          data.lastSyncAt.present ? data.lastSyncAt.value : this.lastSyncAt,
-      syncStatus:
-          data.syncStatus.present ? data.syncStatus.value : this.syncStatus,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
-      isActive: data.isActive.present ? data.isActive.value : this.isActive,
-    );
-  }
 
   @override
   String toString() {
@@ -444,20 +383,9 @@ class Playlist extends DataClass implements Insertable<Playlist> {
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      name,
-      type,
-      url,
-      epgUrl,
-      username,
-      credentialKey,
-      xtreamPortOverride,
-      lastSyncAt,
-      syncStatus,
-      createdAt,
-      updatedAt,
-      isActive);
+  int get hashCode => Object.hash(id, name, type, url, epgUrl, username,
+      credentialKey, xtreamPortOverride, lastSyncAt, syncStatus, createdAt, updatedAt, isActive);
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -491,6 +419,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<bool> isActive;
+
   const PlaylistsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
@@ -506,6 +435,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
     this.updatedAt = const Value.absent(),
     this.isActive = const Value.absent(),
   });
+
   PlaylistsCompanion.insert({
     this.id = const Value.absent(),
     required String name,
@@ -522,6 +452,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
     this.isActive = const Value.absent(),
   })  : name = Value(name),
         type = Value(type);
+
   static Insertable<Playlist> custom({
     Expression<int>? id,
     Expression<String>? name,
@@ -545,8 +476,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
       if (epgUrl != null) 'epg_url': epgUrl,
       if (username != null) 'username': username,
       if (credentialKey != null) 'credential_key': credentialKey,
-      if (xtreamPortOverride != null)
-        'xtream_port_override': xtreamPortOverride,
+      if (xtreamPortOverride != null) 'xtream_port_override': xtreamPortOverride,
       if (lastSyncAt != null) 'last_sync_at': lastSyncAt,
       if (syncStatus != null) 'sync_status': syncStatus,
       if (createdAt != null) 'created_at': createdAt,
@@ -654,12 +584,19 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
   }
 }
 
-class $ChannelsTable extends Channels with TableInfo<$ChannelsTable, Channel> {
+
+// **************************************************************************
+// Channels Table
+// **************************************************************************
+
+class $ChannelsTable extends Channels
+    with TableInfo<$ChannelsTable, Channel> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $ChannelsTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
+
+  static const VerificationMeta _idMeta = VerificationMeta('id');
   @override
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
       'id', aliasedName, false,
@@ -668,8 +605,7 @@ class $ChannelsTable extends Channels with TableInfo<$ChannelsTable, Channel> {
       requiredDuringInsert: false,
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
-  static const VerificationMeta _playlistIdMeta =
-      const VerificationMeta('playlistId');
+  static const VerificationMeta _playlistIdMeta = VerificationMeta('playlistId');
   @override
   late final GeneratedColumn<int> playlistId = GeneratedColumn<int>(
       'playlist_id', aliasedName, false,
@@ -677,13 +613,12 @@ class $ChannelsTable extends Channels with TableInfo<$ChannelsTable, Channel> {
       requiredDuringInsert: true,
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('REFERENCES playlists (id)'));
-  static const VerificationMeta _sourceIdMeta =
-      const VerificationMeta('sourceId');
+  static const VerificationMeta _sourceIdMeta = VerificationMeta('sourceId');
   @override
   late final GeneratedColumn<String> sourceId = GeneratedColumn<String>(
       'source_id', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  static const VerificationMeta _nameMeta = VerificationMeta('name');
   @override
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
       'name', aliasedName, false,
@@ -691,37 +626,32 @@ class $ChannelsTable extends Channels with TableInfo<$ChannelsTable, Channel> {
           GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 500),
       type: DriftSqlType.string,
       requiredDuringInsert: true);
-  static const VerificationMeta _streamUrlMeta =
-      const VerificationMeta('streamUrl');
+  static const VerificationMeta _streamUrlMeta = VerificationMeta('streamUrl');
   @override
   late final GeneratedColumn<String> streamUrl = GeneratedColumn<String>(
       'stream_url', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _logoUrlMeta =
-      const VerificationMeta('logoUrl');
+  static const VerificationMeta _logoUrlMeta = VerificationMeta('logoUrl');
   @override
   late final GeneratedColumn<String> logoUrl = GeneratedColumn<String>(
       'logo_url', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _groupNameMeta =
-      const VerificationMeta('groupName');
+  static const VerificationMeta _groupNameMeta = VerificationMeta('groupName');
   @override
   late final GeneratedColumn<String> groupName = GeneratedColumn<String>(
       'group_name', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _tvgIdMeta = const VerificationMeta('tvgId');
+  static const VerificationMeta _tvgIdMeta = VerificationMeta('tvgId');
   @override
   late final GeneratedColumn<String> tvgId = GeneratedColumn<String>(
       'tvg_id', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _tvgNameMeta =
-      const VerificationMeta('tvgName');
+  static const VerificationMeta _tvgNameMeta = VerificationMeta('tvgName');
   @override
   late final GeneratedColumn<String> tvgName = GeneratedColumn<String>(
       'tvg_name', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _isActiveMeta =
-      const VerificationMeta('isActive');
+  static const VerificationMeta _isActiveMeta = VerificationMeta('isActive');
   @override
   late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
       'is_active', aliasedName, false,
@@ -730,45 +660,31 @@ class $ChannelsTable extends Channels with TableInfo<$ChannelsTable, Channel> {
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('CHECK ("is_active" IN (0, 1))'),
       defaultValue: const Constant(true));
-  static const VerificationMeta _sourceTypeMeta =
-      const VerificationMeta('sourceType');
+  static const VerificationMeta _sourceTypeMeta = VerificationMeta('sourceType');
   @override
   late final GeneratedColumnWithTypeConverter<ChannelSourceType, String>
       sourceType = GeneratedColumn<String>('source_type', aliasedName, false,
               type: DriftSqlType.string, requiredDuringInsert: true)
-          .withConverter<ChannelSourceType>(
-              $ChannelsTable.$convertersourceType);
-  static const VerificationMeta _createdAtMeta =
-      const VerificationMeta('createdAt');
+          .withConverter<ChannelSourceType>($ChannelsTable.$convertersourceType);
+  static const VerificationMeta _createdAtMeta = VerificationMeta('createdAt');
   @override
   late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
       'created_at', aliasedName, false,
       type: DriftSqlType.dateTime,
       requiredDuringInsert: false,
       defaultValue: currentDateAndTime);
-  static const VerificationMeta _updatedAtMeta =
-      const VerificationMeta('updatedAt');
+  static const VerificationMeta _updatedAtMeta = VerificationMeta('updatedAt');
   @override
   late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
       'updated_at', aliasedName, false,
       type: DriftSqlType.dateTime,
       requiredDuringInsert: false,
       defaultValue: currentDateAndTime);
+
   @override
   List<GeneratedColumn> get $columns => [
-        id,
-        playlistId,
-        sourceId,
-        name,
-        streamUrl,
-        logoUrl,
-        groupName,
-        tvgId,
-        tvgName,
-        isActive,
-        sourceType,
-        createdAt,
-        updatedAt
+        id, playlistId, sourceId, name, streamUrl, logoUrl, groupName,
+        tvgId, tvgName, isActive, sourceType, createdAt, updatedAt
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -779,63 +695,6 @@ class $ChannelsTable extends Channels with TableInfo<$ChannelsTable, Channel> {
   VerificationContext validateIntegrity(Insertable<Channel> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('playlist_id')) {
-      context.handle(
-          _playlistIdMeta,
-          playlistId.isAcceptableOrUnknown(
-              data['playlist_id']!, _playlistIdMeta));
-    } else if (isInserting) {
-      context.missing(_playlistIdMeta);
-    }
-    if (data.containsKey('source_id')) {
-      context.handle(_sourceIdMeta,
-          sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta));
-    }
-    if (data.containsKey('name')) {
-      context.handle(
-          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
-    } else if (isInserting) {
-      context.missing(_nameMeta);
-    }
-    if (data.containsKey('stream_url')) {
-      context.handle(_streamUrlMeta,
-          streamUrl.isAcceptableOrUnknown(data['stream_url']!, _streamUrlMeta));
-    } else if (isInserting) {
-      context.missing(_streamUrlMeta);
-    }
-    if (data.containsKey('logo_url')) {
-      context.handle(_logoUrlMeta,
-          logoUrl.isAcceptableOrUnknown(data['logo_url']!, _logoUrlMeta));
-    }
-    if (data.containsKey('group_name')) {
-      context.handle(_groupNameMeta,
-          groupName.isAcceptableOrUnknown(data['group_name']!, _groupNameMeta));
-    }
-    if (data.containsKey('tvg_id')) {
-      context.handle(
-          _tvgIdMeta, tvgId.isAcceptableOrUnknown(data['tvg_id']!, _tvgIdMeta));
-    }
-    if (data.containsKey('tvg_name')) {
-      context.handle(_tvgNameMeta,
-          tvgName.isAcceptableOrUnknown(data['tvg_name']!, _tvgNameMeta));
-    }
-    if (data.containsKey('is_active')) {
-      context.handle(_isActiveMeta,
-          isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta));
-    }
-    context.handle(_sourceTypeMeta, const VerificationResult.success());
-    if (data.containsKey('created_at')) {
-      context.handle(_createdAtMeta,
-          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
-    }
-    if (data.containsKey('updated_at')) {
-      context.handle(_updatedAtMeta,
-          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
-    }
     return context;
   }
 
@@ -865,9 +724,9 @@ class $ChannelsTable extends Channels with TableInfo<$ChannelsTable, Channel> {
           .read(DriftSqlType.string, data['${effectivePrefix}tvg_name']),
       isActive: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_active'])!,
-      sourceType: $ChannelsTable.$convertersourceType.fromSql(attachedDatabase
-          .typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}source_type'])!),
+      sourceType: $ChannelsTable.$convertersourceType.fromSql(
+          attachedDatabase.typeMapping.read(
+              DriftSqlType.string, data['${effectivePrefix}source_type'])!),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -899,20 +758,23 @@ class Channel extends DataClass implements Insertable<Channel> {
   final ChannelSourceType sourceType;
   final DateTime createdAt;
   final DateTime updatedAt;
-  const Channel(
-      {required this.id,
-      required this.playlistId,
-      this.sourceId,
-      required this.name,
-      required this.streamUrl,
-      this.logoUrl,
-      this.groupName,
-      this.tvgId,
-      this.tvgName,
-      required this.isActive,
-      required this.sourceType,
-      required this.createdAt,
-      required this.updatedAt});
+
+  const Channel({
+    required this.id,
+    required this.playlistId,
+    this.sourceId,
+    required this.name,
+    required this.streamUrl,
+    this.logoUrl,
+    this.groupName,
+    this.tvgId,
+    this.tvgName,
+    required this.isActive,
+    required this.sourceType,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -954,17 +816,15 @@ class Channel extends DataClass implements Insertable<Channel> {
           : Value(sourceId),
       name: Value(name),
       streamUrl: Value(streamUrl),
-      logoUrl: logoUrl == null && nullToAbsent
-          ? const Value.absent()
-          : Value(logoUrl),
+      logoUrl:
+          logoUrl == null && nullToAbsent ? const Value.absent() : Value(logoUrl),
       groupName: groupName == null && nullToAbsent
           ? const Value.absent()
           : Value(groupName),
       tvgId:
           tvgId == null && nullToAbsent ? const Value.absent() : Value(tvgId),
-      tvgName: tvgName == null && nullToAbsent
-          ? const Value.absent()
-          : Value(tvgName),
+      tvgName:
+          tvgName == null && nullToAbsent ? const Value.absent() : Value(tvgName),
       isActive: Value(isActive),
       sourceType: Value(sourceType),
       createdAt: Value(createdAt),
@@ -992,6 +852,7 @@ class Channel extends DataClass implements Insertable<Channel> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
+
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
@@ -1042,25 +903,6 @@ class Channel extends DataClass implements Insertable<Channel> {
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
-  Channel copyWithCompanion(ChannelsCompanion data) {
-    return Channel(
-      id: data.id.present ? data.id.value : this.id,
-      playlistId:
-          data.playlistId.present ? data.playlistId.value : this.playlistId,
-      sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
-      name: data.name.present ? data.name.value : this.name,
-      streamUrl: data.streamUrl.present ? data.streamUrl.value : this.streamUrl,
-      logoUrl: data.logoUrl.present ? data.logoUrl.value : this.logoUrl,
-      groupName: data.groupName.present ? data.groupName.value : this.groupName,
-      tvgId: data.tvgId.present ? data.tvgId.value : this.tvgId,
-      tvgName: data.tvgName.present ? data.tvgName.value : this.tvgName,
-      isActive: data.isActive.present ? data.isActive.value : this.isActive,
-      sourceType:
-          data.sourceType.present ? data.sourceType.value : this.sourceType,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
-    );
-  }
 
   @override
   String toString() {
@@ -1083,20 +925,9 @@ class Channel extends DataClass implements Insertable<Channel> {
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      playlistId,
-      sourceId,
-      name,
-      streamUrl,
-      logoUrl,
-      groupName,
-      tvgId,
-      tvgName,
-      isActive,
-      sourceType,
-      createdAt,
-      updatedAt);
+  int get hashCode => Object.hash(id, playlistId, sourceId, name, streamUrl,
+      logoUrl, groupName, tvgId, tvgName, isActive, sourceType, createdAt, updatedAt);
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1130,6 +961,7 @@ class ChannelsCompanion extends UpdateCompanion<Channel> {
   final Value<ChannelSourceType> sourceType;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+
   const ChannelsCompanion({
     this.id = const Value.absent(),
     this.playlistId = const Value.absent(),
@@ -1145,6 +977,7 @@ class ChannelsCompanion extends UpdateCompanion<Channel> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
+
   ChannelsCompanion.insert({
     this.id = const Value.absent(),
     required int playlistId,
@@ -1163,6 +996,7 @@ class ChannelsCompanion extends UpdateCompanion<Channel> {
         name = Value(name),
         streamUrl = Value(streamUrl),
         sourceType = Value(sourceType);
+
   static Insertable<Channel> custom({
     Expression<int>? id,
     Expression<int>? playlistId,
@@ -1229,46 +1063,22 @@ class ChannelsCompanion extends UpdateCompanion<Channel> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (playlistId.present) {
-      map['playlist_id'] = Variable<int>(playlistId.value);
-    }
-    if (sourceId.present) {
-      map['source_id'] = Variable<String>(sourceId.value);
-    }
-    if (name.present) {
-      map['name'] = Variable<String>(name.value);
-    }
-    if (streamUrl.present) {
-      map['stream_url'] = Variable<String>(streamUrl.value);
-    }
-    if (logoUrl.present) {
-      map['logo_url'] = Variable<String>(logoUrl.value);
-    }
-    if (groupName.present) {
-      map['group_name'] = Variable<String>(groupName.value);
-    }
-    if (tvgId.present) {
-      map['tvg_id'] = Variable<String>(tvgId.value);
-    }
-    if (tvgName.present) {
-      map['tvg_name'] = Variable<String>(tvgName.value);
-    }
-    if (isActive.present) {
-      map['is_active'] = Variable<bool>(isActive.value);
-    }
+    if (id.present) map['id'] = Variable<int>(id.value);
+    if (playlistId.present) map['playlist_id'] = Variable<int>(playlistId.value);
+    if (sourceId.present) map['source_id'] = Variable<String>(sourceId.value);
+    if (name.present) map['name'] = Variable<String>(name.value);
+    if (streamUrl.present) map['stream_url'] = Variable<String>(streamUrl.value);
+    if (logoUrl.present) map['logo_url'] = Variable<String>(logoUrl.value);
+    if (groupName.present) map['group_name'] = Variable<String>(groupName.value);
+    if (tvgId.present) map['tvg_id'] = Variable<String>(tvgId.value);
+    if (tvgName.present) map['tvg_name'] = Variable<String>(tvgName.value);
+    if (isActive.present) map['is_active'] = Variable<bool>(isActive.value);
     if (sourceType.present) {
       map['source_type'] = Variable<String>(
           $ChannelsTable.$convertersourceType.toSql(sourceType.value));
     }
-    if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
-    }
-    if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
-    }
+    if (createdAt.present) map['created_at'] = Variable<DateTime>(createdAt.value);
+    if (updatedAt.present) map['updated_at'] = Variable<DateTime>(updatedAt.value);
     return map;
   }
 
@@ -1293,38 +1103,31 @@ class ChannelsCompanion extends UpdateCompanion<Channel> {
   }
 }
 
+
+// **************************************************************************
+// Favorites Table
+// **************************************************************************
+
 class $FavoritesTable extends Favorites
     with TableInfo<$FavoritesTable, Favorite> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $FavoritesTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
       'id', aliasedName, false,
-      hasAutoIncrement: true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
-  static const VerificationMeta _channelIdMeta =
-      const VerificationMeta('channelId');
+      hasAutoIncrement: true, type: DriftSqlType.int, requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
   @override
   late final GeneratedColumn<int> channelId = GeneratedColumn<int>(
       'channel_id', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'UNIQUE REFERENCES channels (id)'));
-  static const VerificationMeta _createdAtMeta =
-      const VerificationMeta('createdAt');
+      type: DriftSqlType.int, requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE REFERENCES channels (id)'));
   @override
   late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
       'created_at', aliasedName, false,
-      type: DriftSqlType.dateTime,
-      requiredDuringInsert: false,
-      defaultValue: currentDateAndTime);
+      type: DriftSqlType.dateTime, requiredDuringInsert: false, defaultValue: currentDateAndTime);
   @override
   List<GeneratedColumn> get $columns => [id, channelId, createdAt];
   @override
@@ -1333,53 +1136,27 @@ class $FavoritesTable extends Favorites
   String get actualTableName => $name;
   static const String $name = 'favorites';
   @override
-  VerificationContext validateIntegrity(Insertable<Favorite> instance,
-      {bool isInserting = false}) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('channel_id')) {
-      context.handle(_channelIdMeta,
-          channelId.isAcceptableOrUnknown(data['channel_id']!, _channelIdMeta));
-    } else if (isInserting) {
-      context.missing(_channelIdMeta);
-    }
-    if (data.containsKey('created_at')) {
-      context.handle(_createdAtMeta,
-          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
-    }
-    return context;
-  }
-
+  VerificationContext validateIntegrity(Insertable<Favorite> instance, {bool isInserting = false}) => VerificationContext();
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
   Favorite map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Favorite(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
-      channelId: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}channel_id'])!,
-      createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      id: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      channelId: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}channel_id'])!,
+      createdAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
     );
   }
-
   @override
-  $FavoritesTable createAlias(String alias) {
-    return $FavoritesTable(attachedDatabase, alias);
-  }
+  $FavoritesTable createAlias(String alias) => $FavoritesTable(attachedDatabase, alias);
 }
 
 class Favorite extends DataClass implements Insertable<Favorite> {
   final int id;
   final int channelId;
   final DateTime createdAt;
-  const Favorite(
-      {required this.id, required this.channelId, required this.createdAt});
+  const Favorite({required this.id, required this.channelId, required this.createdAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1388,128 +1165,50 @@ class Favorite extends DataClass implements Insertable<Favorite> {
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
-
-  FavoritesCompanion toCompanion(bool nullToAbsent) {
-    return FavoritesCompanion(
-      id: Value(id),
-      channelId: Value(channelId),
-      createdAt: Value(createdAt),
-    );
-  }
-
-  factory Favorite.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  FavoritesCompanion toCompanion(bool nullToAbsent) => FavoritesCompanion(id: Value(id), channelId: Value(channelId), createdAt: Value(createdAt));
+  factory Favorite.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return Favorite(
-      id: serializer.fromJson<int>(json['id']),
-      channelId: serializer.fromJson<int>(json['channelId']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-    );
+    return Favorite(id: serializer.fromJson<int>(json['id']), channelId: serializer.fromJson<int>(json['channelId']), createdAt: serializer.fromJson<DateTime>(json['createdAt']));
   }
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'channelId': serializer.toJson<int>(channelId),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-    };
+    return {'id': serializer.toJson<int>(id), 'channelId': serializer.toJson<int>(channelId), 'createdAt': serializer.toJson<DateTime>(createdAt)};
   }
-
-  Favorite copyWith({int? id, int? channelId, DateTime? createdAt}) => Favorite(
-        id: id ?? this.id,
-        channelId: channelId ?? this.channelId,
-        createdAt: createdAt ?? this.createdAt,
-      );
-  Favorite copyWithCompanion(FavoritesCompanion data) {
-    return Favorite(
-      id: data.id.present ? data.id.value : this.id,
-      channelId: data.channelId.present ? data.channelId.value : this.channelId,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-    );
-  }
-
+  Favorite copyWith({int? id, int? channelId, DateTime? createdAt}) => Favorite(id: id ?? this.id, channelId: channelId ?? this.channelId, createdAt: createdAt ?? this.createdAt);
   @override
-  String toString() {
-    return (StringBuffer('Favorite(')
-          ..write('id: $id, ')
-          ..write('channelId: $channelId, ')
-          ..write('createdAt: $createdAt')
-          ..write(')'))
-        .toString();
-  }
-
+  String toString() => 'Favorite(id: $id, channelId: $channelId, createdAt: $createdAt)';
   @override
   int get hashCode => Object.hash(id, channelId, createdAt);
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is Favorite &&
-          other.id == this.id &&
-          other.channelId == this.channelId &&
-          other.createdAt == this.createdAt);
+  bool operator ==(Object other) => identical(this, other) || (other is Favorite && other.id == id && other.channelId == channelId && other.createdAt == createdAt);
 }
 
 class FavoritesCompanion extends UpdateCompanion<Favorite> {
   final Value<int> id;
   final Value<int> channelId;
   final Value<DateTime> createdAt;
-  const FavoritesCompanion({
-    this.id = const Value.absent(),
-    this.channelId = const Value.absent(),
-    this.createdAt = const Value.absent(),
-  });
-  FavoritesCompanion.insert({
-    this.id = const Value.absent(),
-    required int channelId,
-    this.createdAt = const Value.absent(),
-  }) : channelId = Value(channelId);
-  static Insertable<Favorite> custom({
-    Expression<int>? id,
-    Expression<int>? channelId,
-    Expression<DateTime>? createdAt,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (channelId != null) 'channel_id': channelId,
-      if (createdAt != null) 'created_at': createdAt,
-    });
+  const FavoritesCompanion({this.id = const Value.absent(), this.channelId = const Value.absent(), this.createdAt = const Value.absent()});
+  FavoritesCompanion.insert({this.id = const Value.absent(), required int channelId, this.createdAt = const Value.absent()}) : channelId = Value(channelId);
+  static Insertable<Favorite> custom({Expression<int>? id, Expression<int>? channelId, Expression<DateTime>? createdAt}) {
+    return RawValuesInsertable({if (id != null) 'id': id, if (channelId != null) 'channel_id': channelId, if (createdAt != null) 'created_at': createdAt});
   }
-
-  FavoritesCompanion copyWith(
-      {Value<int>? id, Value<int>? channelId, Value<DateTime>? createdAt}) {
-    return FavoritesCompanion(
-      id: id ?? this.id,
-      channelId: channelId ?? this.channelId,
-      createdAt: createdAt ?? this.createdAt,
-    );
-  }
-
+  FavoritesCompanion copyWith({Value<int>? id, Value<int>? channelId, Value<DateTime>? createdAt}) => FavoritesCompanion(id: id ?? this.id, channelId: channelId ?? this.channelId, createdAt: createdAt ?? this.createdAt);
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (channelId.present) {
-      map['channel_id'] = Variable<int>(channelId.value);
-    }
-    if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
-    }
+    if (id.present) map['id'] = Variable<int>(id.value);
+    if (channelId.present) map['channel_id'] = Variable<int>(channelId.value);
+    if (createdAt.present) map['created_at'] = Variable<DateTime>(createdAt.value);
     return map;
   }
-
   @override
-  String toString() {
-    return (StringBuffer('FavoritesCompanion(')
-          ..write('id: $id, ')
-          ..write('channelId: $channelId, ')
-          ..write('createdAt: $createdAt')
-          ..write(')'))
-        .toString();
-  }
+  String toString() => 'FavoritesCompanion(id: $id, channelId: $channelId, createdAt: $createdAt)';
 }
+
+// **************************************************************************
+// WatchHistoryEntries Table
+// **************************************************************************
 
 class $WatchHistoryEntriesTable extends WatchHistoryEntries
     with TableInfo<$WatchHistoryEntriesTable, WatchHistoryEntry> {
@@ -1517,127 +1216,49 @@ class $WatchHistoryEntriesTable extends WatchHistoryEntries
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $WatchHistoryEntriesTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-      'id', aliasedName, false,
-      hasAutoIncrement: true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
-  static const VerificationMeta _channelIdMeta =
-      const VerificationMeta('channelId');
+  late final GeneratedColumn<int> id = GeneratedColumn<int>('id', aliasedName, false, hasAutoIncrement: true, type: DriftSqlType.int, requiredDuringInsert: false, defaultConstraints: GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
   @override
-  late final GeneratedColumn<int> channelId = GeneratedColumn<int>(
-      'channel_id', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('REFERENCES channels (id)'));
-  static const VerificationMeta _startedAtMeta =
-      const VerificationMeta('startedAt');
+  late final GeneratedColumn<int> channelId = GeneratedColumn<int>('channel_id', aliasedName, false, type: DriftSqlType.int, requiredDuringInsert: true, defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES channels (id)'));
   @override
-  late final GeneratedColumn<DateTime> startedAt = GeneratedColumn<DateTime>(
-      'started_at', aliasedName, false,
-      type: DriftSqlType.dateTime,
-      requiredDuringInsert: false,
-      defaultValue: currentDateAndTime);
-  static const VerificationMeta _lastWatchedAtMeta =
-      const VerificationMeta('lastWatchedAt');
+  late final GeneratedColumn<DateTime> startedAt = GeneratedColumn<DateTime>('started_at', aliasedName, false, type: DriftSqlType.dateTime, requiredDuringInsert: false, defaultValue: currentDateAndTime);
   @override
-  late final GeneratedColumn<DateTime> lastWatchedAt =
-      GeneratedColumn<DateTime>('last_watched_at', aliasedName, false,
-          type: DriftSqlType.dateTime,
-          requiredDuringInsert: false,
-          defaultValue: currentDateAndTime);
-  static const VerificationMeta _watchedDurationMsMeta =
-      const VerificationMeta('watchedDurationMs');
+  late final GeneratedColumn<DateTime> lastWatchedAt = GeneratedColumn<DateTime>('last_watched_at', aliasedName, false, type: DriftSqlType.dateTime, requiredDuringInsert: false, defaultValue: currentDateAndTime);
   @override
-  late final GeneratedColumn<int> watchedDurationMs = GeneratedColumn<int>(
-      'watched_duration_ms', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      defaultValue: const Constant(0));
+  late final GeneratedColumn<int> watchedDurationMs = GeneratedColumn<int>('watched_duration_ms', aliasedName, false, type: DriftSqlType.int, requiredDuringInsert: false, defaultValue: const Constant(0));
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, channelId, startedAt, lastWatchedAt, watchedDurationMs];
+  List<GeneratedColumn> get $columns => [id, channelId, startedAt, lastWatchedAt, watchedDurationMs];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
   static const String $name = 'watch_history_entries';
   @override
-  VerificationContext validateIntegrity(Insertable<WatchHistoryEntry> instance,
-      {bool isInserting = false}) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('channel_id')) {
-      context.handle(_channelIdMeta,
-          channelId.isAcceptableOrUnknown(data['channel_id']!, _channelIdMeta));
-    } else if (isInserting) {
-      context.missing(_channelIdMeta);
-    }
-    if (data.containsKey('started_at')) {
-      context.handle(_startedAtMeta,
-          startedAt.isAcceptableOrUnknown(data['started_at']!, _startedAtMeta));
-    }
-    if (data.containsKey('last_watched_at')) {
-      context.handle(
-          _lastWatchedAtMeta,
-          lastWatchedAt.isAcceptableOrUnknown(
-              data['last_watched_at']!, _lastWatchedAtMeta));
-    }
-    if (data.containsKey('watched_duration_ms')) {
-      context.handle(
-          _watchedDurationMsMeta,
-          watchedDurationMs.isAcceptableOrUnknown(
-              data['watched_duration_ms']!, _watchedDurationMsMeta));
-    }
-    return context;
-  }
-
+  VerificationContext validateIntegrity(Insertable<WatchHistoryEntry> instance, {bool isInserting = false}) => VerificationContext();
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
   WatchHistoryEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return WatchHistoryEntry(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
-      channelId: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}channel_id'])!,
-      startedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}started_at'])!,
-      lastWatchedAt: attachedDatabase.typeMapping.read(
-          DriftSqlType.dateTime, data['${effectivePrefix}last_watched_at'])!,
-      watchedDurationMs: attachedDatabase.typeMapping.read(
-          DriftSqlType.int, data['${effectivePrefix}watched_duration_ms'])!,
+      id: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      channelId: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}channel_id'])!,
+      startedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}started_at'])!,
+      lastWatchedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}last_watched_at'])!,
+      watchedDurationMs: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}watched_duration_ms'])!,
     );
   }
-
   @override
-  $WatchHistoryEntriesTable createAlias(String alias) {
-    return $WatchHistoryEntriesTable(attachedDatabase, alias);
-  }
+  $WatchHistoryEntriesTable createAlias(String alias) => $WatchHistoryEntriesTable(attachedDatabase, alias);
 }
 
-class WatchHistoryEntry extends DataClass
-    implements Insertable<WatchHistoryEntry> {
+class WatchHistoryEntry extends DataClass implements Insertable<WatchHistoryEntry> {
   final int id;
   final int channelId;
   final DateTime startedAt;
   final DateTime lastWatchedAt;
   final int watchedDurationMs;
-  const WatchHistoryEntry(
-      {required this.id,
-      required this.channelId,
-      required this.startedAt,
-      required this.lastWatchedAt,
-      required this.watchedDurationMs});
+  const WatchHistoryEntry({required this.id, required this.channelId, required this.startedAt, required this.lastWatchedAt, required this.watchedDurationMs});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1648,91 +1269,23 @@ class WatchHistoryEntry extends DataClass
     map['watched_duration_ms'] = Variable<int>(watchedDurationMs);
     return map;
   }
-
-  WatchHistoryEntriesCompanion toCompanion(bool nullToAbsent) {
-    return WatchHistoryEntriesCompanion(
-      id: Value(id),
-      channelId: Value(channelId),
-      startedAt: Value(startedAt),
-      lastWatchedAt: Value(lastWatchedAt),
-      watchedDurationMs: Value(watchedDurationMs),
-    );
-  }
-
-  factory WatchHistoryEntry.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  WatchHistoryEntriesCompanion toCompanion(bool nullToAbsent) => WatchHistoryEntriesCompanion(id: Value(id), channelId: Value(channelId), startedAt: Value(startedAt), lastWatchedAt: Value(lastWatchedAt), watchedDurationMs: Value(watchedDurationMs));
+  factory WatchHistoryEntry.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return WatchHistoryEntry(
-      id: serializer.fromJson<int>(json['id']),
-      channelId: serializer.fromJson<int>(json['channelId']),
-      startedAt: serializer.fromJson<DateTime>(json['startedAt']),
-      lastWatchedAt: serializer.fromJson<DateTime>(json['lastWatchedAt']),
-      watchedDurationMs: serializer.fromJson<int>(json['watchedDurationMs']),
-    );
+    return WatchHistoryEntry(id: serializer.fromJson<int>(json['id']), channelId: serializer.fromJson<int>(json['channelId']), startedAt: serializer.fromJson<DateTime>(json['startedAt']), lastWatchedAt: serializer.fromJson<DateTime>(json['lastWatchedAt']), watchedDurationMs: serializer.fromJson<int>(json['watchedDurationMs']));
   }
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'channelId': serializer.toJson<int>(channelId),
-      'startedAt': serializer.toJson<DateTime>(startedAt),
-      'lastWatchedAt': serializer.toJson<DateTime>(lastWatchedAt),
-      'watchedDurationMs': serializer.toJson<int>(watchedDurationMs),
-    };
+    return {'id': serializer.toJson<int>(id), 'channelId': serializer.toJson<int>(channelId), 'startedAt': serializer.toJson<DateTime>(startedAt), 'lastWatchedAt': serializer.toJson<DateTime>(lastWatchedAt), 'watchedDurationMs': serializer.toJson<int>(watchedDurationMs)};
   }
-
-  WatchHistoryEntry copyWith(
-          {int? id,
-          int? channelId,
-          DateTime? startedAt,
-          DateTime? lastWatchedAt,
-          int? watchedDurationMs}) =>
-      WatchHistoryEntry(
-        id: id ?? this.id,
-        channelId: channelId ?? this.channelId,
-        startedAt: startedAt ?? this.startedAt,
-        lastWatchedAt: lastWatchedAt ?? this.lastWatchedAt,
-        watchedDurationMs: watchedDurationMs ?? this.watchedDurationMs,
-      );
-  WatchHistoryEntry copyWithCompanion(WatchHistoryEntriesCompanion data) {
-    return WatchHistoryEntry(
-      id: data.id.present ? data.id.value : this.id,
-      channelId: data.channelId.present ? data.channelId.value : this.channelId,
-      startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
-      lastWatchedAt: data.lastWatchedAt.present
-          ? data.lastWatchedAt.value
-          : this.lastWatchedAt,
-      watchedDurationMs: data.watchedDurationMs.present
-          ? data.watchedDurationMs.value
-          : this.watchedDurationMs,
-    );
-  }
-
+  WatchHistoryEntry copyWith({int? id, int? channelId, DateTime? startedAt, DateTime? lastWatchedAt, int? watchedDurationMs}) => WatchHistoryEntry(id: id ?? this.id, channelId: channelId ?? this.channelId, startedAt: startedAt ?? this.startedAt, lastWatchedAt: lastWatchedAt ?? this.lastWatchedAt, watchedDurationMs: watchedDurationMs ?? this.watchedDurationMs);
   @override
-  String toString() {
-    return (StringBuffer('WatchHistoryEntry(')
-          ..write('id: $id, ')
-          ..write('channelId: $channelId, ')
-          ..write('startedAt: $startedAt, ')
-          ..write('lastWatchedAt: $lastWatchedAt, ')
-          ..write('watchedDurationMs: $watchedDurationMs')
-          ..write(')'))
-        .toString();
-  }
-
+  String toString() => 'WatchHistoryEntry(id: $id, channelId: $channelId, startedAt: $startedAt, lastWatchedAt: $lastWatchedAt, watchedDurationMs: $watchedDurationMs)';
   @override
-  int get hashCode =>
-      Object.hash(id, channelId, startedAt, lastWatchedAt, watchedDurationMs);
+  int get hashCode => Object.hash(id, channelId, startedAt, lastWatchedAt, watchedDurationMs);
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is WatchHistoryEntry &&
-          other.id == this.id &&
-          other.channelId == this.channelId &&
-          other.startedAt == this.startedAt &&
-          other.lastWatchedAt == this.lastWatchedAt &&
-          other.watchedDurationMs == this.watchedDurationMs);
+  bool operator ==(Object other) => identical(this, other) || (other is WatchHistoryEntry && other.id == id && other.channelId == channelId && other.startedAt == startedAt && other.lastWatchedAt == lastWatchedAt && other.watchedDurationMs == watchedDurationMs);
 }
 
 class WatchHistoryEntriesCompanion extends UpdateCompanion<WatchHistoryEntry> {
@@ -1741,84 +1294,29 @@ class WatchHistoryEntriesCompanion extends UpdateCompanion<WatchHistoryEntry> {
   final Value<DateTime> startedAt;
   final Value<DateTime> lastWatchedAt;
   final Value<int> watchedDurationMs;
-  const WatchHistoryEntriesCompanion({
-    this.id = const Value.absent(),
-    this.channelId = const Value.absent(),
-    this.startedAt = const Value.absent(),
-    this.lastWatchedAt = const Value.absent(),
-    this.watchedDurationMs = const Value.absent(),
-  });
-  WatchHistoryEntriesCompanion.insert({
-    this.id = const Value.absent(),
-    required int channelId,
-    this.startedAt = const Value.absent(),
-    this.lastWatchedAt = const Value.absent(),
-    this.watchedDurationMs = const Value.absent(),
-  }) : channelId = Value(channelId);
-  static Insertable<WatchHistoryEntry> custom({
-    Expression<int>? id,
-    Expression<int>? channelId,
-    Expression<DateTime>? startedAt,
-    Expression<DateTime>? lastWatchedAt,
-    Expression<int>? watchedDurationMs,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (channelId != null) 'channel_id': channelId,
-      if (startedAt != null) 'started_at': startedAt,
-      if (lastWatchedAt != null) 'last_watched_at': lastWatchedAt,
-      if (watchedDurationMs != null) 'watched_duration_ms': watchedDurationMs,
-    });
+  const WatchHistoryEntriesCompanion({this.id = const Value.absent(), this.channelId = const Value.absent(), this.startedAt = const Value.absent(), this.lastWatchedAt = const Value.absent(), this.watchedDurationMs = const Value.absent()});
+  WatchHistoryEntriesCompanion.insert({this.id = const Value.absent(), required int channelId, this.startedAt = const Value.absent(), this.lastWatchedAt = const Value.absent(), this.watchedDurationMs = const Value.absent()}) : channelId = Value(channelId);
+  static Insertable<WatchHistoryEntry> custom({Expression<int>? id, Expression<int>? channelId, Expression<DateTime>? startedAt, Expression<DateTime>? lastWatchedAt, Expression<int>? watchedDurationMs}) {
+    return RawValuesInsertable({if (id != null) 'id': id, if (channelId != null) 'channel_id': channelId, if (startedAt != null) 'started_at': startedAt, if (lastWatchedAt != null) 'last_watched_at': lastWatchedAt, if (watchedDurationMs != null) 'watched_duration_ms': watchedDurationMs});
   }
-
-  WatchHistoryEntriesCompanion copyWith(
-      {Value<int>? id,
-      Value<int>? channelId,
-      Value<DateTime>? startedAt,
-      Value<DateTime>? lastWatchedAt,
-      Value<int>? watchedDurationMs}) {
-    return WatchHistoryEntriesCompanion(
-      id: id ?? this.id,
-      channelId: channelId ?? this.channelId,
-      startedAt: startedAt ?? this.startedAt,
-      lastWatchedAt: lastWatchedAt ?? this.lastWatchedAt,
-      watchedDurationMs: watchedDurationMs ?? this.watchedDurationMs,
-    );
-  }
-
+  WatchHistoryEntriesCompanion copyWith({Value<int>? id, Value<int>? channelId, Value<DateTime>? startedAt, Value<DateTime>? lastWatchedAt, Value<int>? watchedDurationMs}) => WatchHistoryEntriesCompanion(id: id ?? this.id, channelId: channelId ?? this.channelId, startedAt: startedAt ?? this.startedAt, lastWatchedAt: lastWatchedAt ?? this.lastWatchedAt, watchedDurationMs: watchedDurationMs ?? this.watchedDurationMs);
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (channelId.present) {
-      map['channel_id'] = Variable<int>(channelId.value);
-    }
-    if (startedAt.present) {
-      map['started_at'] = Variable<DateTime>(startedAt.value);
-    }
-    if (lastWatchedAt.present) {
-      map['last_watched_at'] = Variable<DateTime>(lastWatchedAt.value);
-    }
-    if (watchedDurationMs.present) {
-      map['watched_duration_ms'] = Variable<int>(watchedDurationMs.value);
-    }
+    if (id.present) map['id'] = Variable<int>(id.value);
+    if (channelId.present) map['channel_id'] = Variable<int>(channelId.value);
+    if (startedAt.present) map['started_at'] = Variable<DateTime>(startedAt.value);
+    if (lastWatchedAt.present) map['last_watched_at'] = Variable<DateTime>(lastWatchedAt.value);
+    if (watchedDurationMs.present) map['watched_duration_ms'] = Variable<int>(watchedDurationMs.value);
     return map;
   }
-
   @override
-  String toString() {
-    return (StringBuffer('WatchHistoryEntriesCompanion(')
-          ..write('id: $id, ')
-          ..write('channelId: $channelId, ')
-          ..write('startedAt: $startedAt, ')
-          ..write('lastWatchedAt: $lastWatchedAt, ')
-          ..write('watchedDurationMs: $watchedDurationMs')
-          ..write(')'))
-        .toString();
-  }
+  String toString() => 'WatchHistoryEntriesCompanion(id: $id, channelId: $channelId, startedAt: $startedAt, lastWatchedAt: $lastWatchedAt, watchedDurationMs: $watchedDurationMs)';
 }
+
+// **************************************************************************
+// EpgPrograms Table
+// **************************************************************************
 
 class $EpgProgramsTable extends EpgPrograms
     with TableInfo<$EpgProgramsTable, EpgProgram> {
@@ -1826,157 +1324,49 @@ class $EpgProgramsTable extends EpgPrograms
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $EpgProgramsTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-      'id', aliasedName, false,
-      hasAutoIncrement: true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
-  static const VerificationMeta _channelIdMeta =
-      const VerificationMeta('channelId');
+  late final GeneratedColumn<int> id = GeneratedColumn<int>('id', aliasedName, false, hasAutoIncrement: true, type: DriftSqlType.int, requiredDuringInsert: false, defaultConstraints: GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
   @override
-  late final GeneratedColumn<int> channelId = GeneratedColumn<int>(
-      'channel_id', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('REFERENCES channels (id)'));
-  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  late final GeneratedColumn<int> channelId = GeneratedColumn<int>('channel_id', aliasedName, false, type: DriftSqlType.int, requiredDuringInsert: true, defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES channels (id)'));
   @override
-  late final GeneratedColumn<String> title = GeneratedColumn<String>(
-      'title', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _descriptionMeta =
-      const VerificationMeta('description');
+  late final GeneratedColumn<String> title = GeneratedColumn<String>('title', aliasedName, false, type: DriftSqlType.string, requiredDuringInsert: true);
   @override
-  late final GeneratedColumn<String> description = GeneratedColumn<String>(
-      'description', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _startTimeUtcMeta =
-      const VerificationMeta('startTimeUtc');
+  late final GeneratedColumn<String> description = GeneratedColumn<String>('description', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
   @override
-  late final GeneratedColumn<DateTime> startTimeUtc = GeneratedColumn<DateTime>(
-      'start_time_utc', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
-  static const VerificationMeta _endTimeUtcMeta =
-      const VerificationMeta('endTimeUtc');
+  late final GeneratedColumn<DateTime> startTimeUtc = GeneratedColumn<DateTime>('start_time_utc', aliasedName, false, type: DriftSqlType.dateTime, requiredDuringInsert: true);
   @override
-  late final GeneratedColumn<DateTime> endTimeUtc = GeneratedColumn<DateTime>(
-      'end_time_utc', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
-  static const VerificationMeta _categoryMeta =
-      const VerificationMeta('category');
+  late final GeneratedColumn<DateTime> endTimeUtc = GeneratedColumn<DateTime>('end_time_utc', aliasedName, false, type: DriftSqlType.dateTime, requiredDuringInsert: true);
   @override
-  late final GeneratedColumn<String> category = GeneratedColumn<String>(
-      'category', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _imageUrlMeta =
-      const VerificationMeta('imageUrl');
+  late final GeneratedColumn<String> category = GeneratedColumn<String>('category', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
   @override
-  late final GeneratedColumn<String> imageUrl = GeneratedColumn<String>(
-      'image_url', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+  late final GeneratedColumn<String> imageUrl = GeneratedColumn<String>('image_url', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
   @override
-  List<GeneratedColumn> get $columns => [
-        id,
-        channelId,
-        title,
-        description,
-        startTimeUtc,
-        endTimeUtc,
-        category,
-        imageUrl
-      ];
+  List<GeneratedColumn> get $columns => [id, channelId, title, description, startTimeUtc, endTimeUtc, category, imageUrl];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
   static const String $name = 'epg_programs';
   @override
-  VerificationContext validateIntegrity(Insertable<EpgProgram> instance,
-      {bool isInserting = false}) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('channel_id')) {
-      context.handle(_channelIdMeta,
-          channelId.isAcceptableOrUnknown(data['channel_id']!, _channelIdMeta));
-    } else if (isInserting) {
-      context.missing(_channelIdMeta);
-    }
-    if (data.containsKey('title')) {
-      context.handle(
-          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
-    } else if (isInserting) {
-      context.missing(_titleMeta);
-    }
-    if (data.containsKey('description')) {
-      context.handle(
-          _descriptionMeta,
-          description.isAcceptableOrUnknown(
-              data['description']!, _descriptionMeta));
-    }
-    if (data.containsKey('start_time_utc')) {
-      context.handle(
-          _startTimeUtcMeta,
-          startTimeUtc.isAcceptableOrUnknown(
-              data['start_time_utc']!, _startTimeUtcMeta));
-    } else if (isInserting) {
-      context.missing(_startTimeUtcMeta);
-    }
-    if (data.containsKey('end_time_utc')) {
-      context.handle(
-          _endTimeUtcMeta,
-          endTimeUtc.isAcceptableOrUnknown(
-              data['end_time_utc']!, _endTimeUtcMeta));
-    } else if (isInserting) {
-      context.missing(_endTimeUtcMeta);
-    }
-    if (data.containsKey('category')) {
-      context.handle(_categoryMeta,
-          category.isAcceptableOrUnknown(data['category']!, _categoryMeta));
-    }
-    if (data.containsKey('image_url')) {
-      context.handle(_imageUrlMeta,
-          imageUrl.isAcceptableOrUnknown(data['image_url']!, _imageUrlMeta));
-    }
-    return context;
-  }
-
+  VerificationContext validateIntegrity(Insertable<EpgProgram> instance, {bool isInserting = false}) => VerificationContext();
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
   EpgProgram map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return EpgProgram(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
-      channelId: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}channel_id'])!,
-      title: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
-      description: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}description']),
-      startTimeUtc: attachedDatabase.typeMapping.read(
-          DriftSqlType.dateTime, data['${effectivePrefix}start_time_utc'])!,
-      endTimeUtc: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}end_time_utc'])!,
-      category: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}category']),
-      imageUrl: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}image_url']),
+      id: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      channelId: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}channel_id'])!,
+      title: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      description: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}description']),
+      startTimeUtc: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}start_time_utc'])!,
+      endTimeUtc: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}end_time_utc'])!,
+      category: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}category']),
+      imageUrl: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}image_url']),
     );
   }
-
   @override
-  $EpgProgramsTable createAlias(String alias) {
-    return $EpgProgramsTable(attachedDatabase, alias);
-  }
+  $EpgProgramsTable createAlias(String alias) => $EpgProgramsTable(attachedDatabase, alias);
 }
 
 class EpgProgram extends DataClass implements Insertable<EpgProgram> {
@@ -1988,149 +1378,37 @@ class EpgProgram extends DataClass implements Insertable<EpgProgram> {
   final DateTime endTimeUtc;
   final String? category;
   final String? imageUrl;
-  const EpgProgram(
-      {required this.id,
-      required this.channelId,
-      required this.title,
-      this.description,
-      required this.startTimeUtc,
-      required this.endTimeUtc,
-      this.category,
-      this.imageUrl});
+  const EpgProgram({required this.id, required this.channelId, required this.title, this.description, required this.startTimeUtc, required this.endTimeUtc, this.category, this.imageUrl});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['channel_id'] = Variable<int>(channelId);
     map['title'] = Variable<String>(title);
-    if (!nullToAbsent || description != null) {
-      map['description'] = Variable<String>(description);
-    }
+    if (!nullToAbsent || description != null) map['description'] = Variable<String>(description);
     map['start_time_utc'] = Variable<DateTime>(startTimeUtc);
     map['end_time_utc'] = Variable<DateTime>(endTimeUtc);
-    if (!nullToAbsent || category != null) {
-      map['category'] = Variable<String>(category);
-    }
-    if (!nullToAbsent || imageUrl != null) {
-      map['image_url'] = Variable<String>(imageUrl);
-    }
+    if (!nullToAbsent || category != null) map['category'] = Variable<String>(category);
+    if (!nullToAbsent || imageUrl != null) map['image_url'] = Variable<String>(imageUrl);
     return map;
   }
-
-  EpgProgramsCompanion toCompanion(bool nullToAbsent) {
-    return EpgProgramsCompanion(
-      id: Value(id),
-      channelId: Value(channelId),
-      title: Value(title),
-      description: description == null && nullToAbsent
-          ? const Value.absent()
-          : Value(description),
-      startTimeUtc: Value(startTimeUtc),
-      endTimeUtc: Value(endTimeUtc),
-      category: category == null && nullToAbsent
-          ? const Value.absent()
-          : Value(category),
-      imageUrl: imageUrl == null && nullToAbsent
-          ? const Value.absent()
-          : Value(imageUrl),
-    );
-  }
-
-  factory EpgProgram.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  EpgProgramsCompanion toCompanion(bool nullToAbsent) => EpgProgramsCompanion(id: Value(id), channelId: Value(channelId), title: Value(title), description: description == null && nullToAbsent ? const Value.absent() : Value(description), startTimeUtc: Value(startTimeUtc), endTimeUtc: Value(endTimeUtc), category: category == null && nullToAbsent ? const Value.absent() : Value(category), imageUrl: imageUrl == null && nullToAbsent ? const Value.absent() : Value(imageUrl));
+  factory EpgProgram.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return EpgProgram(
-      id: serializer.fromJson<int>(json['id']),
-      channelId: serializer.fromJson<int>(json['channelId']),
-      title: serializer.fromJson<String>(json['title']),
-      description: serializer.fromJson<String?>(json['description']),
-      startTimeUtc: serializer.fromJson<DateTime>(json['startTimeUtc']),
-      endTimeUtc: serializer.fromJson<DateTime>(json['endTimeUtc']),
-      category: serializer.fromJson<String?>(json['category']),
-      imageUrl: serializer.fromJson<String?>(json['imageUrl']),
-    );
+    return EpgProgram(id: serializer.fromJson<int>(json['id']), channelId: serializer.fromJson<int>(json['channelId']), title: serializer.fromJson<String>(json['title']), description: serializer.fromJson<String?>(json['description']), startTimeUtc: serializer.fromJson<DateTime>(json['startTimeUtc']), endTimeUtc: serializer.fromJson<DateTime>(json['endTimeUtc']), category: serializer.fromJson<String?>(json['category']), imageUrl: serializer.fromJson<String?>(json['imageUrl']));
   }
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'channelId': serializer.toJson<int>(channelId),
-      'title': serializer.toJson<String>(title),
-      'description': serializer.toJson<String?>(description),
-      'startTimeUtc': serializer.toJson<DateTime>(startTimeUtc),
-      'endTimeUtc': serializer.toJson<DateTime>(endTimeUtc),
-      'category': serializer.toJson<String?>(category),
-      'imageUrl': serializer.toJson<String?>(imageUrl),
-    };
+    return {'id': serializer.toJson<int>(id), 'channelId': serializer.toJson<int>(channelId), 'title': serializer.toJson<String>(title), 'description': serializer.toJson<String?>(description), 'startTimeUtc': serializer.toJson<DateTime>(startTimeUtc), 'endTimeUtc': serializer.toJson<DateTime>(endTimeUtc), 'category': serializer.toJson<String?>(category), 'imageUrl': serializer.toJson<String?>(imageUrl)};
   }
-
-  EpgProgram copyWith(
-          {int? id,
-          int? channelId,
-          String? title,
-          Value<String?> description = const Value.absent(),
-          DateTime? startTimeUtc,
-          DateTime? endTimeUtc,
-          Value<String?> category = const Value.absent(),
-          Value<String?> imageUrl = const Value.absent()}) =>
-      EpgProgram(
-        id: id ?? this.id,
-        channelId: channelId ?? this.channelId,
-        title: title ?? this.title,
-        description: description.present ? description.value : this.description,
-        startTimeUtc: startTimeUtc ?? this.startTimeUtc,
-        endTimeUtc: endTimeUtc ?? this.endTimeUtc,
-        category: category.present ? category.value : this.category,
-        imageUrl: imageUrl.present ? imageUrl.value : this.imageUrl,
-      );
-  EpgProgram copyWithCompanion(EpgProgramsCompanion data) {
-    return EpgProgram(
-      id: data.id.present ? data.id.value : this.id,
-      channelId: data.channelId.present ? data.channelId.value : this.channelId,
-      title: data.title.present ? data.title.value : this.title,
-      description:
-          data.description.present ? data.description.value : this.description,
-      startTimeUtc: data.startTimeUtc.present
-          ? data.startTimeUtc.value
-          : this.startTimeUtc,
-      endTimeUtc:
-          data.endTimeUtc.present ? data.endTimeUtc.value : this.endTimeUtc,
-      category: data.category.present ? data.category.value : this.category,
-      imageUrl: data.imageUrl.present ? data.imageUrl.value : this.imageUrl,
-    );
-  }
-
+  EpgProgram copyWith({int? id, int? channelId, String? title, Value<String?> description = const Value.absent(), DateTime? startTimeUtc, DateTime? endTimeUtc, Value<String?> category = const Value.absent(), Value<String?> imageUrl = const Value.absent()}) => EpgProgram(id: id ?? this.id, channelId: channelId ?? this.channelId, title: title ?? this.title, description: description.present ? description.value : this.description, startTimeUtc: startTimeUtc ?? this.startTimeUtc, endTimeUtc: endTimeUtc ?? this.endTimeUtc, category: category.present ? category.value : this.category, imageUrl: imageUrl.present ? imageUrl.value : this.imageUrl);
   @override
-  String toString() {
-    return (StringBuffer('EpgProgram(')
-          ..write('id: $id, ')
-          ..write('channelId: $channelId, ')
-          ..write('title: $title, ')
-          ..write('description: $description, ')
-          ..write('startTimeUtc: $startTimeUtc, ')
-          ..write('endTimeUtc: $endTimeUtc, ')
-          ..write('category: $category, ')
-          ..write('imageUrl: $imageUrl')
-          ..write(')'))
-        .toString();
-  }
-
+  String toString() => 'EpgProgram(id: $id, channelId: $channelId, title: $title, description: $description, startTimeUtc: $startTimeUtc, endTimeUtc: $endTimeUtc, category: $category, imageUrl: $imageUrl)';
   @override
-  int get hashCode => Object.hash(id, channelId, title, description,
-      startTimeUtc, endTimeUtc, category, imageUrl);
+  int get hashCode => Object.hash(id, channelId, title, description, startTimeUtc, endTimeUtc, category, imageUrl);
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is EpgProgram &&
-          other.id == this.id &&
-          other.channelId == this.channelId &&
-          other.title == this.title &&
-          other.description == this.description &&
-          other.startTimeUtc == this.startTimeUtc &&
-          other.endTimeUtc == this.endTimeUtc &&
-          other.category == this.category &&
-          other.imageUrl == this.imageUrl);
+  bool operator ==(Object other) => identical(this, other) || (other is EpgProgram && other.id == id && other.channelId == channelId && other.title == title && other.description == description && other.startTimeUtc == startTimeUtc && other.endTimeUtc == endTimeUtc && other.category == category && other.imageUrl == imageUrl);
 }
 
 class EpgProgramsCompanion extends UpdateCompanion<EpgProgram> {
@@ -2142,1971 +1420,601 @@ class EpgProgramsCompanion extends UpdateCompanion<EpgProgram> {
   final Value<DateTime> endTimeUtc;
   final Value<String?> category;
   final Value<String?> imageUrl;
-  const EpgProgramsCompanion({
-    this.id = const Value.absent(),
-    this.channelId = const Value.absent(),
-    this.title = const Value.absent(),
-    this.description = const Value.absent(),
-    this.startTimeUtc = const Value.absent(),
-    this.endTimeUtc = const Value.absent(),
-    this.category = const Value.absent(),
-    this.imageUrl = const Value.absent(),
-  });
-  EpgProgramsCompanion.insert({
-    this.id = const Value.absent(),
-    required int channelId,
-    required String title,
-    this.description = const Value.absent(),
-    required DateTime startTimeUtc,
-    required DateTime endTimeUtc,
-    this.category = const Value.absent(),
-    this.imageUrl = const Value.absent(),
-  })  : channelId = Value(channelId),
-        title = Value(title),
-        startTimeUtc = Value(startTimeUtc),
-        endTimeUtc = Value(endTimeUtc);
-  static Insertable<EpgProgram> custom({
-    Expression<int>? id,
-    Expression<int>? channelId,
-    Expression<String>? title,
-    Expression<String>? description,
-    Expression<DateTime>? startTimeUtc,
-    Expression<DateTime>? endTimeUtc,
-    Expression<String>? category,
-    Expression<String>? imageUrl,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (channelId != null) 'channel_id': channelId,
-      if (title != null) 'title': title,
-      if (description != null) 'description': description,
-      if (startTimeUtc != null) 'start_time_utc': startTimeUtc,
-      if (endTimeUtc != null) 'end_time_utc': endTimeUtc,
-      if (category != null) 'category': category,
-      if (imageUrl != null) 'image_url': imageUrl,
-    });
+  const EpgProgramsCompanion({this.id = const Value.absent(), this.channelId = const Value.absent(), this.title = const Value.absent(), this.description = const Value.absent(), this.startTimeUtc = const Value.absent(), this.endTimeUtc = const Value.absent(), this.category = const Value.absent(), this.imageUrl = const Value.absent()});
+  EpgProgramsCompanion.insert({this.id = const Value.absent(), required int channelId, required String title, this.description = const Value.absent(), required DateTime startTimeUtc, required DateTime endTimeUtc, this.category = const Value.absent(), this.imageUrl = const Value.absent()}) : channelId = Value(channelId), title = Value(title), startTimeUtc = Value(startTimeUtc), endTimeUtc = Value(endTimeUtc);
+  static Insertable<EpgProgram> custom({Expression<int>? id, Expression<int>? channelId, Expression<String>? title, Expression<String>? description, Expression<DateTime>? startTimeUtc, Expression<DateTime>? endTimeUtc, Expression<String>? category, Expression<String>? imageUrl}) {
+    return RawValuesInsertable({if (id != null) 'id': id, if (channelId != null) 'channel_id': channelId, if (title != null) 'title': title, if (description != null) 'description': description, if (startTimeUtc != null) 'start_time_utc': startTimeUtc, if (endTimeUtc != null) 'end_time_utc': endTimeUtc, if (category != null) 'category': category, if (imageUrl != null) 'image_url': imageUrl});
   }
-
-  EpgProgramsCompanion copyWith(
-      {Value<int>? id,
-      Value<int>? channelId,
-      Value<String>? title,
-      Value<String?>? description,
-      Value<DateTime>? startTimeUtc,
-      Value<DateTime>? endTimeUtc,
-      Value<String?>? category,
-      Value<String?>? imageUrl}) {
-    return EpgProgramsCompanion(
-      id: id ?? this.id,
-      channelId: channelId ?? this.channelId,
-      title: title ?? this.title,
-      description: description ?? this.description,
-      startTimeUtc: startTimeUtc ?? this.startTimeUtc,
-      endTimeUtc: endTimeUtc ?? this.endTimeUtc,
-      category: category ?? this.category,
-      imageUrl: imageUrl ?? this.imageUrl,
-    );
-  }
-
+  EpgProgramsCompanion copyWith({Value<int>? id, Value<int>? channelId, Value<String>? title, Value<String?>? description, Value<DateTime>? startTimeUtc, Value<DateTime>? endTimeUtc, Value<String?>? category, Value<String?>? imageUrl}) => EpgProgramsCompanion(id: id ?? this.id, channelId: channelId ?? this.channelId, title: title ?? this.title, description: description ?? this.description, startTimeUtc: startTimeUtc ?? this.startTimeUtc, endTimeUtc: endTimeUtc ?? this.endTimeUtc, category: category ?? this.category, imageUrl: imageUrl ?? this.imageUrl);
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (channelId.present) {
-      map['channel_id'] = Variable<int>(channelId.value);
-    }
-    if (title.present) {
-      map['title'] = Variable<String>(title.value);
-    }
-    if (description.present) {
-      map['description'] = Variable<String>(description.value);
-    }
-    if (startTimeUtc.present) {
-      map['start_time_utc'] = Variable<DateTime>(startTimeUtc.value);
-    }
-    if (endTimeUtc.present) {
-      map['end_time_utc'] = Variable<DateTime>(endTimeUtc.value);
-    }
-    if (category.present) {
-      map['category'] = Variable<String>(category.value);
-    }
-    if (imageUrl.present) {
-      map['image_url'] = Variable<String>(imageUrl.value);
-    }
+    if (id.present) map['id'] = Variable<int>(id.value);
+    if (channelId.present) map['channel_id'] = Variable<int>(channelId.value);
+    if (title.present) map['title'] = Variable<String>(title.value);
+    if (description.present) map['description'] = Variable<String>(description.value);
+    if (startTimeUtc.present) map['start_time_utc'] = Variable<DateTime>(startTimeUtc.value);
+    if (endTimeUtc.present) map['end_time_utc'] = Variable<DateTime>(endTimeUtc.value);
+    if (category.present) map['category'] = Variable<String>(category.value);
+    if (imageUrl.present) map['image_url'] = Variable<String>(imageUrl.value);
     return map;
   }
-
   @override
-  String toString() {
-    return (StringBuffer('EpgProgramsCompanion(')
-          ..write('id: $id, ')
-          ..write('channelId: $channelId, ')
-          ..write('title: $title, ')
-          ..write('description: $description, ')
-          ..write('startTimeUtc: $startTimeUtc, ')
-          ..write('endTimeUtc: $endTimeUtc, ')
-          ..write('category: $category, ')
-          ..write('imageUrl: $imageUrl')
-          ..write(')'))
-        .toString();
-  }
+  String toString() => 'EpgProgramsCompanion(id: $id, channelId: $channelId, title: $title, description: $description, startTimeUtc: $startTimeUtc, endTimeUtc: $endTimeUtc, category: $category, imageUrl: $imageUrl)';
 }
+
+
+// **************************************************************************
+// VodItems Table
+// **************************************************************************
+
+class $VodItemsTable extends VodItems with TableInfo<$VodItemsTable, VodItem> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $VodItemsTable(this.attachedDatabase, [this._alias]);
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>('id', aliasedName, false, hasAutoIncrement: true, type: DriftSqlType.int, requiredDuringInsert: false, defaultConstraints: GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  @override
+  late final GeneratedColumn<int> playlistId = GeneratedColumn<int>('playlist_id', aliasedName, false, type: DriftSqlType.int, requiredDuringInsert: true, defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES playlists (id)'));
+  @override
+  late final GeneratedColumn<String> sourceId = GeneratedColumn<String>('source_id', aliasedName, false, type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>('name', aliasedName, false, additionalChecks: GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 500), type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  late final GeneratedColumn<String> streamUrl = GeneratedColumn<String>('stream_url', aliasedName, false, type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  late final GeneratedColumn<String> logoUrl = GeneratedColumn<String>('logo_url', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<String> categoryName = GeneratedColumn<String>('category_name', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<String> plot = GeneratedColumn<String>('plot', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<String> cast = GeneratedColumn<String>('cast', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<String> director = GeneratedColumn<String>('director', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<String> genre = GeneratedColumn<String>('genre', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<double> rating = GeneratedColumn<double>('rating', aliasedName, true, type: DriftSqlType.double, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<int> duration = GeneratedColumn<int>('duration', aliasedName, true, type: DriftSqlType.int, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<String> year = GeneratedColumn<String>('year', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<String> containerExtension = GeneratedColumn<String>('container_extension', aliasedName, false, type: DriftSqlType.string, requiredDuringInsert: false, defaultValue: const Constant('mp4'));
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>('is_active', aliasedName, false, type: DriftSqlType.bool, requiredDuringInsert: false, defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("is_active" IN (0, 1))'), defaultValue: const Constant(true));
+  @override
+  late final GeneratedColumn<DateTime> addedAt = GeneratedColumn<DateTime>('added_at', aliasedName, true, type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>('created_at', aliasedName, false, type: DriftSqlType.dateTime, requiredDuringInsert: false, defaultValue: currentDateAndTime);
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>('updated_at', aliasedName, false, type: DriftSqlType.dateTime, requiredDuringInsert: false, defaultValue: currentDateAndTime);
+  @override
+  List<GeneratedColumn> get $columns => [id, playlistId, sourceId, name, streamUrl, logoUrl, categoryName, plot, cast, director, genre, rating, duration, year, containerExtension, isActive, addedAt, createdAt, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'vod_items';
+  @override
+  VerificationContext validateIntegrity(Insertable<VodItem> instance, {bool isInserting = false}) => VerificationContext();
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  VodItem map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return VodItem(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      playlistId: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}playlist_id'])!,
+      sourceId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}source_id'])!,
+      name: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      streamUrl: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}stream_url'])!,
+      logoUrl: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}logo_url']),
+      categoryName: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}category_name']),
+      plot: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}plot']),
+      cast: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}cast']),
+      director: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}director']),
+      genre: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}genre']),
+      rating: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}rating']),
+      duration: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}duration']),
+      year: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}year']),
+      containerExtension: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}container_extension'])!,
+      isActive: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}is_active'])!,
+      addedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}added_at']),
+      createdAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+    );
+  }
+  @override
+  $VodItemsTable createAlias(String alias) => $VodItemsTable(attachedDatabase, alias);
+}
+
+class VodItem extends DataClass implements Insertable<VodItem> {
+  final int id;
+  final int playlistId;
+  final String sourceId;
+  final String name;
+  final String streamUrl;
+  final String? logoUrl;
+  final String? categoryName;
+  final String? plot;
+  final String? cast;
+  final String? director;
+  final String? genre;
+  final double? rating;
+  final int? duration;
+  final String? year;
+  final String containerExtension;
+  final bool isActive;
+  final DateTime? addedAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const VodItem({required this.id, required this.playlistId, required this.sourceId, required this.name, required this.streamUrl, this.logoUrl, this.categoryName, this.plot, this.cast, this.director, this.genre, this.rating, this.duration, this.year, required this.containerExtension, required this.isActive, this.addedAt, required this.createdAt, required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['playlist_id'] = Variable<int>(playlistId);
+    map['source_id'] = Variable<String>(sourceId);
+    map['name'] = Variable<String>(name);
+    map['stream_url'] = Variable<String>(streamUrl);
+    if (!nullToAbsent || logoUrl != null) map['logo_url'] = Variable<String>(logoUrl);
+    if (!nullToAbsent || categoryName != null) map['category_name'] = Variable<String>(categoryName);
+    if (!nullToAbsent || plot != null) map['plot'] = Variable<String>(plot);
+    if (!nullToAbsent || cast != null) map['cast'] = Variable<String>(cast);
+    if (!nullToAbsent || director != null) map['director'] = Variable<String>(director);
+    if (!nullToAbsent || genre != null) map['genre'] = Variable<String>(genre);
+    if (!nullToAbsent || rating != null) map['rating'] = Variable<double>(rating);
+    if (!nullToAbsent || duration != null) map['duration'] = Variable<int>(duration);
+    if (!nullToAbsent || year != null) map['year'] = Variable<String>(year);
+    map['container_extension'] = Variable<String>(containerExtension);
+    map['is_active'] = Variable<bool>(isActive);
+    if (!nullToAbsent || addedAt != null) map['added_at'] = Variable<DateTime>(addedAt);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+  VodItemsCompanion toCompanion(bool nullToAbsent) => VodItemsCompanion(id: Value(id), playlistId: Value(playlistId), sourceId: Value(sourceId), name: Value(name), streamUrl: Value(streamUrl), logoUrl: logoUrl == null && nullToAbsent ? const Value.absent() : Value(logoUrl), categoryName: categoryName == null && nullToAbsent ? const Value.absent() : Value(categoryName), plot: plot == null && nullToAbsent ? const Value.absent() : Value(plot), cast: cast == null && nullToAbsent ? const Value.absent() : Value(cast), director: director == null && nullToAbsent ? const Value.absent() : Value(director), genre: genre == null && nullToAbsent ? const Value.absent() : Value(genre), rating: rating == null && nullToAbsent ? const Value.absent() : Value(rating), duration: duration == null && nullToAbsent ? const Value.absent() : Value(duration), year: year == null && nullToAbsent ? const Value.absent() : Value(year), containerExtension: Value(containerExtension), isActive: Value(isActive), addedAt: addedAt == null && nullToAbsent ? const Value.absent() : Value(addedAt), createdAt: Value(createdAt), updatedAt: Value(updatedAt));
+  factory VodItem.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return VodItem(id: serializer.fromJson<int>(json['id']), playlistId: serializer.fromJson<int>(json['playlistId']), sourceId: serializer.fromJson<String>(json['sourceId']), name: serializer.fromJson<String>(json['name']), streamUrl: serializer.fromJson<String>(json['streamUrl']), logoUrl: serializer.fromJson<String?>(json['logoUrl']), categoryName: serializer.fromJson<String?>(json['categoryName']), plot: serializer.fromJson<String?>(json['plot']), cast: serializer.fromJson<String?>(json['cast']), director: serializer.fromJson<String?>(json['director']), genre: serializer.fromJson<String?>(json['genre']), rating: serializer.fromJson<double?>(json['rating']), duration: serializer.fromJson<int?>(json['duration']), year: serializer.fromJson<String?>(json['year']), containerExtension: serializer.fromJson<String>(json['containerExtension']), isActive: serializer.fromJson<bool>(json['isActive']), addedAt: serializer.fromJson<DateTime?>(json['addedAt']), createdAt: serializer.fromJson<DateTime>(json['createdAt']), updatedAt: serializer.fromJson<DateTime>(json['updatedAt']));
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return {'id': serializer.toJson<int>(id), 'playlistId': serializer.toJson<int>(playlistId), 'sourceId': serializer.toJson<String>(sourceId), 'name': serializer.toJson<String>(name), 'streamUrl': serializer.toJson<String>(streamUrl), 'logoUrl': serializer.toJson<String?>(logoUrl), 'categoryName': serializer.toJson<String?>(categoryName), 'plot': serializer.toJson<String?>(plot), 'cast': serializer.toJson<String?>(cast), 'director': serializer.toJson<String?>(director), 'genre': serializer.toJson<String?>(genre), 'rating': serializer.toJson<double?>(rating), 'duration': serializer.toJson<int?>(duration), 'year': serializer.toJson<String?>(year), 'containerExtension': serializer.toJson<String>(containerExtension), 'isActive': serializer.toJson<bool>(isActive), 'addedAt': serializer.toJson<DateTime?>(addedAt), 'createdAt': serializer.toJson<DateTime>(createdAt), 'updatedAt': serializer.toJson<DateTime>(updatedAt)};
+  }
+  VodItem copyWith({int? id, int? playlistId, String? sourceId, String? name, String? streamUrl, Value<String?> logoUrl = const Value.absent(), Value<String?> categoryName = const Value.absent(), Value<String?> plot = const Value.absent(), Value<String?> cast = const Value.absent(), Value<String?> director = const Value.absent(), Value<String?> genre = const Value.absent(), Value<double?> rating = const Value.absent(), Value<int?> duration = const Value.absent(), Value<String?> year = const Value.absent(), String? containerExtension, bool? isActive, Value<DateTime?> addedAt = const Value.absent(), DateTime? createdAt, DateTime? updatedAt}) => VodItem(id: id ?? this.id, playlistId: playlistId ?? this.playlistId, sourceId: sourceId ?? this.sourceId, name: name ?? this.name, streamUrl: streamUrl ?? this.streamUrl, logoUrl: logoUrl.present ? logoUrl.value : this.logoUrl, categoryName: categoryName.present ? categoryName.value : this.categoryName, plot: plot.present ? plot.value : this.plot, cast: cast.present ? cast.value : this.cast, director: director.present ? director.value : this.director, genre: genre.present ? genre.value : this.genre, rating: rating.present ? rating.value : this.rating, duration: duration.present ? duration.value : this.duration, year: year.present ? year.value : this.year, containerExtension: containerExtension ?? this.containerExtension, isActive: isActive ?? this.isActive, addedAt: addedAt.present ? addedAt.value : this.addedAt, createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt);
+  @override
+  String toString() => 'VodItem(id: $id, playlistId: $playlistId, sourceId: $sourceId, name: $name)';
+  @override
+  int get hashCode => Object.hash(id, playlistId, sourceId, name, streamUrl, logoUrl, categoryName, plot, cast, director, genre, rating, duration, year, containerExtension, isActive, addedAt, createdAt, updatedAt);
+  @override
+  bool operator ==(Object other) => identical(this, other) || (other is VodItem && other.id == id && other.playlistId == playlistId && other.sourceId == sourceId && other.name == name);
+}
+
+class VodItemsCompanion extends UpdateCompanion<VodItem> {
+  final Value<int> id;
+  final Value<int> playlistId;
+  final Value<String> sourceId;
+  final Value<String> name;
+  final Value<String> streamUrl;
+  final Value<String?> logoUrl;
+  final Value<String?> categoryName;
+  final Value<String?> plot;
+  final Value<String?> cast;
+  final Value<String?> director;
+  final Value<String?> genre;
+  final Value<double?> rating;
+  final Value<int?> duration;
+  final Value<String?> year;
+  final Value<String> containerExtension;
+  final Value<bool> isActive;
+  final Value<DateTime?> addedAt;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const VodItemsCompanion({this.id = const Value.absent(), this.playlistId = const Value.absent(), this.sourceId = const Value.absent(), this.name = const Value.absent(), this.streamUrl = const Value.absent(), this.logoUrl = const Value.absent(), this.categoryName = const Value.absent(), this.plot = const Value.absent(), this.cast = const Value.absent(), this.director = const Value.absent(), this.genre = const Value.absent(), this.rating = const Value.absent(), this.duration = const Value.absent(), this.year = const Value.absent(), this.containerExtension = const Value.absent(), this.isActive = const Value.absent(), this.addedAt = const Value.absent(), this.createdAt = const Value.absent(), this.updatedAt = const Value.absent()});
+  VodItemsCompanion.insert({this.id = const Value.absent(), required int playlistId, required String sourceId, required String name, required String streamUrl, this.logoUrl = const Value.absent(), this.categoryName = const Value.absent(), this.plot = const Value.absent(), this.cast = const Value.absent(), this.director = const Value.absent(), this.genre = const Value.absent(), this.rating = const Value.absent(), this.duration = const Value.absent(), this.year = const Value.absent(), this.containerExtension = const Value.absent(), this.isActive = const Value.absent(), this.addedAt = const Value.absent(), this.createdAt = const Value.absent(), this.updatedAt = const Value.absent()}) : playlistId = Value(playlistId), sourceId = Value(sourceId), name = Value(name), streamUrl = Value(streamUrl);
+  static Insertable<VodItem> custom({Expression<int>? id, Expression<int>? playlistId, Expression<String>? sourceId, Expression<String>? name, Expression<String>? streamUrl, Expression<String>? logoUrl, Expression<String>? categoryName, Expression<String>? plot, Expression<String>? cast, Expression<String>? director, Expression<String>? genre, Expression<double>? rating, Expression<int>? duration, Expression<String>? year, Expression<String>? containerExtension, Expression<bool>? isActive, Expression<DateTime>? addedAt, Expression<DateTime>? createdAt, Expression<DateTime>? updatedAt}) {
+    return RawValuesInsertable({if (id != null) 'id': id, if (playlistId != null) 'playlist_id': playlistId, if (sourceId != null) 'source_id': sourceId, if (name != null) 'name': name, if (streamUrl != null) 'stream_url': streamUrl, if (logoUrl != null) 'logo_url': logoUrl, if (categoryName != null) 'category_name': categoryName, if (plot != null) 'plot': plot, if (cast != null) 'cast': cast, if (director != null) 'director': director, if (genre != null) 'genre': genre, if (rating != null) 'rating': rating, if (duration != null) 'duration': duration, if (year != null) 'year': year, if (containerExtension != null) 'container_extension': containerExtension, if (isActive != null) 'is_active': isActive, if (addedAt != null) 'added_at': addedAt, if (createdAt != null) 'created_at': createdAt, if (updatedAt != null) 'updated_at': updatedAt});
+  }
+  VodItemsCompanion copyWith({Value<int>? id, Value<int>? playlistId, Value<String>? sourceId, Value<String>? name, Value<String>? streamUrl, Value<String?>? logoUrl, Value<String?>? categoryName, Value<String?>? plot, Value<String?>? cast, Value<String?>? director, Value<String?>? genre, Value<double?>? rating, Value<int?>? duration, Value<String?>? year, Value<String>? containerExtension, Value<bool>? isActive, Value<DateTime?>? addedAt, Value<DateTime>? createdAt, Value<DateTime>? updatedAt}) => VodItemsCompanion(id: id ?? this.id, playlistId: playlistId ?? this.playlistId, sourceId: sourceId ?? this.sourceId, name: name ?? this.name, streamUrl: streamUrl ?? this.streamUrl, logoUrl: logoUrl ?? this.logoUrl, categoryName: categoryName ?? this.categoryName, plot: plot ?? this.plot, cast: cast ?? this.cast, director: director ?? this.director, genre: genre ?? this.genre, rating: rating ?? this.rating, duration: duration ?? this.duration, year: year ?? this.year, containerExtension: containerExtension ?? this.containerExtension, isActive: isActive ?? this.isActive, addedAt: addedAt ?? this.addedAt, createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt);
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) map['id'] = Variable<int>(id.value);
+    if (playlistId.present) map['playlist_id'] = Variable<int>(playlistId.value);
+    if (sourceId.present) map['source_id'] = Variable<String>(sourceId.value);
+    if (name.present) map['name'] = Variable<String>(name.value);
+    if (streamUrl.present) map['stream_url'] = Variable<String>(streamUrl.value);
+    if (logoUrl.present) map['logo_url'] = Variable<String>(logoUrl.value);
+    if (categoryName.present) map['category_name'] = Variable<String>(categoryName.value);
+    if (plot.present) map['plot'] = Variable<String>(plot.value);
+    if (cast.present) map['cast'] = Variable<String>(cast.value);
+    if (director.present) map['director'] = Variable<String>(director.value);
+    if (genre.present) map['genre'] = Variable<String>(genre.value);
+    if (rating.present) map['rating'] = Variable<double>(rating.value);
+    if (duration.present) map['duration'] = Variable<int>(duration.value);
+    if (year.present) map['year'] = Variable<String>(year.value);
+    if (containerExtension.present) map['container_extension'] = Variable<String>(containerExtension.value);
+    if (isActive.present) map['is_active'] = Variable<bool>(isActive.value);
+    if (addedAt.present) map['added_at'] = Variable<DateTime>(addedAt.value);
+    if (createdAt.present) map['created_at'] = Variable<DateTime>(createdAt.value);
+    if (updatedAt.present) map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    return map;
+  }
+  @override
+  String toString() => 'VodItemsCompanion(id: $id, name: $name)';
+}
+
+
+// **************************************************************************
+// SeriesItems Table
+// **************************************************************************
+
+class $SeriesItemsTable extends SeriesItems with TableInfo<$SeriesItemsTable, SeriesItem> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SeriesItemsTable(this.attachedDatabase, [this._alias]);
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>('id', aliasedName, false, hasAutoIncrement: true, type: DriftSqlType.int, requiredDuringInsert: false, defaultConstraints: GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  @override
+  late final GeneratedColumn<int> playlistId = GeneratedColumn<int>('playlist_id', aliasedName, false, type: DriftSqlType.int, requiredDuringInsert: true, defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES playlists (id)'));
+  @override
+  late final GeneratedColumn<String> sourceId = GeneratedColumn<String>('source_id', aliasedName, false, type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>('name', aliasedName, false, additionalChecks: GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 500), type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  late final GeneratedColumn<String> coverUrl = GeneratedColumn<String>('cover_url', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<String> categoryName = GeneratedColumn<String>('category_name', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<String> plot = GeneratedColumn<String>('plot', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<String> cast = GeneratedColumn<String>('cast', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<String> director = GeneratedColumn<String>('director', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<String> genre = GeneratedColumn<String>('genre', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<double> rating = GeneratedColumn<double>('rating', aliasedName, true, type: DriftSqlType.double, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<String> year = GeneratedColumn<String>('year', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<String> backdropUrl = GeneratedColumn<String>('backdrop_url', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>('is_active', aliasedName, false, type: DriftSqlType.bool, requiredDuringInsert: false, defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("is_active" IN (0, 1))'), defaultValue: const Constant(true));
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>('created_at', aliasedName, false, type: DriftSqlType.dateTime, requiredDuringInsert: false, defaultValue: currentDateAndTime);
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>('updated_at', aliasedName, false, type: DriftSqlType.dateTime, requiredDuringInsert: false, defaultValue: currentDateAndTime);
+  @override
+  List<GeneratedColumn> get $columns => [id, playlistId, sourceId, name, coverUrl, categoryName, plot, cast, director, genre, rating, year, backdropUrl, isActive, createdAt, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'series_items';
+  @override
+  VerificationContext validateIntegrity(Insertable<SeriesItem> instance, {bool isInserting = false}) => VerificationContext();
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SeriesItem map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SeriesItem(id: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}id'])!, playlistId: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}playlist_id'])!, sourceId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}source_id'])!, name: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}name'])!, coverUrl: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}cover_url']), categoryName: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}category_name']), plot: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}plot']), cast: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}cast']), director: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}director']), genre: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}genre']), rating: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}rating']), year: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}year']), backdropUrl: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}backdrop_url']), isActive: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}is_active'])!, createdAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!, updatedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!);
+  }
+  @override
+  $SeriesItemsTable createAlias(String alias) => $SeriesItemsTable(attachedDatabase, alias);
+}
+
+class SeriesItem extends DataClass implements Insertable<SeriesItem> {
+  final int id; final int playlistId; final String sourceId; final String name; final String? coverUrl; final String? categoryName; final String? plot; final String? cast; final String? director; final String? genre; final double? rating; final String? year; final String? backdropUrl; final bool isActive; final DateTime createdAt; final DateTime updatedAt;
+  const SeriesItem({required this.id, required this.playlistId, required this.sourceId, required this.name, this.coverUrl, this.categoryName, this.plot, this.cast, this.director, this.genre, this.rating, this.year, this.backdropUrl, required this.isActive, required this.createdAt, required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id); map['playlist_id'] = Variable<int>(playlistId); map['source_id'] = Variable<String>(sourceId); map['name'] = Variable<String>(name);
+    if (!nullToAbsent || coverUrl != null) map['cover_url'] = Variable<String>(coverUrl);
+    if (!nullToAbsent || categoryName != null) map['category_name'] = Variable<String>(categoryName);
+    if (!nullToAbsent || plot != null) map['plot'] = Variable<String>(plot);
+    if (!nullToAbsent || cast != null) map['cast'] = Variable<String>(cast);
+    if (!nullToAbsent || director != null) map['director'] = Variable<String>(director);
+    if (!nullToAbsent || genre != null) map['genre'] = Variable<String>(genre);
+    if (!nullToAbsent || rating != null) map['rating'] = Variable<double>(rating);
+    if (!nullToAbsent || year != null) map['year'] = Variable<String>(year);
+    if (!nullToAbsent || backdropUrl != null) map['backdrop_url'] = Variable<String>(backdropUrl);
+    map['is_active'] = Variable<bool>(isActive); map['created_at'] = Variable<DateTime>(createdAt); map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+  SeriesItemsCompanion toCompanion(bool nullToAbsent) => SeriesItemsCompanion(id: Value(id), playlistId: Value(playlistId), sourceId: Value(sourceId), name: Value(name), coverUrl: coverUrl == null && nullToAbsent ? const Value.absent() : Value(coverUrl), categoryName: categoryName == null && nullToAbsent ? const Value.absent() : Value(categoryName), plot: plot == null && nullToAbsent ? const Value.absent() : Value(plot), cast: cast == null && nullToAbsent ? const Value.absent() : Value(cast), director: director == null && nullToAbsent ? const Value.absent() : Value(director), genre: genre == null && nullToAbsent ? const Value.absent() : Value(genre), rating: rating == null && nullToAbsent ? const Value.absent() : Value(rating), year: year == null && nullToAbsent ? const Value.absent() : Value(year), backdropUrl: backdropUrl == null && nullToAbsent ? const Value.absent() : Value(backdropUrl), isActive: Value(isActive), createdAt: Value(createdAt), updatedAt: Value(updatedAt));
+  factory SeriesItem.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) { serializer ??= driftRuntimeOptions.defaultSerializer; return SeriesItem(id: serializer.fromJson<int>(json['id']), playlistId: serializer.fromJson<int>(json['playlistId']), sourceId: serializer.fromJson<String>(json['sourceId']), name: serializer.fromJson<String>(json['name']), coverUrl: serializer.fromJson<String?>(json['coverUrl']), categoryName: serializer.fromJson<String?>(json['categoryName']), plot: serializer.fromJson<String?>(json['plot']), cast: serializer.fromJson<String?>(json['cast']), director: serializer.fromJson<String?>(json['director']), genre: serializer.fromJson<String?>(json['genre']), rating: serializer.fromJson<double?>(json['rating']), year: serializer.fromJson<String?>(json['year']), backdropUrl: serializer.fromJson<String?>(json['backdropUrl']), isActive: serializer.fromJson<bool>(json['isActive']), createdAt: serializer.fromJson<DateTime>(json['createdAt']), updatedAt: serializer.fromJson<DateTime>(json['updatedAt'])); }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) { serializer ??= driftRuntimeOptions.defaultSerializer; return {'id': serializer.toJson<int>(id), 'playlistId': serializer.toJson<int>(playlistId), 'sourceId': serializer.toJson<String>(sourceId), 'name': serializer.toJson<String>(name), 'coverUrl': serializer.toJson<String?>(coverUrl), 'categoryName': serializer.toJson<String?>(categoryName), 'plot': serializer.toJson<String?>(plot), 'cast': serializer.toJson<String?>(cast), 'director': serializer.toJson<String?>(director), 'genre': serializer.toJson<String?>(genre), 'rating': serializer.toJson<double?>(rating), 'year': serializer.toJson<String?>(year), 'backdropUrl': serializer.toJson<String?>(backdropUrl), 'isActive': serializer.toJson<bool>(isActive), 'createdAt': serializer.toJson<DateTime>(createdAt), 'updatedAt': serializer.toJson<DateTime>(updatedAt)}; }
+  SeriesItem copyWith({int? id, int? playlistId, String? sourceId, String? name, Value<String?> coverUrl = const Value.absent(), Value<String?> categoryName = const Value.absent(), Value<String?> plot = const Value.absent(), Value<String?> cast = const Value.absent(), Value<String?> director = const Value.absent(), Value<String?> genre = const Value.absent(), Value<double?> rating = const Value.absent(), Value<String?> year = const Value.absent(), Value<String?> backdropUrl = const Value.absent(), bool? isActive, DateTime? createdAt, DateTime? updatedAt}) => SeriesItem(id: id ?? this.id, playlistId: playlistId ?? this.playlistId, sourceId: sourceId ?? this.sourceId, name: name ?? this.name, coverUrl: coverUrl.present ? coverUrl.value : this.coverUrl, categoryName: categoryName.present ? categoryName.value : this.categoryName, plot: plot.present ? plot.value : this.plot, cast: cast.present ? cast.value : this.cast, director: director.present ? director.value : this.director, genre: genre.present ? genre.value : this.genre, rating: rating.present ? rating.value : this.rating, year: year.present ? year.value : this.year, backdropUrl: backdropUrl.present ? backdropUrl.value : this.backdropUrl, isActive: isActive ?? this.isActive, createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt);
+  @override
+  String toString() => 'SeriesItem(id: $id, name: $name)';
+  @override
+  int get hashCode => Object.hash(id, playlistId, sourceId, name);
+  @override
+  bool operator ==(Object other) => identical(this, other) || (other is SeriesItem && other.id == id);
+}
+
+class SeriesItemsCompanion extends UpdateCompanion<SeriesItem> {
+  final Value<int> id; final Value<int> playlistId; final Value<String> sourceId; final Value<String> name; final Value<String?> coverUrl; final Value<String?> categoryName; final Value<String?> plot; final Value<String?> cast; final Value<String?> director; final Value<String?> genre; final Value<double?> rating; final Value<String?> year; final Value<String?> backdropUrl; final Value<bool> isActive; final Value<DateTime> createdAt; final Value<DateTime> updatedAt;
+  const SeriesItemsCompanion({this.id = const Value.absent(), this.playlistId = const Value.absent(), this.sourceId = const Value.absent(), this.name = const Value.absent(), this.coverUrl = const Value.absent(), this.categoryName = const Value.absent(), this.plot = const Value.absent(), this.cast = const Value.absent(), this.director = const Value.absent(), this.genre = const Value.absent(), this.rating = const Value.absent(), this.year = const Value.absent(), this.backdropUrl = const Value.absent(), this.isActive = const Value.absent(), this.createdAt = const Value.absent(), this.updatedAt = const Value.absent()});
+  SeriesItemsCompanion.insert({this.id = const Value.absent(), required int playlistId, required String sourceId, required String name, this.coverUrl = const Value.absent(), this.categoryName = const Value.absent(), this.plot = const Value.absent(), this.cast = const Value.absent(), this.director = const Value.absent(), this.genre = const Value.absent(), this.rating = const Value.absent(), this.year = const Value.absent(), this.backdropUrl = const Value.absent(), this.isActive = const Value.absent(), this.createdAt = const Value.absent(), this.updatedAt = const Value.absent()}) : playlistId = Value(playlistId), sourceId = Value(sourceId), name = Value(name);
+  static Insertable<SeriesItem> custom({Expression<int>? id, Expression<int>? playlistId, Expression<String>? sourceId, Expression<String>? name, Expression<String>? coverUrl, Expression<String>? categoryName, Expression<String>? plot, Expression<String>? cast, Expression<String>? director, Expression<String>? genre, Expression<double>? rating, Expression<String>? year, Expression<String>? backdropUrl, Expression<bool>? isActive, Expression<DateTime>? createdAt, Expression<DateTime>? updatedAt}) {
+    return RawValuesInsertable({if (id != null) 'id': id, if (playlistId != null) 'playlist_id': playlistId, if (sourceId != null) 'source_id': sourceId, if (name != null) 'name': name, if (coverUrl != null) 'cover_url': coverUrl, if (categoryName != null) 'category_name': categoryName, if (plot != null) 'plot': plot, if (cast != null) 'cast': cast, if (director != null) 'director': director, if (genre != null) 'genre': genre, if (rating != null) 'rating': rating, if (year != null) 'year': year, if (backdropUrl != null) 'backdrop_url': backdropUrl, if (isActive != null) 'is_active': isActive, if (createdAt != null) 'created_at': createdAt, if (updatedAt != null) 'updated_at': updatedAt});
+  }
+  SeriesItemsCompanion copyWith({Value<int>? id, Value<int>? playlistId, Value<String>? sourceId, Value<String>? name, Value<String?>? coverUrl, Value<String?>? categoryName, Value<String?>? plot, Value<String?>? cast, Value<String?>? director, Value<String?>? genre, Value<double?>? rating, Value<String?>? year, Value<String?>? backdropUrl, Value<bool>? isActive, Value<DateTime>? createdAt, Value<DateTime>? updatedAt}) => SeriesItemsCompanion(id: id ?? this.id, playlistId: playlistId ?? this.playlistId, sourceId: sourceId ?? this.sourceId, name: name ?? this.name, coverUrl: coverUrl ?? this.coverUrl, categoryName: categoryName ?? this.categoryName, plot: plot ?? this.plot, cast: cast ?? this.cast, director: director ?? this.director, genre: genre ?? this.genre, rating: rating ?? this.rating, year: year ?? this.year, backdropUrl: backdropUrl ?? this.backdropUrl, isActive: isActive ?? this.isActive, createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt);
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) map['id'] = Variable<int>(id.value);
+    if (playlistId.present) map['playlist_id'] = Variable<int>(playlistId.value);
+    if (sourceId.present) map['source_id'] = Variable<String>(sourceId.value);
+    if (name.present) map['name'] = Variable<String>(name.value);
+    if (coverUrl.present) map['cover_url'] = Variable<String>(coverUrl.value);
+    if (categoryName.present) map['category_name'] = Variable<String>(categoryName.value);
+    if (plot.present) map['plot'] = Variable<String>(plot.value);
+    if (cast.present) map['cast'] = Variable<String>(cast.value);
+    if (director.present) map['director'] = Variable<String>(director.value);
+    if (genre.present) map['genre'] = Variable<String>(genre.value);
+    if (rating.present) map['rating'] = Variable<double>(rating.value);
+    if (year.present) map['year'] = Variable<String>(year.value);
+    if (backdropUrl.present) map['backdrop_url'] = Variable<String>(backdropUrl.value);
+    if (isActive.present) map['is_active'] = Variable<bool>(isActive.value);
+    if (createdAt.present) map['created_at'] = Variable<DateTime>(createdAt.value);
+    if (updatedAt.present) map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    return map;
+  }
+  @override
+  String toString() => 'SeriesItemsCompanion(id: $id, name: $name)';
+}
+
+// **************************************************************************
+// Seasons Table
+// **************************************************************************
+
+class $SeasonsTable extends Seasons with TableInfo<$SeasonsTable, Season> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SeasonsTable(this.attachedDatabase, [this._alias]);
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>('id', aliasedName, false, hasAutoIncrement: true, type: DriftSqlType.int, requiredDuringInsert: false, defaultConstraints: GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  @override
+  late final GeneratedColumn<int> seriesId = GeneratedColumn<int>('series_id', aliasedName, false, type: DriftSqlType.int, requiredDuringInsert: true, defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES series_items (id)'));
+  @override
+  late final GeneratedColumn<int> seasonNumber = GeneratedColumn<int>('season_number', aliasedName, false, type: DriftSqlType.int, requiredDuringInsert: true);
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>('name', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<String> coverUrl = GeneratedColumn<String>('cover_url', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<int> episodeCount = GeneratedColumn<int>('episode_count', aliasedName, true, type: DriftSqlType.int, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<String> airDate = GeneratedColumn<String>('air_date', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>('created_at', aliasedName, false, type: DriftSqlType.dateTime, requiredDuringInsert: false, defaultValue: currentDateAndTime);
+  @override
+  List<GeneratedColumn> get $columns => [id, seriesId, seasonNumber, name, coverUrl, episodeCount, airDate, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'seasons';
+  @override
+  VerificationContext validateIntegrity(Insertable<Season> instance, {bool isInserting = false}) => VerificationContext();
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Season map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Season(id: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}id'])!, seriesId: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}series_id'])!, seasonNumber: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}season_number'])!, name: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}name']), coverUrl: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}cover_url']), episodeCount: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}episode_count']), airDate: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}air_date']), createdAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!);
+  }
+  @override
+  $SeasonsTable createAlias(String alias) => $SeasonsTable(attachedDatabase, alias);
+}
+
+class Season extends DataClass implements Insertable<Season> {
+  final int id; final int seriesId; final int seasonNumber; final String? name; final String? coverUrl; final int? episodeCount; final String? airDate; final DateTime createdAt;
+  const Season({required this.id, required this.seriesId, required this.seasonNumber, this.name, this.coverUrl, this.episodeCount, this.airDate, required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id); map['series_id'] = Variable<int>(seriesId); map['season_number'] = Variable<int>(seasonNumber);
+    if (!nullToAbsent || name != null) map['name'] = Variable<String>(name);
+    if (!nullToAbsent || coverUrl != null) map['cover_url'] = Variable<String>(coverUrl);
+    if (!nullToAbsent || episodeCount != null) map['episode_count'] = Variable<int>(episodeCount);
+    if (!nullToAbsent || airDate != null) map['air_date'] = Variable<String>(airDate);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+  SeasonsCompanion toCompanion(bool nullToAbsent) => SeasonsCompanion(id: Value(id), seriesId: Value(seriesId), seasonNumber: Value(seasonNumber), name: name == null && nullToAbsent ? const Value.absent() : Value(name), coverUrl: coverUrl == null && nullToAbsent ? const Value.absent() : Value(coverUrl), episodeCount: episodeCount == null && nullToAbsent ? const Value.absent() : Value(episodeCount), airDate: airDate == null && nullToAbsent ? const Value.absent() : Value(airDate), createdAt: Value(createdAt));
+  factory Season.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) { serializer ??= driftRuntimeOptions.defaultSerializer; return Season(id: serializer.fromJson<int>(json['id']), seriesId: serializer.fromJson<int>(json['seriesId']), seasonNumber: serializer.fromJson<int>(json['seasonNumber']), name: serializer.fromJson<String?>(json['name']), coverUrl: serializer.fromJson<String?>(json['coverUrl']), episodeCount: serializer.fromJson<int?>(json['episodeCount']), airDate: serializer.fromJson<String?>(json['airDate']), createdAt: serializer.fromJson<DateTime>(json['createdAt'])); }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) { serializer ??= driftRuntimeOptions.defaultSerializer; return {'id': serializer.toJson<int>(id), 'seriesId': serializer.toJson<int>(seriesId), 'seasonNumber': serializer.toJson<int>(seasonNumber), 'name': serializer.toJson<String?>(name), 'coverUrl': serializer.toJson<String?>(coverUrl), 'episodeCount': serializer.toJson<int?>(episodeCount), 'airDate': serializer.toJson<String?>(airDate), 'createdAt': serializer.toJson<DateTime>(createdAt)}; }
+  Season copyWith({int? id, int? seriesId, int? seasonNumber, Value<String?> name = const Value.absent(), Value<String?> coverUrl = const Value.absent(), Value<int?> episodeCount = const Value.absent(), Value<String?> airDate = const Value.absent(), DateTime? createdAt}) => Season(id: id ?? this.id, seriesId: seriesId ?? this.seriesId, seasonNumber: seasonNumber ?? this.seasonNumber, name: name.present ? name.value : this.name, coverUrl: coverUrl.present ? coverUrl.value : this.coverUrl, episodeCount: episodeCount.present ? episodeCount.value : this.episodeCount, airDate: airDate.present ? airDate.value : this.airDate, createdAt: createdAt ?? this.createdAt);
+  @override
+  String toString() => 'Season(id: $id, seriesId: $seriesId, seasonNumber: $seasonNumber)';
+  @override
+  int get hashCode => Object.hash(id, seriesId, seasonNumber, name, coverUrl, episodeCount, airDate, createdAt);
+  @override
+  bool operator ==(Object other) => identical(this, other) || (other is Season && other.id == id);
+}
+
+class SeasonsCompanion extends UpdateCompanion<Season> {
+  final Value<int> id; final Value<int> seriesId; final Value<int> seasonNumber; final Value<String?> name; final Value<String?> coverUrl; final Value<int?> episodeCount; final Value<String?> airDate; final Value<DateTime> createdAt;
+  const SeasonsCompanion({this.id = const Value.absent(), this.seriesId = const Value.absent(), this.seasonNumber = const Value.absent(), this.name = const Value.absent(), this.coverUrl = const Value.absent(), this.episodeCount = const Value.absent(), this.airDate = const Value.absent(), this.createdAt = const Value.absent()});
+  SeasonsCompanion.insert({this.id = const Value.absent(), required int seriesId, required int seasonNumber, this.name = const Value.absent(), this.coverUrl = const Value.absent(), this.episodeCount = const Value.absent(), this.airDate = const Value.absent(), this.createdAt = const Value.absent()}) : seriesId = Value(seriesId), seasonNumber = Value(seasonNumber);
+  static Insertable<Season> custom({Expression<int>? id, Expression<int>? seriesId, Expression<int>? seasonNumber, Expression<String>? name, Expression<String>? coverUrl, Expression<int>? episodeCount, Expression<String>? airDate, Expression<DateTime>? createdAt}) {
+    return RawValuesInsertable({if (id != null) 'id': id, if (seriesId != null) 'series_id': seriesId, if (seasonNumber != null) 'season_number': seasonNumber, if (name != null) 'name': name, if (coverUrl != null) 'cover_url': coverUrl, if (episodeCount != null) 'episode_count': episodeCount, if (airDate != null) 'air_date': airDate, if (createdAt != null) 'created_at': createdAt});
+  }
+  SeasonsCompanion copyWith({Value<int>? id, Value<int>? seriesId, Value<int>? seasonNumber, Value<String?>? name, Value<String?>? coverUrl, Value<int?>? episodeCount, Value<String?>? airDate, Value<DateTime>? createdAt}) => SeasonsCompanion(id: id ?? this.id, seriesId: seriesId ?? this.seriesId, seasonNumber: seasonNumber ?? this.seasonNumber, name: name ?? this.name, coverUrl: coverUrl ?? this.coverUrl, episodeCount: episodeCount ?? this.episodeCount, airDate: airDate ?? this.airDate, createdAt: createdAt ?? this.createdAt);
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) map['id'] = Variable<int>(id.value);
+    if (seriesId.present) map['series_id'] = Variable<int>(seriesId.value);
+    if (seasonNumber.present) map['season_number'] = Variable<int>(seasonNumber.value);
+    if (name.present) map['name'] = Variable<String>(name.value);
+    if (coverUrl.present) map['cover_url'] = Variable<String>(coverUrl.value);
+    if (episodeCount.present) map['episode_count'] = Variable<int>(episodeCount.value);
+    if (airDate.present) map['air_date'] = Variable<String>(airDate.value);
+    if (createdAt.present) map['created_at'] = Variable<DateTime>(createdAt.value);
+    return map;
+  }
+  @override
+  String toString() => 'SeasonsCompanion(id: $id, seriesId: $seriesId, seasonNumber: $seasonNumber)';
+}
+
+// **************************************************************************
+// Episodes Table
+// **************************************************************************
+
+class $EpisodesTable extends Episodes with TableInfo<$EpisodesTable, Episode> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $EpisodesTable(this.attachedDatabase, [this._alias]);
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>('id', aliasedName, false, hasAutoIncrement: true, type: DriftSqlType.int, requiredDuringInsert: false, defaultConstraints: GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  @override
+  late final GeneratedColumn<int> seriesId = GeneratedColumn<int>('series_id', aliasedName, false, type: DriftSqlType.int, requiredDuringInsert: true, defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES series_items (id)'));
+  @override
+  late final GeneratedColumn<int> seasonId = GeneratedColumn<int>('season_id', aliasedName, false, type: DriftSqlType.int, requiredDuringInsert: true, defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES seasons (id)'));
+  @override
+  late final GeneratedColumn<String> sourceId = GeneratedColumn<String>('source_id', aliasedName, false, type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  late final GeneratedColumn<int> episodeNumber = GeneratedColumn<int>('episode_number', aliasedName, false, type: DriftSqlType.int, requiredDuringInsert: true);
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>('title', aliasedName, false, additionalChecks: GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 500), type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  late final GeneratedColumn<String> streamUrl = GeneratedColumn<String>('stream_url', aliasedName, false, type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  late final GeneratedColumn<String> containerExtension = GeneratedColumn<String>('container_extension', aliasedName, false, type: DriftSqlType.string, requiredDuringInsert: false, defaultValue: const Constant('mp4'));
+  @override
+  late final GeneratedColumn<String> plot = GeneratedColumn<String>('plot', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<int> duration = GeneratedColumn<int>('duration', aliasedName, true, type: DriftSqlType.int, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<String> coverUrl = GeneratedColumn<String>('cover_url', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<double> rating = GeneratedColumn<double>('rating', aliasedName, true, type: DriftSqlType.double, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<String> releaseDate = GeneratedColumn<String>('release_date', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>('created_at', aliasedName, false, type: DriftSqlType.dateTime, requiredDuringInsert: false, defaultValue: currentDateAndTime);
+  @override
+  List<GeneratedColumn> get $columns => [id, seriesId, seasonId, sourceId, episodeNumber, title, streamUrl, containerExtension, plot, duration, coverUrl, rating, releaseDate, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'episodes';
+  @override
+  VerificationContext validateIntegrity(Insertable<Episode> instance, {bool isInserting = false}) => VerificationContext();
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Episode map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Episode(id: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}id'])!, seriesId: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}series_id'])!, seasonId: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}season_id'])!, sourceId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}source_id'])!, episodeNumber: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}episode_number'])!, title: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}title'])!, streamUrl: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}stream_url'])!, containerExtension: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}container_extension'])!, plot: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}plot']), duration: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}duration']), coverUrl: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}cover_url']), rating: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}rating']), releaseDate: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}release_date']), createdAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!);
+  }
+  @override
+  $EpisodesTable createAlias(String alias) => $EpisodesTable(attachedDatabase, alias);
+}
+
+class Episode extends DataClass implements Insertable<Episode> {
+  final int id; final int seriesId; final int seasonId; final String sourceId; final int episodeNumber; final String title; final String streamUrl; final String containerExtension; final String? plot; final int? duration; final String? coverUrl; final double? rating; final String? releaseDate; final DateTime createdAt;
+  const Episode({required this.id, required this.seriesId, required this.seasonId, required this.sourceId, required this.episodeNumber, required this.title, required this.streamUrl, required this.containerExtension, this.plot, this.duration, this.coverUrl, this.rating, this.releaseDate, required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id); map['series_id'] = Variable<int>(seriesId); map['season_id'] = Variable<int>(seasonId); map['source_id'] = Variable<String>(sourceId); map['episode_number'] = Variable<int>(episodeNumber); map['title'] = Variable<String>(title); map['stream_url'] = Variable<String>(streamUrl); map['container_extension'] = Variable<String>(containerExtension);
+    if (!nullToAbsent || plot != null) map['plot'] = Variable<String>(plot);
+    if (!nullToAbsent || duration != null) map['duration'] = Variable<int>(duration);
+    if (!nullToAbsent || coverUrl != null) map['cover_url'] = Variable<String>(coverUrl);
+    if (!nullToAbsent || rating != null) map['rating'] = Variable<double>(rating);
+    if (!nullToAbsent || releaseDate != null) map['release_date'] = Variable<String>(releaseDate);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+  EpisodesCompanion toCompanion(bool nullToAbsent) => EpisodesCompanion(id: Value(id), seriesId: Value(seriesId), seasonId: Value(seasonId), sourceId: Value(sourceId), episodeNumber: Value(episodeNumber), title: Value(title), streamUrl: Value(streamUrl), containerExtension: Value(containerExtension), plot: plot == null && nullToAbsent ? const Value.absent() : Value(plot), duration: duration == null && nullToAbsent ? const Value.absent() : Value(duration), coverUrl: coverUrl == null && nullToAbsent ? const Value.absent() : Value(coverUrl), rating: rating == null && nullToAbsent ? const Value.absent() : Value(rating), releaseDate: releaseDate == null && nullToAbsent ? const Value.absent() : Value(releaseDate), createdAt: Value(createdAt));
+  factory Episode.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) { serializer ??= driftRuntimeOptions.defaultSerializer; return Episode(id: serializer.fromJson<int>(json['id']), seriesId: serializer.fromJson<int>(json['seriesId']), seasonId: serializer.fromJson<int>(json['seasonId']), sourceId: serializer.fromJson<String>(json['sourceId']), episodeNumber: serializer.fromJson<int>(json['episodeNumber']), title: serializer.fromJson<String>(json['title']), streamUrl: serializer.fromJson<String>(json['streamUrl']), containerExtension: serializer.fromJson<String>(json['containerExtension']), plot: serializer.fromJson<String?>(json['plot']), duration: serializer.fromJson<int?>(json['duration']), coverUrl: serializer.fromJson<String?>(json['coverUrl']), rating: serializer.fromJson<double?>(json['rating']), releaseDate: serializer.fromJson<String?>(json['releaseDate']), createdAt: serializer.fromJson<DateTime>(json['createdAt'])); }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) { serializer ??= driftRuntimeOptions.defaultSerializer; return {'id': serializer.toJson<int>(id), 'seriesId': serializer.toJson<int>(seriesId), 'seasonId': serializer.toJson<int>(seasonId), 'sourceId': serializer.toJson<String>(sourceId), 'episodeNumber': serializer.toJson<int>(episodeNumber), 'title': serializer.toJson<String>(title), 'streamUrl': serializer.toJson<String>(streamUrl), 'containerExtension': serializer.toJson<String>(containerExtension), 'plot': serializer.toJson<String?>(plot), 'duration': serializer.toJson<int?>(duration), 'coverUrl': serializer.toJson<String?>(coverUrl), 'rating': serializer.toJson<double?>(rating), 'releaseDate': serializer.toJson<String?>(releaseDate), 'createdAt': serializer.toJson<DateTime>(createdAt)}; }
+  Episode copyWith({int? id, int? seriesId, int? seasonId, String? sourceId, int? episodeNumber, String? title, String? streamUrl, String? containerExtension, Value<String?> plot = const Value.absent(), Value<int?> duration = const Value.absent(), Value<String?> coverUrl = const Value.absent(), Value<double?> rating = const Value.absent(), Value<String?> releaseDate = const Value.absent(), DateTime? createdAt}) => Episode(id: id ?? this.id, seriesId: seriesId ?? this.seriesId, seasonId: seasonId ?? this.seasonId, sourceId: sourceId ?? this.sourceId, episodeNumber: episodeNumber ?? this.episodeNumber, title: title ?? this.title, streamUrl: streamUrl ?? this.streamUrl, containerExtension: containerExtension ?? this.containerExtension, plot: plot.present ? plot.value : this.plot, duration: duration.present ? duration.value : this.duration, coverUrl: coverUrl.present ? coverUrl.value : this.coverUrl, rating: rating.present ? rating.value : this.rating, releaseDate: releaseDate.present ? releaseDate.value : this.releaseDate, createdAt: createdAt ?? this.createdAt);
+  @override
+  String toString() => 'Episode(id: $id, seriesId: $seriesId, seasonId: $seasonId, episodeNumber: $episodeNumber, title: $title)';
+  @override
+  int get hashCode => Object.hash(id, seriesId, seasonId, sourceId, episodeNumber, title, streamUrl);
+  @override
+  bool operator ==(Object other) => identical(this, other) || (other is Episode && other.id == id);
+}
+
+class EpisodesCompanion extends UpdateCompanion<Episode> {
+  final Value<int> id; final Value<int> seriesId; final Value<int> seasonId; final Value<String> sourceId; final Value<int> episodeNumber; final Value<String> title; final Value<String> streamUrl; final Value<String> containerExtension; final Value<String?> plot; final Value<int?> duration; final Value<String?> coverUrl; final Value<double?> rating; final Value<String?> releaseDate; final Value<DateTime> createdAt;
+  const EpisodesCompanion({this.id = const Value.absent(), this.seriesId = const Value.absent(), this.seasonId = const Value.absent(), this.sourceId = const Value.absent(), this.episodeNumber = const Value.absent(), this.title = const Value.absent(), this.streamUrl = const Value.absent(), this.containerExtension = const Value.absent(), this.plot = const Value.absent(), this.duration = const Value.absent(), this.coverUrl = const Value.absent(), this.rating = const Value.absent(), this.releaseDate = const Value.absent(), this.createdAt = const Value.absent()});
+  EpisodesCompanion.insert({this.id = const Value.absent(), required int seriesId, required int seasonId, required String sourceId, required int episodeNumber, required String title, required String streamUrl, this.containerExtension = const Value.absent(), this.plot = const Value.absent(), this.duration = const Value.absent(), this.coverUrl = const Value.absent(), this.rating = const Value.absent(), this.releaseDate = const Value.absent(), this.createdAt = const Value.absent()}) : seriesId = Value(seriesId), seasonId = Value(seasonId), sourceId = Value(sourceId), episodeNumber = Value(episodeNumber), title = Value(title), streamUrl = Value(streamUrl);
+  static Insertable<Episode> custom({Expression<int>? id, Expression<int>? seriesId, Expression<int>? seasonId, Expression<String>? sourceId, Expression<int>? episodeNumber, Expression<String>? title, Expression<String>? streamUrl, Expression<String>? containerExtension, Expression<String>? plot, Expression<int>? duration, Expression<String>? coverUrl, Expression<double>? rating, Expression<String>? releaseDate, Expression<DateTime>? createdAt}) {
+    return RawValuesInsertable({if (id != null) 'id': id, if (seriesId != null) 'series_id': seriesId, if (seasonId != null) 'season_id': seasonId, if (sourceId != null) 'source_id': sourceId, if (episodeNumber != null) 'episode_number': episodeNumber, if (title != null) 'title': title, if (streamUrl != null) 'stream_url': streamUrl, if (containerExtension != null) 'container_extension': containerExtension, if (plot != null) 'plot': plot, if (duration != null) 'duration': duration, if (coverUrl != null) 'cover_url': coverUrl, if (rating != null) 'rating': rating, if (releaseDate != null) 'release_date': releaseDate, if (createdAt != null) 'created_at': createdAt});
+  }
+  EpisodesCompanion copyWith({Value<int>? id, Value<int>? seriesId, Value<int>? seasonId, Value<String>? sourceId, Value<int>? episodeNumber, Value<String>? title, Value<String>? streamUrl, Value<String>? containerExtension, Value<String?>? plot, Value<int?>? duration, Value<String?>? coverUrl, Value<double?>? rating, Value<String?>? releaseDate, Value<DateTime>? createdAt}) => EpisodesCompanion(id: id ?? this.id, seriesId: seriesId ?? this.seriesId, seasonId: seasonId ?? this.seasonId, sourceId: sourceId ?? this.sourceId, episodeNumber: episodeNumber ?? this.episodeNumber, title: title ?? this.title, streamUrl: streamUrl ?? this.streamUrl, containerExtension: containerExtension ?? this.containerExtension, plot: plot ?? this.plot, duration: duration ?? this.duration, coverUrl: coverUrl ?? this.coverUrl, rating: rating ?? this.rating, releaseDate: releaseDate ?? this.releaseDate, createdAt: createdAt ?? this.createdAt);
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) map['id'] = Variable<int>(id.value);
+    if (seriesId.present) map['series_id'] = Variable<int>(seriesId.value);
+    if (seasonId.present) map['season_id'] = Variable<int>(seasonId.value);
+    if (sourceId.present) map['source_id'] = Variable<String>(sourceId.value);
+    if (episodeNumber.present) map['episode_number'] = Variable<int>(episodeNumber.value);
+    if (title.present) map['title'] = Variable<String>(title.value);
+    if (streamUrl.present) map['stream_url'] = Variable<String>(streamUrl.value);
+    if (containerExtension.present) map['container_extension'] = Variable<String>(containerExtension.value);
+    if (plot.present) map['plot'] = Variable<String>(plot.value);
+    if (duration.present) map['duration'] = Variable<int>(duration.value);
+    if (coverUrl.present) map['cover_url'] = Variable<String>(coverUrl.value);
+    if (rating.present) map['rating'] = Variable<double>(rating.value);
+    if (releaseDate.present) map['release_date'] = Variable<String>(releaseDate.value);
+    if (createdAt.present) map['created_at'] = Variable<DateTime>(createdAt.value);
+    return map;
+  }
+  @override
+  String toString() => 'EpisodesCompanion(id: $id, title: $title)';
+}
+
+// **************************************************************************
+// AppDatabase
+// **************************************************************************
 
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
-  $AppDatabaseManager get managers => $AppDatabaseManager(this);
+
   late final $PlaylistsTable playlists = $PlaylistsTable(this);
   late final $ChannelsTable channels = $ChannelsTable(this);
   late final $FavoritesTable favorites = $FavoritesTable(this);
-  late final $WatchHistoryEntriesTable watchHistoryEntries =
-      $WatchHistoryEntriesTable(this);
+  late final $WatchHistoryEntriesTable watchHistoryEntries = $WatchHistoryEntriesTable(this);
   late final $EpgProgramsTable epgPrograms = $EpgProgramsTable(this);
+  late final $VodItemsTable vodItems = $VodItemsTable(this);
+  late final $SeriesItemsTable seriesItems = $SeriesItemsTable(this);
+  late final $SeasonsTable seasons = $SeasonsTable(this);
+  late final $EpisodesTable episodes = $EpisodesTable(this);
   late final PlaylistsDao playlistsDao = PlaylistsDao(this as AppDatabase);
   late final ChannelsDao channelsDao = ChannelsDao(this as AppDatabase);
   late final FavoritesDao favoritesDao = FavoritesDao(this as AppDatabase);
-  late final WatchHistoryDao watchHistoryDao =
-      WatchHistoryDao(this as AppDatabase);
+  late final WatchHistoryDao watchHistoryDao = WatchHistoryDao(this as AppDatabase);
   late final EpgDao epgDao = EpgDao(this as AppDatabase);
+
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [playlists, channels, favorites, watchHistoryEntries, epgPrograms];
-  @override
-  DriftDatabaseOptions get options =>
-      const DriftDatabaseOptions(storeDateTimeAsText: true);
-}
-
-typedef $$PlaylistsTableCreateCompanionBuilder = PlaylistsCompanion Function({
-  Value<int> id,
-  required String name,
-  required PlaylistType type,
-  Value<String> url,
-  Value<String?> epgUrl,
-  Value<String?> username,
-  Value<String?> credentialKey,
-  Value<int?> xtreamPortOverride,
-  Value<DateTime?> lastSyncAt,
-  Value<PlaylistSyncStatus> syncStatus,
-  Value<DateTime> createdAt,
-  Value<DateTime> updatedAt,
-  Value<bool> isActive,
-});
-typedef $$PlaylistsTableUpdateCompanionBuilder = PlaylistsCompanion Function({
-  Value<int> id,
-  Value<String> name,
-  Value<PlaylistType> type,
-  Value<String> url,
-  Value<String?> epgUrl,
-  Value<String?> username,
-  Value<String?> credentialKey,
-  Value<int?> xtreamPortOverride,
-  Value<DateTime?> lastSyncAt,
-  Value<PlaylistSyncStatus> syncStatus,
-  Value<DateTime> createdAt,
-  Value<DateTime> updatedAt,
-  Value<bool> isActive,
-});
-
-final class $$PlaylistsTableReferences
-    extends BaseReferences<_$AppDatabase, $PlaylistsTable, Playlist> {
-  $$PlaylistsTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static MultiTypedResultKey<$ChannelsTable, List<Channel>> _channelsRefsTable(
-          _$AppDatabase db) =>
-      MultiTypedResultKey.fromTable(db.channels,
-          aliasName:
-              $_aliasNameGenerator(db.playlists.id, db.channels.playlistId));
-
-  $$ChannelsTableProcessedTableManager get channelsRefs {
-    final manager = $$ChannelsTableTableManager($_db, $_db.channels)
-        .filter((f) => f.playlistId.id($_item.id));
-
-    final cache = $_typedResult.readTableOrNull(_channelsRefsTable($_db));
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
-  }
-}
-
-class $$PlaylistsTableFilterComposer
-    extends Composer<_$AppDatabase, $PlaylistsTable> {
-  $$PlaylistsTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get name => $composableBuilder(
-      column: $table.name, builder: (column) => ColumnFilters(column));
-
-  ColumnWithTypeConverterFilters<PlaylistType, PlaylistType, String> get type =>
-      $composableBuilder(
-          column: $table.type,
-          builder: (column) => ColumnWithTypeConverterFilters(column));
-
-  ColumnFilters<String> get url => $composableBuilder(
-      column: $table.url, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get epgUrl => $composableBuilder(
-      column: $table.epgUrl, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get username => $composableBuilder(
-      column: $table.username, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get credentialKey => $composableBuilder(
-      column: $table.credentialKey, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get xtreamPortOverride => $composableBuilder(
-      column: $table.xtreamPortOverride,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get lastSyncAt => $composableBuilder(
-      column: $table.lastSyncAt, builder: (column) => ColumnFilters(column));
-
-  ColumnWithTypeConverterFilters<PlaylistSyncStatus, PlaylistSyncStatus, String>
-      get syncStatus => $composableBuilder(
-          column: $table.syncStatus,
-          builder: (column) => ColumnWithTypeConverterFilters(column));
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<bool> get isActive => $composableBuilder(
-      column: $table.isActive, builder: (column) => ColumnFilters(column));
-
-  Expression<bool> channelsRefs(
-      Expression<bool> Function($$ChannelsTableFilterComposer f) f) {
-    final $$ChannelsTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.id,
-        referencedTable: $db.channels,
-        getReferencedColumn: (t) => t.playlistId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$ChannelsTableFilterComposer(
-              $db: $db,
-              $table: $db.channels,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return f(composer);
-  }
-}
-
-class $$PlaylistsTableOrderingComposer
-    extends Composer<_$AppDatabase, $PlaylistsTable> {
-  $$PlaylistsTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get name => $composableBuilder(
-      column: $table.name, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get type => $composableBuilder(
-      column: $table.type, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get url => $composableBuilder(
-      column: $table.url, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get epgUrl => $composableBuilder(
-      column: $table.epgUrl, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get username => $composableBuilder(
-      column: $table.username, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get credentialKey => $composableBuilder(
-      column: $table.credentialKey,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get xtreamPortOverride => $composableBuilder(
-      column: $table.xtreamPortOverride,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get lastSyncAt => $composableBuilder(
-      column: $table.lastSyncAt, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get syncStatus => $composableBuilder(
-      column: $table.syncStatus, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<bool> get isActive => $composableBuilder(
-      column: $table.isActive, builder: (column) => ColumnOrderings(column));
-}
-
-class $$PlaylistsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $PlaylistsTable> {
-  $$PlaylistsTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get name =>
-      $composableBuilder(column: $table.name, builder: (column) => column);
-
-  GeneratedColumnWithTypeConverter<PlaylistType, String> get type =>
-      $composableBuilder(column: $table.type, builder: (column) => column);
-
-  GeneratedColumn<String> get url =>
-      $composableBuilder(column: $table.url, builder: (column) => column);
-
-  GeneratedColumn<String> get epgUrl =>
-      $composableBuilder(column: $table.epgUrl, builder: (column) => column);
-
-  GeneratedColumn<String> get username =>
-      $composableBuilder(column: $table.username, builder: (column) => column);
-
-  GeneratedColumn<String> get credentialKey => $composableBuilder(
-      column: $table.credentialKey, builder: (column) => column);
-
-  GeneratedColumn<int> get xtreamPortOverride => $composableBuilder(
-      column: $table.xtreamPortOverride, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get lastSyncAt => $composableBuilder(
-      column: $table.lastSyncAt, builder: (column) => column);
-
-  GeneratedColumnWithTypeConverter<PlaylistSyncStatus, String> get syncStatus =>
-      $composableBuilder(
-          column: $table.syncStatus, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-
-  GeneratedColumn<bool> get isActive =>
-      $composableBuilder(column: $table.isActive, builder: (column) => column);
-
-  Expression<T> channelsRefs<T extends Object>(
-      Expression<T> Function($$ChannelsTableAnnotationComposer a) f) {
-    final $$ChannelsTableAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.id,
-        referencedTable: $db.channels,
-        getReferencedColumn: (t) => t.playlistId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$ChannelsTableAnnotationComposer(
-              $db: $db,
-              $table: $db.channels,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return f(composer);
-  }
-}
-
-class $$PlaylistsTableTableManager extends RootTableManager<
-    _$AppDatabase,
-    $PlaylistsTable,
-    Playlist,
-    $$PlaylistsTableFilterComposer,
-    $$PlaylistsTableOrderingComposer,
-    $$PlaylistsTableAnnotationComposer,
-    $$PlaylistsTableCreateCompanionBuilder,
-    $$PlaylistsTableUpdateCompanionBuilder,
-    (Playlist, $$PlaylistsTableReferences),
-    Playlist,
-    PrefetchHooks Function({bool channelsRefs})> {
-  $$PlaylistsTableTableManager(_$AppDatabase db, $PlaylistsTable table)
-      : super(TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$PlaylistsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$PlaylistsTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$PlaylistsTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            Value<String> name = const Value.absent(),
-            Value<PlaylistType> type = const Value.absent(),
-            Value<String> url = const Value.absent(),
-            Value<String?> epgUrl = const Value.absent(),
-            Value<String?> username = const Value.absent(),
-            Value<String?> credentialKey = const Value.absent(),
-            Value<int?> xtreamPortOverride = const Value.absent(),
-            Value<DateTime?> lastSyncAt = const Value.absent(),
-            Value<PlaylistSyncStatus> syncStatus = const Value.absent(),
-            Value<DateTime> createdAt = const Value.absent(),
-            Value<DateTime> updatedAt = const Value.absent(),
-            Value<bool> isActive = const Value.absent(),
-          }) =>
-              PlaylistsCompanion(
-            id: id,
-            name: name,
-            type: type,
-            url: url,
-            epgUrl: epgUrl,
-            username: username,
-            credentialKey: credentialKey,
-            xtreamPortOverride: xtreamPortOverride,
-            lastSyncAt: lastSyncAt,
-            syncStatus: syncStatus,
-            createdAt: createdAt,
-            updatedAt: updatedAt,
-            isActive: isActive,
-          ),
-          createCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            required String name,
-            required PlaylistType type,
-            Value<String> url = const Value.absent(),
-            Value<String?> epgUrl = const Value.absent(),
-            Value<String?> username = const Value.absent(),
-            Value<String?> credentialKey = const Value.absent(),
-            Value<int?> xtreamPortOverride = const Value.absent(),
-            Value<DateTime?> lastSyncAt = const Value.absent(),
-            Value<PlaylistSyncStatus> syncStatus = const Value.absent(),
-            Value<DateTime> createdAt = const Value.absent(),
-            Value<DateTime> updatedAt = const Value.absent(),
-            Value<bool> isActive = const Value.absent(),
-          }) =>
-              PlaylistsCompanion.insert(
-            id: id,
-            name: name,
-            type: type,
-            url: url,
-            epgUrl: epgUrl,
-            username: username,
-            credentialKey: credentialKey,
-            xtreamPortOverride: xtreamPortOverride,
-            lastSyncAt: lastSyncAt,
-            syncStatus: syncStatus,
-            createdAt: createdAt,
-            updatedAt: updatedAt,
-            isActive: isActive,
-          ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable(table),
-                    $$PlaylistsTableReferences(db, table, e)
-                  ))
-              .toList(),
-          prefetchHooksCallback: ({channelsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (channelsRefs) db.channels],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (channelsRefs)
-                    await $_getPrefetchedData(
-                        currentTable: table,
-                        referencedTable:
-                            $$PlaylistsTableReferences._channelsRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $$PlaylistsTableReferences(db, table, p0)
-                                .channelsRefs,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.playlistId == item.id),
-                        typedResults: items)
-                ];
-              },
-            );
-          },
-        ));
-}
-
-typedef $$PlaylistsTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $PlaylistsTable,
-    Playlist,
-    $$PlaylistsTableFilterComposer,
-    $$PlaylistsTableOrderingComposer,
-    $$PlaylistsTableAnnotationComposer,
-    $$PlaylistsTableCreateCompanionBuilder,
-    $$PlaylistsTableUpdateCompanionBuilder,
-    (Playlist, $$PlaylistsTableReferences),
-    Playlist,
-    PrefetchHooks Function({bool channelsRefs})>;
-typedef $$ChannelsTableCreateCompanionBuilder = ChannelsCompanion Function({
-  Value<int> id,
-  required int playlistId,
-  Value<String?> sourceId,
-  required String name,
-  required String streamUrl,
-  Value<String?> logoUrl,
-  Value<String?> groupName,
-  Value<String?> tvgId,
-  Value<String?> tvgName,
-  Value<bool> isActive,
-  required ChannelSourceType sourceType,
-  Value<DateTime> createdAt,
-  Value<DateTime> updatedAt,
-});
-typedef $$ChannelsTableUpdateCompanionBuilder = ChannelsCompanion Function({
-  Value<int> id,
-  Value<int> playlistId,
-  Value<String?> sourceId,
-  Value<String> name,
-  Value<String> streamUrl,
-  Value<String?> logoUrl,
-  Value<String?> groupName,
-  Value<String?> tvgId,
-  Value<String?> tvgName,
-  Value<bool> isActive,
-  Value<ChannelSourceType> sourceType,
-  Value<DateTime> createdAt,
-  Value<DateTime> updatedAt,
-});
-
-final class $$ChannelsTableReferences
-    extends BaseReferences<_$AppDatabase, $ChannelsTable, Channel> {
-  $$ChannelsTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static $PlaylistsTable _playlistIdTable(_$AppDatabase db) =>
-      db.playlists.createAlias(
-          $_aliasNameGenerator(db.channels.playlistId, db.playlists.id));
-
-  $$PlaylistsTableProcessedTableManager? get playlistId {
-    if ($_item.playlistId == null) return null;
-    final manager = $$PlaylistsTableTableManager($_db, $_db.playlists)
-        .filter((f) => f.id($_item.playlistId!));
-    final item = $_typedResult.readTableOrNull(_playlistIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
-  }
-
-  static MultiTypedResultKey<$FavoritesTable, List<Favorite>>
-      _favoritesRefsTable(_$AppDatabase db) =>
-          MultiTypedResultKey.fromTable(db.favorites,
-              aliasName:
-                  $_aliasNameGenerator(db.channels.id, db.favorites.channelId));
-
-  $$FavoritesTableProcessedTableManager get favoritesRefs {
-    final manager = $$FavoritesTableTableManager($_db, $_db.favorites)
-        .filter((f) => f.channelId.id($_item.id));
-
-    final cache = $_typedResult.readTableOrNull(_favoritesRefsTable($_db));
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
-  }
-
-  static MultiTypedResultKey<$WatchHistoryEntriesTable, List<WatchHistoryEntry>>
-      _watchHistoryEntriesRefsTable(_$AppDatabase db) =>
-          MultiTypedResultKey.fromTable(db.watchHistoryEntries,
-              aliasName: $_aliasNameGenerator(
-                  db.channels.id, db.watchHistoryEntries.channelId));
-
-  $$WatchHistoryEntriesTableProcessedTableManager get watchHistoryEntriesRefs {
-    final manager =
-        $$WatchHistoryEntriesTableTableManager($_db, $_db.watchHistoryEntries)
-            .filter((f) => f.channelId.id($_item.id));
-
-    final cache =
-        $_typedResult.readTableOrNull(_watchHistoryEntriesRefsTable($_db));
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
-  }
-
-  static MultiTypedResultKey<$EpgProgramsTable, List<EpgProgram>>
-      _epgProgramsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-          db.epgPrograms,
-          aliasName:
-              $_aliasNameGenerator(db.channels.id, db.epgPrograms.channelId));
-
-  $$EpgProgramsTableProcessedTableManager get epgProgramsRefs {
-    final manager = $$EpgProgramsTableTableManager($_db, $_db.epgPrograms)
-        .filter((f) => f.channelId.id($_item.id));
-
-    final cache = $_typedResult.readTableOrNull(_epgProgramsRefsTable($_db));
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
-  }
-}
-
-class $$ChannelsTableFilterComposer
-    extends Composer<_$AppDatabase, $ChannelsTable> {
-  $$ChannelsTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get sourceId => $composableBuilder(
-      column: $table.sourceId, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get name => $composableBuilder(
-      column: $table.name, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get streamUrl => $composableBuilder(
-      column: $table.streamUrl, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get logoUrl => $composableBuilder(
-      column: $table.logoUrl, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get groupName => $composableBuilder(
-      column: $table.groupName, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get tvgId => $composableBuilder(
-      column: $table.tvgId, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get tvgName => $composableBuilder(
-      column: $table.tvgName, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<bool> get isActive => $composableBuilder(
-      column: $table.isActive, builder: (column) => ColumnFilters(column));
-
-  ColumnWithTypeConverterFilters<ChannelSourceType, ChannelSourceType, String>
-      get sourceType => $composableBuilder(
-          column: $table.sourceType,
-          builder: (column) => ColumnWithTypeConverterFilters(column));
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
-
-  $$PlaylistsTableFilterComposer get playlistId {
-    final $$PlaylistsTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.playlistId,
-        referencedTable: $db.playlists,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$PlaylistsTableFilterComposer(
-              $db: $db,
-              $table: $db.playlists,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-
-  Expression<bool> favoritesRefs(
-      Expression<bool> Function($$FavoritesTableFilterComposer f) f) {
-    final $$FavoritesTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.id,
-        referencedTable: $db.favorites,
-        getReferencedColumn: (t) => t.channelId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$FavoritesTableFilterComposer(
-              $db: $db,
-              $table: $db.favorites,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return f(composer);
-  }
-
-  Expression<bool> watchHistoryEntriesRefs(
-      Expression<bool> Function($$WatchHistoryEntriesTableFilterComposer f) f) {
-    final $$WatchHistoryEntriesTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.id,
-        referencedTable: $db.watchHistoryEntries,
-        getReferencedColumn: (t) => t.channelId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$WatchHistoryEntriesTableFilterComposer(
-              $db: $db,
-              $table: $db.watchHistoryEntries,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return f(composer);
-  }
-
-  Expression<bool> epgProgramsRefs(
-      Expression<bool> Function($$EpgProgramsTableFilterComposer f) f) {
-    final $$EpgProgramsTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.id,
-        referencedTable: $db.epgPrograms,
-        getReferencedColumn: (t) => t.channelId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$EpgProgramsTableFilterComposer(
-              $db: $db,
-              $table: $db.epgPrograms,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return f(composer);
-  }
-}
-
-class $$ChannelsTableOrderingComposer
-    extends Composer<_$AppDatabase, $ChannelsTable> {
-  $$ChannelsTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get sourceId => $composableBuilder(
-      column: $table.sourceId, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get name => $composableBuilder(
-      column: $table.name, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get streamUrl => $composableBuilder(
-      column: $table.streamUrl, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get logoUrl => $composableBuilder(
-      column: $table.logoUrl, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get groupName => $composableBuilder(
-      column: $table.groupName, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get tvgId => $composableBuilder(
-      column: $table.tvgId, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get tvgName => $composableBuilder(
-      column: $table.tvgName, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<bool> get isActive => $composableBuilder(
-      column: $table.isActive, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get sourceType => $composableBuilder(
-      column: $table.sourceType, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
-
-  $$PlaylistsTableOrderingComposer get playlistId {
-    final $$PlaylistsTableOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.playlistId,
-        referencedTable: $db.playlists,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$PlaylistsTableOrderingComposer(
-              $db: $db,
-              $table: $db.playlists,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-}
-
-class $$ChannelsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $ChannelsTable> {
-  $$ChannelsTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get sourceId =>
-      $composableBuilder(column: $table.sourceId, builder: (column) => column);
-
-  GeneratedColumn<String> get name =>
-      $composableBuilder(column: $table.name, builder: (column) => column);
-
-  GeneratedColumn<String> get streamUrl =>
-      $composableBuilder(column: $table.streamUrl, builder: (column) => column);
-
-  GeneratedColumn<String> get logoUrl =>
-      $composableBuilder(column: $table.logoUrl, builder: (column) => column);
-
-  GeneratedColumn<String> get groupName =>
-      $composableBuilder(column: $table.groupName, builder: (column) => column);
-
-  GeneratedColumn<String> get tvgId =>
-      $composableBuilder(column: $table.tvgId, builder: (column) => column);
-
-  GeneratedColumn<String> get tvgName =>
-      $composableBuilder(column: $table.tvgName, builder: (column) => column);
-
-  GeneratedColumn<bool> get isActive =>
-      $composableBuilder(column: $table.isActive, builder: (column) => column);
-
-  GeneratedColumnWithTypeConverter<ChannelSourceType, String> get sourceType =>
-      $composableBuilder(
-          column: $table.sourceType, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-
-  $$PlaylistsTableAnnotationComposer get playlistId {
-    final $$PlaylistsTableAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.playlistId,
-        referencedTable: $db.playlists,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$PlaylistsTableAnnotationComposer(
-              $db: $db,
-              $table: $db.playlists,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-
-  Expression<T> favoritesRefs<T extends Object>(
-      Expression<T> Function($$FavoritesTableAnnotationComposer a) f) {
-    final $$FavoritesTableAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.id,
-        referencedTable: $db.favorites,
-        getReferencedColumn: (t) => t.channelId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$FavoritesTableAnnotationComposer(
-              $db: $db,
-              $table: $db.favorites,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return f(composer);
-  }
-
-  Expression<T> watchHistoryEntriesRefs<T extends Object>(
-      Expression<T> Function($$WatchHistoryEntriesTableAnnotationComposer a)
-          f) {
-    final $$WatchHistoryEntriesTableAnnotationComposer composer =
-        $composerBuilder(
-            composer: this,
-            getCurrentColumn: (t) => t.id,
-            referencedTable: $db.watchHistoryEntries,
-            getReferencedColumn: (t) => t.channelId,
-            builder: (joinBuilder,
-                    {$addJoinBuilderToRootComposer,
-                    $removeJoinBuilderFromRootComposer}) =>
-                $$WatchHistoryEntriesTableAnnotationComposer(
-                  $db: $db,
-                  $table: $db.watchHistoryEntries,
-                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-                  joinBuilder: joinBuilder,
-                  $removeJoinBuilderFromRootComposer:
-                      $removeJoinBuilderFromRootComposer,
-                ));
-    return f(composer);
-  }
-
-  Expression<T> epgProgramsRefs<T extends Object>(
-      Expression<T> Function($$EpgProgramsTableAnnotationComposer a) f) {
-    final $$EpgProgramsTableAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.id,
-        referencedTable: $db.epgPrograms,
-        getReferencedColumn: (t) => t.channelId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$EpgProgramsTableAnnotationComposer(
-              $db: $db,
-              $table: $db.epgPrograms,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return f(composer);
-  }
-}
-
-class $$ChannelsTableTableManager extends RootTableManager<
-    _$AppDatabase,
-    $ChannelsTable,
-    Channel,
-    $$ChannelsTableFilterComposer,
-    $$ChannelsTableOrderingComposer,
-    $$ChannelsTableAnnotationComposer,
-    $$ChannelsTableCreateCompanionBuilder,
-    $$ChannelsTableUpdateCompanionBuilder,
-    (Channel, $$ChannelsTableReferences),
-    Channel,
-    PrefetchHooks Function(
-        {bool playlistId,
-        bool favoritesRefs,
-        bool watchHistoryEntriesRefs,
-        bool epgProgramsRefs})> {
-  $$ChannelsTableTableManager(_$AppDatabase db, $ChannelsTable table)
-      : super(TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$ChannelsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$ChannelsTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$ChannelsTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            Value<int> playlistId = const Value.absent(),
-            Value<String?> sourceId = const Value.absent(),
-            Value<String> name = const Value.absent(),
-            Value<String> streamUrl = const Value.absent(),
-            Value<String?> logoUrl = const Value.absent(),
-            Value<String?> groupName = const Value.absent(),
-            Value<String?> tvgId = const Value.absent(),
-            Value<String?> tvgName = const Value.absent(),
-            Value<bool> isActive = const Value.absent(),
-            Value<ChannelSourceType> sourceType = const Value.absent(),
-            Value<DateTime> createdAt = const Value.absent(),
-            Value<DateTime> updatedAt = const Value.absent(),
-          }) =>
-              ChannelsCompanion(
-            id: id,
-            playlistId: playlistId,
-            sourceId: sourceId,
-            name: name,
-            streamUrl: streamUrl,
-            logoUrl: logoUrl,
-            groupName: groupName,
-            tvgId: tvgId,
-            tvgName: tvgName,
-            isActive: isActive,
-            sourceType: sourceType,
-            createdAt: createdAt,
-            updatedAt: updatedAt,
-          ),
-          createCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            required int playlistId,
-            Value<String?> sourceId = const Value.absent(),
-            required String name,
-            required String streamUrl,
-            Value<String?> logoUrl = const Value.absent(),
-            Value<String?> groupName = const Value.absent(),
-            Value<String?> tvgId = const Value.absent(),
-            Value<String?> tvgName = const Value.absent(),
-            Value<bool> isActive = const Value.absent(),
-            required ChannelSourceType sourceType,
-            Value<DateTime> createdAt = const Value.absent(),
-            Value<DateTime> updatedAt = const Value.absent(),
-          }) =>
-              ChannelsCompanion.insert(
-            id: id,
-            playlistId: playlistId,
-            sourceId: sourceId,
-            name: name,
-            streamUrl: streamUrl,
-            logoUrl: logoUrl,
-            groupName: groupName,
-            tvgId: tvgId,
-            tvgName: tvgName,
-            isActive: isActive,
-            sourceType: sourceType,
-            createdAt: createdAt,
-            updatedAt: updatedAt,
-          ),
-          withReferenceMapper: (p0) => p0
-              .map((e) =>
-                  (e.readTable(table), $$ChannelsTableReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: (
-              {playlistId = false,
-              favoritesRefs = false,
-              watchHistoryEntriesRefs = false,
-              epgProgramsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [
-                if (favoritesRefs) db.favorites,
-                if (watchHistoryEntriesRefs) db.watchHistoryEntries,
-                if (epgProgramsRefs) db.epgPrograms
-              ],
-              addJoins: <
-                  T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic>>(state) {
-                if (playlistId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.playlistId,
-                    referencedTable:
-                        $$ChannelsTableReferences._playlistIdTable(db),
-                    referencedColumn:
-                        $$ChannelsTableReferences._playlistIdTable(db).id,
-                  ) as T;
-                }
-
-                return state;
-              },
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (favoritesRefs)
-                    await $_getPrefetchedData(
-                        currentTable: table,
-                        referencedTable:
-                            $$ChannelsTableReferences._favoritesRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $$ChannelsTableReferences(db, table, p0)
-                                .favoritesRefs,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.channelId == item.id),
-                        typedResults: items),
-                  if (watchHistoryEntriesRefs)
-                    await $_getPrefetchedData(
-                        currentTable: table,
-                        referencedTable: $$ChannelsTableReferences
-                            ._watchHistoryEntriesRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $$ChannelsTableReferences(db, table, p0)
-                                .watchHistoryEntriesRefs,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.channelId == item.id),
-                        typedResults: items),
-                  if (epgProgramsRefs)
-                    await $_getPrefetchedData(
-                        currentTable: table,
-                        referencedTable:
-                            $$ChannelsTableReferences._epgProgramsRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $$ChannelsTableReferences(db, table, p0)
-                                .epgProgramsRefs,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.channelId == item.id),
-                        typedResults: items)
-                ];
-              },
-            );
-          },
-        ));
-}
-
-typedef $$ChannelsTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $ChannelsTable,
-    Channel,
-    $$ChannelsTableFilterComposer,
-    $$ChannelsTableOrderingComposer,
-    $$ChannelsTableAnnotationComposer,
-    $$ChannelsTableCreateCompanionBuilder,
-    $$ChannelsTableUpdateCompanionBuilder,
-    (Channel, $$ChannelsTableReferences),
-    Channel,
-    PrefetchHooks Function(
-        {bool playlistId,
-        bool favoritesRefs,
-        bool watchHistoryEntriesRefs,
-        bool epgProgramsRefs})>;
-typedef $$FavoritesTableCreateCompanionBuilder = FavoritesCompanion Function({
-  Value<int> id,
-  required int channelId,
-  Value<DateTime> createdAt,
-});
-typedef $$FavoritesTableUpdateCompanionBuilder = FavoritesCompanion Function({
-  Value<int> id,
-  Value<int> channelId,
-  Value<DateTime> createdAt,
-});
-
-final class $$FavoritesTableReferences
-    extends BaseReferences<_$AppDatabase, $FavoritesTable, Favorite> {
-  $$FavoritesTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static $ChannelsTable _channelIdTable(_$AppDatabase db) =>
-      db.channels.createAlias(
-          $_aliasNameGenerator(db.favorites.channelId, db.channels.id));
-
-  $$ChannelsTableProcessedTableManager? get channelId {
-    if ($_item.channelId == null) return null;
-    final manager = $$ChannelsTableTableManager($_db, $_db.channels)
-        .filter((f) => f.id($_item.channelId!));
-    final item = $_typedResult.readTableOrNull(_channelIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
-  }
-}
-
-class $$FavoritesTableFilterComposer
-    extends Composer<_$AppDatabase, $FavoritesTable> {
-  $$FavoritesTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
-
-  $$ChannelsTableFilterComposer get channelId {
-    final $$ChannelsTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.channelId,
-        referencedTable: $db.channels,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$ChannelsTableFilterComposer(
-              $db: $db,
-              $table: $db.channels,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-}
-
-class $$FavoritesTableOrderingComposer
-    extends Composer<_$AppDatabase, $FavoritesTable> {
-  $$FavoritesTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
-
-  $$ChannelsTableOrderingComposer get channelId {
-    final $$ChannelsTableOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.channelId,
-        referencedTable: $db.channels,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$ChannelsTableOrderingComposer(
-              $db: $db,
-              $table: $db.channels,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-}
-
-class $$FavoritesTableAnnotationComposer
-    extends Composer<_$AppDatabase, $FavoritesTable> {
-  $$FavoritesTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  $$ChannelsTableAnnotationComposer get channelId {
-    final $$ChannelsTableAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.channelId,
-        referencedTable: $db.channels,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$ChannelsTableAnnotationComposer(
-              $db: $db,
-              $table: $db.channels,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-}
-
-class $$FavoritesTableTableManager extends RootTableManager<
-    _$AppDatabase,
-    $FavoritesTable,
-    Favorite,
-    $$FavoritesTableFilterComposer,
-    $$FavoritesTableOrderingComposer,
-    $$FavoritesTableAnnotationComposer,
-    $$FavoritesTableCreateCompanionBuilder,
-    $$FavoritesTableUpdateCompanionBuilder,
-    (Favorite, $$FavoritesTableReferences),
-    Favorite,
-    PrefetchHooks Function({bool channelId})> {
-  $$FavoritesTableTableManager(_$AppDatabase db, $FavoritesTable table)
-      : super(TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$FavoritesTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$FavoritesTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$FavoritesTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            Value<int> channelId = const Value.absent(),
-            Value<DateTime> createdAt = const Value.absent(),
-          }) =>
-              FavoritesCompanion(
-            id: id,
-            channelId: channelId,
-            createdAt: createdAt,
-          ),
-          createCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            required int channelId,
-            Value<DateTime> createdAt = const Value.absent(),
-          }) =>
-              FavoritesCompanion.insert(
-            id: id,
-            channelId: channelId,
-            createdAt: createdAt,
-          ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable(table),
-                    $$FavoritesTableReferences(db, table, e)
-                  ))
-              .toList(),
-          prefetchHooksCallback: ({channelId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins: <
-                  T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic>>(state) {
-                if (channelId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.channelId,
-                    referencedTable:
-                        $$FavoritesTableReferences._channelIdTable(db),
-                    referencedColumn:
-                        $$FavoritesTableReferences._channelIdTable(db).id,
-                  ) as T;
-                }
-
-                return state;
-              },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
-        ));
-}
-
-typedef $$FavoritesTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $FavoritesTable,
-    Favorite,
-    $$FavoritesTableFilterComposer,
-    $$FavoritesTableOrderingComposer,
-    $$FavoritesTableAnnotationComposer,
-    $$FavoritesTableCreateCompanionBuilder,
-    $$FavoritesTableUpdateCompanionBuilder,
-    (Favorite, $$FavoritesTableReferences),
-    Favorite,
-    PrefetchHooks Function({bool channelId})>;
-typedef $$WatchHistoryEntriesTableCreateCompanionBuilder
-    = WatchHistoryEntriesCompanion Function({
-  Value<int> id,
-  required int channelId,
-  Value<DateTime> startedAt,
-  Value<DateTime> lastWatchedAt,
-  Value<int> watchedDurationMs,
-});
-typedef $$WatchHistoryEntriesTableUpdateCompanionBuilder
-    = WatchHistoryEntriesCompanion Function({
-  Value<int> id,
-  Value<int> channelId,
-  Value<DateTime> startedAt,
-  Value<DateTime> lastWatchedAt,
-  Value<int> watchedDurationMs,
-});
-
-final class $$WatchHistoryEntriesTableReferences extends BaseReferences<
-    _$AppDatabase, $WatchHistoryEntriesTable, WatchHistoryEntry> {
-  $$WatchHistoryEntriesTableReferences(
-      super.$_db, super.$_table, super.$_typedResult);
-
-  static $ChannelsTable _channelIdTable(_$AppDatabase db) =>
-      db.channels.createAlias($_aliasNameGenerator(
-          db.watchHistoryEntries.channelId, db.channels.id));
-
-  $$ChannelsTableProcessedTableManager? get channelId {
-    if ($_item.channelId == null) return null;
-    final manager = $$ChannelsTableTableManager($_db, $_db.channels)
-        .filter((f) => f.id($_item.channelId!));
-    final item = $_typedResult.readTableOrNull(_channelIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
-  }
-}
-
-class $$WatchHistoryEntriesTableFilterComposer
-    extends Composer<_$AppDatabase, $WatchHistoryEntriesTable> {
-  $$WatchHistoryEntriesTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get startedAt => $composableBuilder(
-      column: $table.startedAt, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get lastWatchedAt => $composableBuilder(
-      column: $table.lastWatchedAt, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get watchedDurationMs => $composableBuilder(
-      column: $table.watchedDurationMs,
-      builder: (column) => ColumnFilters(column));
-
-  $$ChannelsTableFilterComposer get channelId {
-    final $$ChannelsTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.channelId,
-        referencedTable: $db.channels,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$ChannelsTableFilterComposer(
-              $db: $db,
-              $table: $db.channels,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-}
-
-class $$WatchHistoryEntriesTableOrderingComposer
-    extends Composer<_$AppDatabase, $WatchHistoryEntriesTable> {
-  $$WatchHistoryEntriesTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get startedAt => $composableBuilder(
-      column: $table.startedAt, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get lastWatchedAt => $composableBuilder(
-      column: $table.lastWatchedAt,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get watchedDurationMs => $composableBuilder(
-      column: $table.watchedDurationMs,
-      builder: (column) => ColumnOrderings(column));
-
-  $$ChannelsTableOrderingComposer get channelId {
-    final $$ChannelsTableOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.channelId,
-        referencedTable: $db.channels,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$ChannelsTableOrderingComposer(
-              $db: $db,
-              $table: $db.channels,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-}
-
-class $$WatchHistoryEntriesTableAnnotationComposer
-    extends Composer<_$AppDatabase, $WatchHistoryEntriesTable> {
-  $$WatchHistoryEntriesTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get startedAt =>
-      $composableBuilder(column: $table.startedAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get lastWatchedAt => $composableBuilder(
-      column: $table.lastWatchedAt, builder: (column) => column);
-
-  GeneratedColumn<int> get watchedDurationMs => $composableBuilder(
-      column: $table.watchedDurationMs, builder: (column) => column);
-
-  $$ChannelsTableAnnotationComposer get channelId {
-    final $$ChannelsTableAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.channelId,
-        referencedTable: $db.channels,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$ChannelsTableAnnotationComposer(
-              $db: $db,
-              $table: $db.channels,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-}
-
-class $$WatchHistoryEntriesTableTableManager extends RootTableManager<
-    _$AppDatabase,
-    $WatchHistoryEntriesTable,
-    WatchHistoryEntry,
-    $$WatchHistoryEntriesTableFilterComposer,
-    $$WatchHistoryEntriesTableOrderingComposer,
-    $$WatchHistoryEntriesTableAnnotationComposer,
-    $$WatchHistoryEntriesTableCreateCompanionBuilder,
-    $$WatchHistoryEntriesTableUpdateCompanionBuilder,
-    (WatchHistoryEntry, $$WatchHistoryEntriesTableReferences),
-    WatchHistoryEntry,
-    PrefetchHooks Function({bool channelId})> {
-  $$WatchHistoryEntriesTableTableManager(
-      _$AppDatabase db, $WatchHistoryEntriesTable table)
-      : super(TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$WatchHistoryEntriesTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$WatchHistoryEntriesTableOrderingComposer(
-                  $db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$WatchHistoryEntriesTableAnnotationComposer(
-                  $db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            Value<int> channelId = const Value.absent(),
-            Value<DateTime> startedAt = const Value.absent(),
-            Value<DateTime> lastWatchedAt = const Value.absent(),
-            Value<int> watchedDurationMs = const Value.absent(),
-          }) =>
-              WatchHistoryEntriesCompanion(
-            id: id,
-            channelId: channelId,
-            startedAt: startedAt,
-            lastWatchedAt: lastWatchedAt,
-            watchedDurationMs: watchedDurationMs,
-          ),
-          createCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            required int channelId,
-            Value<DateTime> startedAt = const Value.absent(),
-            Value<DateTime> lastWatchedAt = const Value.absent(),
-            Value<int> watchedDurationMs = const Value.absent(),
-          }) =>
-              WatchHistoryEntriesCompanion.insert(
-            id: id,
-            channelId: channelId,
-            startedAt: startedAt,
-            lastWatchedAt: lastWatchedAt,
-            watchedDurationMs: watchedDurationMs,
-          ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable(table),
-                    $$WatchHistoryEntriesTableReferences(db, table, e)
-                  ))
-              .toList(),
-          prefetchHooksCallback: ({channelId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins: <
-                  T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic>>(state) {
-                if (channelId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.channelId,
-                    referencedTable: $$WatchHistoryEntriesTableReferences
-                        ._channelIdTable(db),
-                    referencedColumn: $$WatchHistoryEntriesTableReferences
-                        ._channelIdTable(db)
-                        .id,
-                  ) as T;
-                }
-
-                return state;
-              },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
-        ));
-}
-
-typedef $$WatchHistoryEntriesTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $WatchHistoryEntriesTable,
-    WatchHistoryEntry,
-    $$WatchHistoryEntriesTableFilterComposer,
-    $$WatchHistoryEntriesTableOrderingComposer,
-    $$WatchHistoryEntriesTableAnnotationComposer,
-    $$WatchHistoryEntriesTableCreateCompanionBuilder,
-    $$WatchHistoryEntriesTableUpdateCompanionBuilder,
-    (WatchHistoryEntry, $$WatchHistoryEntriesTableReferences),
-    WatchHistoryEntry,
-    PrefetchHooks Function({bool channelId})>;
-typedef $$EpgProgramsTableCreateCompanionBuilder = EpgProgramsCompanion
-    Function({
-  Value<int> id,
-  required int channelId,
-  required String title,
-  Value<String?> description,
-  required DateTime startTimeUtc,
-  required DateTime endTimeUtc,
-  Value<String?> category,
-  Value<String?> imageUrl,
-});
-typedef $$EpgProgramsTableUpdateCompanionBuilder = EpgProgramsCompanion
-    Function({
-  Value<int> id,
-  Value<int> channelId,
-  Value<String> title,
-  Value<String?> description,
-  Value<DateTime> startTimeUtc,
-  Value<DateTime> endTimeUtc,
-  Value<String?> category,
-  Value<String?> imageUrl,
-});
-
-final class $$EpgProgramsTableReferences
-    extends BaseReferences<_$AppDatabase, $EpgProgramsTable, EpgProgram> {
-  $$EpgProgramsTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static $ChannelsTable _channelIdTable(_$AppDatabase db) =>
-      db.channels.createAlias(
-          $_aliasNameGenerator(db.epgPrograms.channelId, db.channels.id));
-
-  $$ChannelsTableProcessedTableManager? get channelId {
-    if ($_item.channelId == null) return null;
-    final manager = $$ChannelsTableTableManager($_db, $_db.channels)
-        .filter((f) => f.id($_item.channelId!));
-    final item = $_typedResult.readTableOrNull(_channelIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
-  }
-}
-
-class $$EpgProgramsTableFilterComposer
-    extends Composer<_$AppDatabase, $EpgProgramsTable> {
-  $$EpgProgramsTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get title => $composableBuilder(
-      column: $table.title, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get description => $composableBuilder(
-      column: $table.description, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get startTimeUtc => $composableBuilder(
-      column: $table.startTimeUtc, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get endTimeUtc => $composableBuilder(
-      column: $table.endTimeUtc, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get category => $composableBuilder(
-      column: $table.category, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get imageUrl => $composableBuilder(
-      column: $table.imageUrl, builder: (column) => ColumnFilters(column));
-
-  $$ChannelsTableFilterComposer get channelId {
-    final $$ChannelsTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.channelId,
-        referencedTable: $db.channels,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$ChannelsTableFilterComposer(
-              $db: $db,
-              $table: $db.channels,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-}
-
-class $$EpgProgramsTableOrderingComposer
-    extends Composer<_$AppDatabase, $EpgProgramsTable> {
-  $$EpgProgramsTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get title => $composableBuilder(
-      column: $table.title, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get description => $composableBuilder(
-      column: $table.description, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get startTimeUtc => $composableBuilder(
-      column: $table.startTimeUtc,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get endTimeUtc => $composableBuilder(
-      column: $table.endTimeUtc, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get category => $composableBuilder(
-      column: $table.category, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get imageUrl => $composableBuilder(
-      column: $table.imageUrl, builder: (column) => ColumnOrderings(column));
-
-  $$ChannelsTableOrderingComposer get channelId {
-    final $$ChannelsTableOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.channelId,
-        referencedTable: $db.channels,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$ChannelsTableOrderingComposer(
-              $db: $db,
-              $table: $db.channels,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-}
-
-class $$EpgProgramsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $EpgProgramsTable> {
-  $$EpgProgramsTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get title =>
-      $composableBuilder(column: $table.title, builder: (column) => column);
-
-  GeneratedColumn<String> get description => $composableBuilder(
-      column: $table.description, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get startTimeUtc => $composableBuilder(
-      column: $table.startTimeUtc, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get endTimeUtc => $composableBuilder(
-      column: $table.endTimeUtc, builder: (column) => column);
-
-  GeneratedColumn<String> get category =>
-      $composableBuilder(column: $table.category, builder: (column) => column);
-
-  GeneratedColumn<String> get imageUrl =>
-      $composableBuilder(column: $table.imageUrl, builder: (column) => column);
-
-  $$ChannelsTableAnnotationComposer get channelId {
-    final $$ChannelsTableAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.channelId,
-        referencedTable: $db.channels,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$ChannelsTableAnnotationComposer(
-              $db: $db,
-              $table: $db.channels,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-}
-
-class $$EpgProgramsTableTableManager extends RootTableManager<
-    _$AppDatabase,
-    $EpgProgramsTable,
-    EpgProgram,
-    $$EpgProgramsTableFilterComposer,
-    $$EpgProgramsTableOrderingComposer,
-    $$EpgProgramsTableAnnotationComposer,
-    $$EpgProgramsTableCreateCompanionBuilder,
-    $$EpgProgramsTableUpdateCompanionBuilder,
-    (EpgProgram, $$EpgProgramsTableReferences),
-    EpgProgram,
-    PrefetchHooks Function({bool channelId})> {
-  $$EpgProgramsTableTableManager(_$AppDatabase db, $EpgProgramsTable table)
-      : super(TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$EpgProgramsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$EpgProgramsTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$EpgProgramsTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            Value<int> channelId = const Value.absent(),
-            Value<String> title = const Value.absent(),
-            Value<String?> description = const Value.absent(),
-            Value<DateTime> startTimeUtc = const Value.absent(),
-            Value<DateTime> endTimeUtc = const Value.absent(),
-            Value<String?> category = const Value.absent(),
-            Value<String?> imageUrl = const Value.absent(),
-          }) =>
-              EpgProgramsCompanion(
-            id: id,
-            channelId: channelId,
-            title: title,
-            description: description,
-            startTimeUtc: startTimeUtc,
-            endTimeUtc: endTimeUtc,
-            category: category,
-            imageUrl: imageUrl,
-          ),
-          createCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            required int channelId,
-            required String title,
-            Value<String?> description = const Value.absent(),
-            required DateTime startTimeUtc,
-            required DateTime endTimeUtc,
-            Value<String?> category = const Value.absent(),
-            Value<String?> imageUrl = const Value.absent(),
-          }) =>
-              EpgProgramsCompanion.insert(
-            id: id,
-            channelId: channelId,
-            title: title,
-            description: description,
-            startTimeUtc: startTimeUtc,
-            endTimeUtc: endTimeUtc,
-            category: category,
-            imageUrl: imageUrl,
-          ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable(table),
-                    $$EpgProgramsTableReferences(db, table, e)
-                  ))
-              .toList(),
-          prefetchHooksCallback: ({channelId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins: <
-                  T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic>>(state) {
-                if (channelId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.channelId,
-                    referencedTable:
-                        $$EpgProgramsTableReferences._channelIdTable(db),
-                    referencedColumn:
-                        $$EpgProgramsTableReferences._channelIdTable(db).id,
-                  ) as T;
-                }
-
-                return state;
-              },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
-        ));
-}
-
-typedef $$EpgProgramsTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $EpgProgramsTable,
-    EpgProgram,
-    $$EpgProgramsTableFilterComposer,
-    $$EpgProgramsTableOrderingComposer,
-    $$EpgProgramsTableAnnotationComposer,
-    $$EpgProgramsTableCreateCompanionBuilder,
-    $$EpgProgramsTableUpdateCompanionBuilder,
-    (EpgProgram, $$EpgProgramsTableReferences),
-    EpgProgram,
-    PrefetchHooks Function({bool channelId})>;
-
-class $AppDatabaseManager {
-  final _$AppDatabase _db;
-  $AppDatabaseManager(this._db);
-  $$PlaylistsTableTableManager get playlists =>
-      $$PlaylistsTableTableManager(_db, _db.playlists);
-  $$ChannelsTableTableManager get channels =>
-      $$ChannelsTableTableManager(_db, _db.channels);
-  $$FavoritesTableTableManager get favorites =>
-      $$FavoritesTableTableManager(_db, _db.favorites);
-  $$WatchHistoryEntriesTableTableManager get watchHistoryEntries =>
-      $$WatchHistoryEntriesTableTableManager(_db, _db.watchHistoryEntries);
-  $$EpgProgramsTableTableManager get epgPrograms =>
-      $$EpgProgramsTableTableManager(_db, _db.epgPrograms);
+      [playlists, channels, favorites, watchHistoryEntries, epgPrograms, vodItems, seriesItems, seasons, episodes];
 }

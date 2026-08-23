@@ -4,7 +4,5 @@ part of 'epg_dao.dart';
 
 // ignore_for_file: type=lint
 mixin _$EpgDaoMixin on DatabaseAccessor<AppDatabase> {
-  $PlaylistsTable get playlists => attachedDatabase.playlists;
-  $ChannelsTable get channels => attachedDatabase.channels;
   $EpgProgramsTable get epgPrograms => attachedDatabase.epgPrograms;
 }

@@ -1,10 +1,13 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
-import 'package:nebula_iptv/core/widgets/loading_view.dart';
+import 'package:nebula_iptv/data/datasources/player/media_kit_player_service.dart';
 import 'package:nebula_iptv/domain/services/video_player_service.dart';
 import 'package:nebula_iptv/features/player/providers/player_provider.dart';
+import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
 import 'package:nebula_iptv/features/player/widgets/player_controls.dart';
 import 'package:nebula_iptv/features/player/widgets/player_error_overlay.dart';
 
@@ -16,12 +19,16 @@ class PlayerScreen extends ConsumerStatefulWidget {
   final String channelName;
   final String streamUrl;
   final String? logoUrl;
+  final WatchContentInfo? contentInfo;
+  final int? seekToMs;
 
   const PlayerScreen({
     super.key,
     required this.channelName,
     required this.streamUrl,
     this.logoUrl,
+    this.contentInfo,
+    this.seekToMs,
   });
 
   @override
@@ -30,18 +37,69 @@ class PlayerScreen extends ConsumerStatefulWidget {
 
 class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   bool _showControls = true;
+  VideoController? _videoController;
 
   @override
   void initState() {
     super.initState();
+
+    // Create VideoController for media_kit on native platforms
+    if (!kIsWeb) {
+      final playerService = ref.read(videoPlayerServiceProvider);
+      if (playerService is MediaKitPlayerService) {
+        // Initialize player first if needed, then create controller
+        playerService.initialize().then((_) {
+          if (mounted && playerService.player != null) {
+            setState(() {
+              _videoController = VideoController(playerService.player!);
+            });
+          }
+        });
+      }
+    }
+
     // Start playback
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(playerProvider.notifier).playStream(widget.streamUrl);
+      ref.read(playerProvider.notifier).playStream(
+        widget.streamUrl,
+        contentInfo: widget.contentInfo,
+        seekToMs: widget.seekToMs,
+      );
     });
     // Auto-hide controls after 3s
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) setState(() => _showControls = false);
     });
+  }
+
+  @override
+  void dispose() {
+    _videoController = null;
+    super.dispose();
+  }
+
+  /// Safely stop playback and navigate back.
+  bool _isExiting = false;
+
+  Future<void> _goBack() async {
+    if (_isExiting) return;
+    _isExiting = true;
+
+    // 1. Remove video widget from tree by nulling controller
+    setState(() {
+      _videoController = null;
+    });
+
+    // 2. Give the native surface time to release
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    // 3. Stop playback (includes saving watch tracking)
+    await ref.read(playerProvider.notifier).stop();
+
+    // 4. Navigate back
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -57,16 +115,30 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           onTap: () => setState(() => _showControls = !_showControls),
           child: Stack(
             children: [
-              // Video surface placeholder (media_kit Video widget goes here)
-              const Center(
-                child: SizedBox.expand(
-                  child: ColoredBox(color: Colors.black),
-                ),
-              ),
+              // Video surface
+              if (_videoController != null)
+                Center(
+                  child: Video(
+                    controller: _videoController!,
+                  ),
+                )
+              else
+                const SizedBox.expand(child: ColoredBox(color: Colors.black)),
 
-              // Buffering indicator
+              // Buffering indicator — small spinner in bottom-left corner
               if (state.playbackState.status == PlaybackStatus.buffering)
-                const Center(child: LoadingView()),
+                const Positioned(
+                  bottom: 80,
+                  left: 16,
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white54,
+                    ),
+                  ),
+                ),
 
               // Error overlay
               if (state.playbackState.status == PlaybackStatus.error)
@@ -103,7 +175,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                               Icons.arrow_back_rounded,
                               color: Colors.white,
                             ),
-                            onPressed: () => Navigator.of(context).pop(),
+                            onPressed: () => _goBack(),
                           ),
                           const SizedBox(width: 12),
                           Text(
@@ -136,7 +208,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                     },
                     onStop: () {
                       ref.read(playerProvider.notifier).stop();
-                      Navigator.of(context).pop();
+                      _goBack();
                     },
                     onVolumeChanged: (vol) {
                       ref.read(playerProvider.notifier).setVolume(vol);
@@ -165,7 +237,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           notifier.resume();
         }
       case LogicalKeyboardKey.escape:
-        Navigator.of(context).pop();
+        _goBack();
       case LogicalKeyboardKey.arrowUp:
         ref.read(playerProvider.notifier).setVolume(
               (ref.read(playerProvider).playbackState.volume + 0.1)

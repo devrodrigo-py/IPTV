@@ -1,8 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nebula_iptv/domain/providers/watch_providers.dart';
 import 'package:nebula_iptv/domain/services/stream_reconnection_service.dart';
 import 'package:nebula_iptv/domain/services/video_player_service.dart';
+import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
+import 'package:nebula_iptv/core/logging/app_logger.dart';
+import 'package:nebula_iptv/data/datasources/player/media_kit_player_service.dart';
 
 /// State for the player screen.
 class PlayerState {
@@ -45,18 +49,25 @@ final playerProvider =
   (ref) => PlayerNotifier(ref),
 );
 
-/// Manages player state, playback, and reconnection.
+/// Manages player state, playback, reconnection, and watch tracking.
 class PlayerNotifier extends StateNotifier<PlayerState> {
   final Ref _ref;
   StreamReconnectionService? _reconnectionService;
   final List<StreamSubscription<dynamic>> _subscriptions = [];
   String? _currentUrl;
+  WatchContentInfo? _contentInfo;
 
   PlayerNotifier(this._ref) : super(const PlayerState());
 
-  /// Starts playing a stream URL.
-  Future<void> playStream(String url) async {
+  /// Starts playing a stream URL with optional content info for tracking.
+  Future<void> playStream(
+    String url, {
+    WatchContentInfo? contentInfo,
+    int? seekToMs,
+  }) async {
     _currentUrl = url;
+    _contentInfo = contentInfo;
+
     final player = _ref.read(videoPlayerServiceProvider);
 
     // Listen to player streams
@@ -64,6 +75,16 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
       player.playbackState.listen((playback) {
         if (mounted) {
           state = state.copyWith(playbackState: playback);
+
+          // Update watch tracking with progress (on every state change while playing)
+          if (_contentInfo != null &&
+              playback.status == PlaybackStatus.playing &&
+              playback.position > Duration.zero) {
+            _ref.read(watchTrackingServiceProvider).updateProgress(
+              position: playback.position,
+              duration: playback.duration,
+            );
+          }
 
           // Trigger reconnection on error
           if (playback.status == PlaybackStatus.error) {
@@ -81,7 +102,51 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
       }),
     );
 
+    // Start watch tracking
+    if (_contentInfo != null) {
+      _ref.read(watchTrackingServiceProvider).startTracking(_contentInfo!);
+
+      // Listen to position directly from native player for accurate tracking
+      final service = _ref.read(videoPlayerServiceProvider);
+      if (service is MediaKitPlayerService && service.player != null) {
+        _subscriptions.add(
+          service.player!.stream.position.listen((position) {
+            final duration = service.player!.state.duration;
+            if (position > Duration.zero) {
+              _ref.read(watchTrackingServiceProvider).updateProgress(
+                position: position,
+                duration: duration,
+              );
+            }
+          }),
+        );
+      }
+    }
+
     await player.play(url);
+
+    // Seek to saved position if resuming
+    if (seekToMs != null && seekToMs > 0) {
+      final targetMs = seekToMs; // Capture for closure
+      appLogger.d('[Player] Will seek to ${targetMs}ms once stream is playing');
+      // Wait for the video to actually start playing, then seek
+      final service = _ref.read(videoPlayerServiceProvider);
+      if (service is MediaKitPlayerService && service.player != null) {
+        late final StreamSubscription<Duration> seekSub;
+        seekSub = service.player!.stream.position.listen((pos) {
+          // Once we get a real position (video is playing), do the seek
+          if (pos.inMilliseconds > 100) {
+            seekSub.cancel();
+            appLogger.d('[Player] Stream playing at ${pos.inMilliseconds}ms, seeking to ${targetMs}ms');
+            service.player!.seek(Duration(milliseconds: targetMs));
+          }
+        });
+        // Safety timeout: cancel listener after 15s if video never starts
+        Future.delayed(const Duration(seconds: 15), () {
+          seekSub.cancel();
+        });
+      }
+    }
   }
 
   /// Pauses playback.
@@ -97,6 +162,8 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
   /// Stops playback.
   Future<void> stop() async {
     _reconnectionService?.cancel();
+    // Stop watch tracking
+    await _ref.read(watchTrackingServiceProvider).stopTracking();
     await _ref.read(videoPlayerServiceProvider).stop();
   }
 
@@ -112,7 +179,7 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
       reconnectionStatus: ReconnectionStatus.idle,
       reconnectionAttempt: 0,
     );
-    await playStream(url);
+    await playStream(url, contentInfo: _contentInfo);
   }
 
   void _startReconnection() {
@@ -141,6 +208,16 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
 
   @override
   void dispose() {
+    // Stop watch tracking (fire-and-forget in dispose)
+    try {
+      _ref.read(watchTrackingServiceProvider).stopTracking();
+    } catch (_) {}
+    // Stop playback when leaving the player screen (safe to call even if already stopped)
+    try {
+      _ref.read(videoPlayerServiceProvider).stop();
+    } catch (_) {
+      // Player may already be disposed — ignore
+    }
     for (final sub in _subscriptions) {
       sub.cancel();
     }

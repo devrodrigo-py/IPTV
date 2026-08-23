@@ -9,6 +9,8 @@ import 'package:nebula_iptv/features/history/history_screen.dart';
 import 'package:nebula_iptv/features/home/home_screen.dart';
 import 'package:nebula_iptv/features/playlists/playlists_screen.dart';
 import 'package:nebula_iptv/features/settings/settings_screen.dart';
+import 'package:nebula_iptv/features/vod/vod_screen.dart';
+import 'package:nebula_iptv/features/series/series_screen.dart';
 import 'package:nebula_iptv/features/shell/widgets/mobile_bottom_nav.dart';
 import 'package:nebula_iptv/features/shell/widgets/sidebar.dart';
 import 'package:nebula_iptv/features/shell/widgets/top_bar.dart';
@@ -35,11 +37,13 @@ class _ShellScreenState extends State<ShellScreen> {
     return switch (_selectedIndex) {
       0 => l10n.home,
       1 => l10n.channels,
-      2 => l10n.favorites,
-      3 => l10n.history,
-      4 => l10n.playlists,
-      5 => l10n.epg,
-      6 => l10n.settings,
+      2 => 'Filmes',
+      3 => 'Séries',
+      4 => l10n.favorites,
+      5 => l10n.history,
+      6 => l10n.playlists,
+      7 => l10n.epg,
+      8 => l10n.settings,
       _ => l10n.home,
     };
   }
@@ -49,11 +53,13 @@ class _ShellScreenState extends State<ShellScreen> {
     return switch (_selectedIndex) {
       0 => const HomeScreen(),
       1 => const ChannelsScreen(),
-      2 => const FavoritesScreen(),
-      3 => const HistoryScreen(),
-      4 => const PlaylistsScreen(),
-      5 => const EpgScreen(),
-      6 => const SettingsScreen(),
+      2 => const VodScreen(),
+      3 => const SeriesScreen(),
+      4 => const FavoritesScreen(),
+      5 => const HistoryScreen(),
+      6 => const PlaylistsScreen(),
+      7 => const EpgScreen(),
+      8 => const SettingsScreen(),
       _ => const HomeScreen(),
     };
   }
@@ -63,9 +69,9 @@ class _ShellScreenState extends State<ShellScreen> {
     return switch (mobileIndex) {
       0 => 0, // Home
       1 => 1, // Channels
-      2 => 2, // Favorites
-      3 => 4, // Playlists
-      4 => 6, // Settings
+      2 => 4, // Favorites
+      3 => 6, // Playlists
+      4 => 8, // Settings
       _ => 0,
     };
   }
@@ -75,9 +81,11 @@ class _ShellScreenState extends State<ShellScreen> {
     return switch (fullIndex) {
       0 => 0,
       1 => 1,
-      2 => 2,
-      4 => 3,
-      6 => 4,
+      2 => 0, // Films → Home on mobile
+      3 => 0, // Series → Home on mobile
+      4 => 2,
+      6 => 3,
+      8 => 4,
       _ => 0,
     };
   }
@@ -164,6 +172,10 @@ class _ShellScreenState extends State<ShellScreen> {
           const _NavigateIntent(5),
       const SingleActivator(LogicalKeyboardKey.digit7, alt: true):
           const _NavigateIntent(6),
+      const SingleActivator(LogicalKeyboardKey.digit8, alt: true):
+          const _NavigateIntent(7),
+      const SingleActivator(LogicalKeyboardKey.digit9, alt: true):
+          const _NavigateIntent(8),
     };
   }
 }

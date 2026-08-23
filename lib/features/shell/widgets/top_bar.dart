@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
+import 'package:nebula_iptv/features/search/search_screen.dart';
 import 'package:nebula_iptv/l10n/app_localizations.dart';
 
 /// Top bar for the application shell.
@@ -40,7 +41,9 @@ class TopBar extends StatelessWidget {
           const Spacer(),
           FocusableWidget(
             onPressed: () {
-              // Search will be implemented in Phase 5
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const SearchScreen(),
+              ));
             },
             borderRadius: const BorderRadius.all(Radius.circular(20)),
             builder: (context, isFocused) {

@@ -165,6 +165,15 @@ class PlaylistsScreen extends ConsumerWidget {
               .read(playlistManagementProvider.notifier)
               .importFromUrl(name: name, url: url);
         },
+        onImportXtream: (name, serverUrl, username, password) {
+          Navigator.of(ctx).pop();
+          ref.read(playlistManagementProvider.notifier).importFromXtream(
+                name: name,
+                serverUrl: serverUrl,
+                username: username,
+                password: password,
+              );
+        },
         onImportFile: () {
           Navigator.of(ctx).pop();
           ref.read(playlistManagementProvider.notifier).importFromFile();
@@ -176,10 +185,12 @@ class PlaylistsScreen extends ConsumerWidget {
 
 class _AddPlaylistDialog extends StatefulWidget {
   final void Function(String name, String url) onImportUrl;
+  final void Function(String name, String serverUrl, String username, String password) onImportXtream;
   final VoidCallback onImportFile;
 
   const _AddPlaylistDialog({
     required this.onImportUrl,
+    required this.onImportXtream,
     required this.onImportFile,
   });
 
@@ -187,14 +198,31 @@ class _AddPlaylistDialog extends StatefulWidget {
   State<_AddPlaylistDialog> createState() => _AddPlaylistDialogState();
 }
 
-class _AddPlaylistDialogState extends State<_AddPlaylistDialog> {
+class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   final _nameController = TextEditingController();
   final _urlController = TextEditingController();
+  final _xtreamNameController = TextEditingController();
+  final _serverUrlController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
     _urlController.dispose();
+    _xtreamNameController.dispose();
+    _serverUrlController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -205,31 +233,94 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog> {
       title: const Text('Adicionar fonte'),
       content: SizedBox(
         width: 400,
+        height: 320,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Nome',
-                hintText: 'Ex: Minha Playlist',
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _urlController,
-              decoration: const InputDecoration(
-                labelText: 'URL da playlist (M3U/M3U8)',
-                hintText: 'https://exemplo.com/playlist.m3u',
-              ),
+            TabBar(
+              controller: _tabController,
+              labelColor: AppColors.primary,
+              unselectedLabelColor: AppColors.textSecondary,
+              indicatorColor: AppColors.primary,
+              tabs: const [
+                Tab(text: 'Xtream Codes'),
+                Tab(text: 'M3U / URL'),
+              ],
             ),
             const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 8),
-            TextButton.icon(
-              onPressed: widget.onImportFile,
-              icon: const Icon(Icons.file_open_rounded),
-              label: const Text('Importar de arquivo'),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  // Tab 1: Xtream Codes
+                  SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextField(
+                          controller: _xtreamNameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Nome',
+                            hintText: 'Ex: Minha IPTV',
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _serverUrlController,
+                          decoration: const InputDecoration(
+                            labelText: 'URL do servidor',
+                            hintText: 'http://servidor.com',
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _usernameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Usuário',
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _passwordController,
+                          obscureText: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Senha',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Tab 2: M3U URL
+                  SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextField(
+                          controller: _nameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Nome',
+                            hintText: 'Ex: Minha Playlist',
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _urlController,
+                          decoration: const InputDecoration(
+                            labelText: 'URL da playlist (M3U/M3U8)',
+                            hintText: 'https://exemplo.com/playlist.m3u',
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextButton.icon(
+                          onPressed: widget.onImportFile,
+                          icon: const Icon(Icons.file_open_rounded),
+                          label: const Text('Importar de arquivo'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -241,10 +332,22 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog> {
         ),
         ElevatedButton(
           onPressed: () {
-            final name = _nameController.text.trim();
-            final url = _urlController.text.trim();
-            if (name.isEmpty || url.isEmpty) return;
-            widget.onImportUrl(name, url);
+            if (_tabController.index == 0) {
+              // Xtream
+              final name = _xtreamNameController.text.trim();
+              final serverUrl = _serverUrlController.text.trim();
+              final username = _usernameController.text.trim();
+              final password = _passwordController.text.trim();
+              if (name.isEmpty || serverUrl.isEmpty ||
+                  username.isEmpty || password.isEmpty) return;
+              widget.onImportXtream(name, serverUrl, username, password);
+            } else {
+              // M3U
+              final name = _nameController.text.trim();
+              final url = _urlController.text.trim();
+              if (name.isEmpty || url.isEmpty) return;
+              widget.onImportUrl(name, url);
+            }
           },
           child: const Text('Importar'),
         ),

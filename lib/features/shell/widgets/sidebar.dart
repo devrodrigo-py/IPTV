@@ -27,6 +27,8 @@ class Sidebar extends StatelessWidget {
     final destinations = [
       _NavDestination(Icons.home_rounded, l10n.home),
       _NavDestination(Icons.live_tv_rounded, l10n.channels),
+      _NavDestination(Icons.movie_rounded, 'Filmes'),
+      _NavDestination(Icons.tv_rounded, 'Séries'),
       _NavDestination(Icons.favorite_rounded, l10n.favorites),
       _NavDestination(Icons.history_rounded, l10n.history),
       _NavDestination(Icons.playlist_play_rounded, l10n.playlists),

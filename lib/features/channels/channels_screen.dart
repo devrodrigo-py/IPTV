@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
 import 'package:nebula_iptv/features/player/player_screen.dart';
 import 'package:nebula_iptv/core/widgets/empty_view.dart';
 import 'package:nebula_iptv/core/widgets/error_view.dart';
@@ -101,6 +102,12 @@ class ChannelsScreen extends ConsumerWidget {
                   channelName: channel.name,
                   streamUrl: channel.streamUrl,
                   logoUrl: channel.logoUrl,
+                  contentInfo: WatchContentInfo(
+                    channelId: channel.id,
+                    name: channel.name,
+                    contentType: 'live',
+                    thumbnailUrl: channel.logoUrl,
+                  ),
                 ),
               ),
             );

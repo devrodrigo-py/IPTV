@@ -23,7 +23,7 @@ dependencies:
   dio: ^5.4.3
 
   # Database
-  drift: ^2.18.0
+  drift: ^2.22.1
   sqlite3_flutter_libs: ^0.5.24
 
   # Video Player
@@ -50,13 +50,6 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  # Code Generation
-  build_runner: ^2.4.9
-  riverpod_generator: ^2.4.0
-  drift_dev: ^2.18.0
-  custom_lint: ^0.6.4
-  riverpod_lint: ^2.3.10
 
   # Linting
   flutter_lints: ^4.0.0

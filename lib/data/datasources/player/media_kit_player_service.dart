@@ -24,6 +24,9 @@ class MediaKitPlayerService implements VideoPlayerService {
   VideoPlaybackState _currentState = const VideoPlaybackState();
   final List<StreamSubscription<dynamic>> _subscriptions = [];
 
+  /// Exposes the underlying media_kit Player for the Video widget.
+  Player? get player => _player;
+
   @override
   Future<Result<void>> initialize() async {
     try {
@@ -50,7 +53,13 @@ class MediaKitPlayerService implements VideoPlayerService {
 
     try {
       _updateState(_currentState.copyWith(status: PlaybackStatus.buffering));
-      await _player!.open(Media(url));
+      // For live streams, use .m3u8 extension (HLS) instead of .ts
+      // This enables proper live streaming behavior (no download-and-play)
+      var playUrl = url;
+      if (url.contains('/live/') && url.endsWith('.ts')) {
+        playUrl = '${url.substring(0, url.length - 3)}.m3u8';
+      }
+      await _player!.open(Media(playUrl));
       return const Success(null);
     } catch (e) {
       _emitError('PLAY_ERROR', 'Erro ao reproduzir stream.', e);

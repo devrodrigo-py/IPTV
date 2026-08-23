@@ -6,6 +6,7 @@ import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/tv_focusable_card.dart';
 import 'package:nebula_iptv/data/database/app_database.dart';
 import 'package:nebula_iptv/features/home/home_screen.dart';
+import 'package:nebula_iptv/domain/providers/watch_providers.dart';
 import 'package:nebula_iptv/l10n/app_localizations.dart';
 
 /// TV-optimized home screen with large cards for 10-foot UI.
