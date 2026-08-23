@@ -11,6 +11,7 @@ class ContentRowItem {
   final double? progress;
   final String? badge;
   final IconData fallbackIcon;
+  final int? channelId;
 
   const ContentRowItem({
     required this.title,
@@ -19,6 +20,7 @@ class ContentRowItem {
     this.progress,
     this.badge,
     this.fallbackIcon = Icons.movie_rounded,
+    this.channelId,
   });
 }
 
@@ -28,11 +30,13 @@ class ContentRowItem {
 /// - Category title header with "Ver todos >" button
 /// - Horizontal scrolling list of ContentCards
 /// - Consistent spacing and padding
+/// - Right-click context menu for shortcuts
 class ContentRow extends StatelessWidget {
   final String title;
   final List<ContentRowItem> items;
   final VoidCallback? onSeeAll;
   final void Function(int index)? onItemTap;
+  final void Function(int index, Offset position)? onItemSecondaryTap;
   final double cardWidth;
   final double height;
 
@@ -42,6 +46,7 @@ class ContentRow extends StatelessWidget {
     required this.items,
     this.onSeeAll,
     this.onItemTap,
+    this.onItemSecondaryTap,
     this.cardWidth = 140,
     this.height = 260,
   });
@@ -112,6 +117,9 @@ class ContentRow extends StatelessWidget {
                   fallbackIcon: item.fallbackIcon,
                   width: cardWidth,
                   onTap: onItemTap != null ? () => onItemTap!(index) : null,
+                  onSecondaryTap: onItemSecondaryTap != null
+                      ? (position) => onItemSecondaryTap!(index, position)
+                      : null,
                 ),
               );
             },

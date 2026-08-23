@@ -9,6 +9,7 @@ import 'package:nebula_iptv/data/database/daos/health_check_dao.dart';
 import 'package:nebula_iptv/data/database/daos/media_work_dao.dart';
 import 'package:nebula_iptv/data/database/daos/profile_dao.dart';
 import 'package:nebula_iptv/data/database/daos/shortcut_dao.dart';
+import 'package:nebula_iptv/data/database/daos/ratings_dao.dart';
 import 'package:nebula_iptv/data/database/daos/channel_group_dao.dart';
 import 'package:nebula_iptv/data/database/daos/tmdb_cache_dao.dart';
 import 'package:nebula_iptv/data/database/daos/vod_dao.dart';
@@ -24,6 +25,7 @@ import 'package:nebula_iptv/data/database/tables/playlists_table.dart';
 import 'package:nebula_iptv/data/database/tables/seasons_table.dart';
 import 'package:nebula_iptv/data/database/tables/series_table.dart';
 import 'package:nebula_iptv/data/database/tables/profile_tables.dart';
+import 'package:nebula_iptv/data/database/tables/ratings_table.dart';
 import 'package:nebula_iptv/data/database/tables/vod_table.dart';
 import 'package:nebula_iptv/data/database/tables/watch_history_table.dart';
 import 'package:nebula_iptv/data/database/tables/watch_stats_table.dart';
@@ -66,9 +68,9 @@ class AppDatabase extends _$AppDatabase {
       const DriftDatabaseOptions(storeDateTimeAsText: true);
 
   @override
-  int get schemaVersion => 9;
+int get schemaVersion => 10;
 
-  // Manual DAO getters (not using @DriftAccessor to avoid codegen issues)
+  // Manual DAO gette
   CategoryCacheDao get categoryCacheDao => CategoryCacheDao(this);
   VodDao get vodDao => VodDao(this);
   SeriesDao get seriesDao => SeriesDao(this);
@@ -80,6 +82,7 @@ class AppDatabase extends _$AppDatabase {
   SearchAliasesDao get searchAliasesDao => SearchAliasesDao(this);
   ProfileDao get profileDao => ProfileDao(this);
   ShortcutDao get shortcutDao => ShortcutDao(this);
+  RatingsDao get ratingsDao => RatingsDao(this);
 
   @override
   MigrationStrategy get migration {
@@ -103,6 +106,8 @@ class AppDatabase extends _$AppDatabase {
         await _createSearchAliasesTables();
         // Create profile & shortcuts tables (Etapa 6)
         await _createProfileTables();
+        // Create ratings tables (Etapa 7)
+        await _createRatingsTables();
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 2) {
@@ -139,6 +144,9 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 9) {
           await _createProfileTables();
+        }
+        if (from < 10) {
+          await _createRatingsTables();
         }
       },
     );
@@ -238,6 +246,13 @@ class AppDatabase extends _$AppDatabase {
     }
 
     for (final indexSql in ProfileSql.createIndexes) {
+      await customStatement(indexSql);
+    }
+  }
+
+  Future<void> _createRatingsTables() async {
+    await customStatement(RatingsSql.createUserRatings);
+    for (final indexSql in RatingsSql.createIndexes) {
       await customStatement(indexSql);
     }
   }

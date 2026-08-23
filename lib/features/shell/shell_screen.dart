@@ -9,6 +9,7 @@ import 'package:nebula_iptv/features/history/history_screen.dart';
 import 'package:nebula_iptv/features/home/home_screen.dart';
 import 'package:nebula_iptv/features/playlists/playlists_screen.dart';
 import 'package:nebula_iptv/features/settings/settings_screen.dart';
+import 'package:nebula_iptv/features/stats/stats_screen.dart';
 import 'package:nebula_iptv/features/vod/vod_screen.dart';
 import 'package:nebula_iptv/features/series/series_screen.dart';
 import 'package:nebula_iptv/features/shell/widgets/mobile_bottom_nav.dart';
@@ -43,7 +44,8 @@ class _ShellScreenState extends State<ShellScreen> {
       5 => l10n.history,
       6 => l10n.playlists,
       7 => l10n.epg,
-      8 => l10n.settings,
+      8 => 'Estatísticas',
+      9 => l10n.settings,
       _ => l10n.home,
     };
   }
@@ -59,7 +61,8 @@ class _ShellScreenState extends State<ShellScreen> {
       5 => const HistoryScreen(),
       6 => const PlaylistsScreen(),
       7 => const EpgScreen(),
-      8 => const SettingsScreen(),
+      8 => const StatsScreen(),
+      9 => const SettingsScreen(),
       _ => const HomeScreen(),
     };
   }
@@ -71,7 +74,7 @@ class _ShellScreenState extends State<ShellScreen> {
       1 => 1, // Channels
       2 => 4, // Favorites
       3 => 6, // Playlists
-      4 => 8, // Settings
+      4 => 9, // Settings
       _ => 0,
     };
   }
@@ -85,7 +88,7 @@ class _ShellScreenState extends State<ShellScreen> {
       3 => 0, // Series → Home on mobile
       4 => 2,
       6 => 3,
-      8 => 4,
+      9 => 4,
       _ => 0,
     };
   }

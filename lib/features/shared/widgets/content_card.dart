@@ -271,8 +271,7 @@ class _ContentCardState extends State<ContentCard>
     if (widget.imageUrl != null && widget.imageUrl!.isNotEmpty) {
       return Image.network(
         widget.imageUrl!,
-        fit: BoxFit.contain,
-        alignment: Alignment.center,
+        fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => _buildFallback(),
       );
     }

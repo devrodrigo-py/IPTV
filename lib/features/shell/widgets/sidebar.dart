@@ -33,6 +33,7 @@ class Sidebar extends StatelessWidget {
       _NavDestination(Icons.history_rounded, l10n.history),
       _NavDestination(Icons.playlist_play_rounded, l10n.playlists),
       _NavDestination(Icons.schedule_rounded, l10n.epg),
+      _NavDestination(Icons.bar_chart_rounded, 'Estatísticas'),
       _NavDestination(Icons.settings_rounded, l10n.settings),
     ];
 

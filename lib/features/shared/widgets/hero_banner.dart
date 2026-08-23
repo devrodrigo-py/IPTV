@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
@@ -135,10 +136,25 @@ class _HeroBannerPage extends StatelessWidget {
       children: [
         // Background image or gradient
         if (item.imageUrl != null && item.imageUrl!.isNotEmpty)
-          Image.network(
-            item.imageUrl!,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _buildGradientBackground(),
+          Stack(
+            fit: StackFit.expand,
+            children: [
+              // Blurred fill (handles any aspect ratio gracefully)
+              ImageFiltered(
+                imageFilter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                child: Image.network(
+                  item.imageUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _buildGradientBackground(),
+                ),
+              ),
+              // Sharp image centered
+              Image.network(
+                item.imageUrl!,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ],
           )
         else
           _buildGradientBackground(),

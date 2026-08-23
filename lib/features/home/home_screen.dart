@@ -19,6 +19,9 @@ import 'package:nebula_iptv/features/shared/widgets/hero_banner.dart';
 import 'package:nebula_iptv/features/shortcuts/providers/shortcut_provider.dart';
 import 'package:nebula_iptv/features/profiles/providers/profile_provider.dart';
 import 'package:nebula_iptv/l10n/app_localizations.dart';
+import 'package:nebula_iptv/features/shared/providers/rating_provider.dart';
+import 'package:nebula_iptv/features/shared/widgets/shortcut_context_menu.dart';
+import 'package:nebula_iptv/features/sua_tv/sua_tv_player_screen.dart';
 
 /// Provider for favorite channels on Home.
 final homeFavoritesProvider = FutureProvider.autoDispose<List<Channel>>((ref) async {
@@ -58,6 +61,7 @@ class HomeScreen extends ConsumerWidget {
     final discovery = ref.watch(discoveryProvider);
     final recentlyAdded = ref.watch(recentlyAddedProvider);
     final shortcuts = ref.watch(shortcutsProvider);
+    final topRated = ref.watch(topRatedProvider);
 
     // Trigger background enrichment (runs 30s after app start)
     ref.watch(batchEnrichmentTriggerProvider);
@@ -119,6 +123,10 @@ class HomeScreen extends ConsumerWidget {
         if (recentlyAdded.valueOrNull?.isNotEmpty == true)
           _buildRecentlyAddedRow(context, ref, recentlyAdded.value!),
 
+        // Top rated by user
+        if (topRated.valueOrNull?.isNotEmpty == true)
+          _buildTopRatedRow(context, topRated.value!),
+
         // Most watched
         if (mostWatched.valueOrNull?.isNotEmpty == true)
           _buildMostWatchedRow(context, ref, mostWatched.value!),
@@ -126,7 +134,13 @@ class HomeScreen extends ConsumerWidget {
         // "Surpreenda-me" button
         Center(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
+            padding: const EdgeInsets.only(top: 8, bottom: 8),
+            child: _buildSuaTvButton(context),
+          ),
+        ),
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 24),
             child: ElevatedButton.icon(
               onPressed: () => _showSurpriseMe(context, ref),
               icon: const Text('🎲', style: TextStyle(fontSize: 20)),
@@ -283,6 +297,15 @@ class HomeScreen extends ConsumerWidget {
             ),
           ));
         },
+        onItemSecondaryTap: (index, position) {
+          final channel = channels[index];
+          showShortcutContextMenu(
+            context, ref,
+            position: position,
+            channelId: channel.id,
+            channelName: channel.name,
+          );
+        },
       ),
     );
   }
@@ -343,6 +366,47 @@ class HomeScreen extends ConsumerWidget {
             sourceType: item['source_type'] as String? ?? 'vod',
           );
           _openSearchResult(context, ref, searchItem);
+        },
+        onItemSecondaryTap: (index, position) {
+          final item = items[index];
+          showShortcutContextMenu(
+            context, ref,
+            position: position,
+            channelId: item['id'] as int,
+            channelName: item['name'] as String? ?? '',
+          );
+        },
+      ),
+    );
+  }
+
+
+  Widget _buildTopRatedRow(BuildContext context, List<Map<String, dynamic>> items) {
+    final rowItems = items.map((item) {
+      return ContentRowItem(
+        title: item['name'] as String? ?? '',
+        imageUrl: item['logo_url'] as String?,
+        subtitle: '⭐ ${(item['rating'] as num?)?.toStringAsFixed(1) ?? ''}',
+      );
+    }).toList();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: ContentRow(
+        title: '⭐ Seus mais bem avaliados',
+        items: rowItems,
+        onItemTap: (index) {
+          final item = items[index];
+          final streamUrl = item['stream_url'] as String? ?? '';
+          final name = item['name'] as String? ?? '';
+          if (streamUrl.isNotEmpty) {
+            Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => PlayerScreen(
+                channelName: name,
+                streamUrl: streamUrl,
+              ),
+            ));
+          }
         },
       ),
     );
@@ -575,6 +639,41 @@ class HomeScreen extends ConsumerWidget {
         seekToMs: seekToMs > 5000 ? seekToMs : null,
       ),
     ));
+  }
+  Widget _buildSuaTvButton(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const SuaTvPlayerScreen()),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.primary, Color(0xFFF107A3)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.play_circle_filled_rounded, color: Colors.white, size: 22),
+            const SizedBox(width: 10),
+            Text('Sua TV', style: AppTypography.body.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
   }
 }
 

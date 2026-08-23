@@ -8,8 +8,11 @@ import 'package:nebula_iptv/data/datasources/player/media_kit_player_service.dar
 import 'package:nebula_iptv/domain/services/video_player_service.dart';
 import 'package:nebula_iptv/features/player/providers/player_provider.dart';
 import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
+import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/features/player/widgets/player_controls.dart';
 import 'package:nebula_iptv/features/player/widgets/player_error_overlay.dart';
+import 'package:nebula_iptv/features/player/widgets/quality_selector.dart';
+import 'package:nebula_iptv/domain/services/quality_service.dart';
 
 /// Full-screen player screen.
 ///
@@ -38,6 +41,8 @@ class PlayerScreen extends ConsumerStatefulWidget {
 class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   bool _showControls = true;
   VideoController? _videoController;
+  List<QualityVariant> _qualityVariants = [];
+  String _currentQuality = 'Auto';
 
   @override
   void initState() {
@@ -70,12 +75,35 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) setState(() => _showControls = false);
     });
+    // Load quality variants
+    _loadQualityVariants();
   }
 
   @override
   void dispose() {
     _videoController = null;
     super.dispose();
+  }
+
+  Future<void> _loadQualityVariants() async {
+    try {
+      final db = ref.read(databaseProvider);
+      final qualityService = QualityService(db);
+      // We need a channelId — extract from contentInfo
+      final channelId = widget.contentInfo?.channelId;
+      if (channelId == null) return;
+      final variants = await qualityService.getQualityVariants(channelId);
+      if (mounted && variants.isNotEmpty) {
+        setState(() => _qualityVariants = variants);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _switchQuality(QualityVariant? variant) async {
+    final url = variant?.streamUrl ?? widget.streamUrl;
+    setState(() => _currentQuality = variant?.name ?? 'Auto');
+    await ref.read(playerProvider.notifier).stop();
+    await ref.read(playerProvider.notifier).playStream(url, contentInfo: widget.contentInfo);
   }
 
   /// Safely stop playback and navigate back.
@@ -178,12 +206,21 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                             onPressed: () => _goBack(),
                           ),
                           const SizedBox(width: 12),
-                          Text(
-                            widget.channelName,
-                            style: AppTypography.title.copyWith(
-                              color: Colors.white,
+                          Expanded(
+                            child: Text(
+                              widget.channelName,
+                              style: AppTypography.title.copyWith(
+                                color: Colors.white,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (_qualityVariants.isNotEmpty)
+                            QualitySelector(
+                              variants: _qualityVariants,
+                              currentQuality: _currentQuality,
+                              onQualitySelected: _switchQuality,
+                            ),
                         ],
                       ),
                     ),

@@ -1,30 +1,149 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
+import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
+import 'package:nebula_iptv/features/profiles/profile_edit_dialog.dart';
+import 'package:nebula_iptv/features/profiles/providers/profile_provider.dart';
 import 'package:nebula_iptv/l10n/app_localizations.dart';
 
 /// Settings screen.
 ///
-/// Provides access to application configuration.
-/// Additional settings will be added as features are implemented.
-class SettingsScreen extends StatelessWidget {
+/// Provides access to application configuration including profiles.
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    final profilesAsync = ref.watch(profilesProvider);
+    final activeId = ref.watch(activeProfileProvider);
 
     return Padding(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: ListView(
         children: [
           Text(
             l10n.settings,
             style: AppTypography.title,
           ),
           const SizedBox(height: 24),
+
+          // Profiles section
+          _SettingsSection(
+            title: 'Perfis',
+            children: [
+              ...profilesAsync.when(
+                data: (profiles) => profiles.map<Widget>((p) {
+                  final id = p['id'] as int;
+                  final isActive = id == activeId;
+                  final name = p['name'] as String? ?? 'Perfil';
+                  return _SettingsTile(
+                    icon: isActive
+                        ? Icons.person_rounded
+                        : Icons.person_outline_rounded,
+                    title: name,
+                    subtitle: isActive ? '● Ativo' : 'Toque para ativar',
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit_rounded, size: 18),
+                          color: AppColors.textSecondary,
+                          onPressed: () async {
+                            final result = await showDialog<Map<String, String>>(
+                              context: context,
+                              builder: (_) => ProfileEditDialog(
+                                initialName: name,
+                                initialIcon: p['avatar_icon'] as String? ?? 'person',
+                                initialColor: p['avatar_color'] as String? ?? '#7B2FF7',
+                              ),
+                            );
+                            if (result != null) {
+                              final db = ref.read(databaseProvider);
+                              await db.profileDao.updateProfile(
+                                id: id,
+                                name: result['name']!,
+                                avatarIcon: result['icon']!,
+                                avatarColor: result['color']!,
+                              );
+                            }
+                            ref.invalidate(profilesProvider);
+                          },
+                        ),
+                        if (!isActive && (p['is_default'] as int? ?? 0) == 0)
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                            color: AppColors.error,
+                            onPressed: () async {
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  backgroundColor: AppColors.surface,
+                                  title: const Text('Excluir perfil?'),
+                                  content: Text('Isso vai excluir o perfil "$name" e seus atalhos.'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context, false),
+                                      child: const Text('Cancelar'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context, true),
+                                      style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                                      child: const Text('Excluir'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirm == true) {
+                                final db = ref.read(databaseProvider);
+                                await db.profileDao.deleteProfile(id);
+                                ref.invalidate(profilesProvider);
+                              }
+                            },
+                          ),
+                      ],
+                    ),
+                    onTap: () {
+                      ref.read(activeProfileProvider.notifier).state = id;
+                    },
+                  );
+                }).toList(),
+                loading: () => [const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: CircularProgressIndicator(),
+                )],
+                error: (_, __) => [const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('Erro ao carregar perfis'),
+                )],
+              ),
+              _SettingsTile(
+                icon: Icons.add_rounded,
+                title: 'Adicionar perfil',
+                subtitle: 'Criar um novo perfil',
+                onTap: () async {
+                  final result = await showDialog<Map<String, String>>(
+                    context: context,
+                    builder: (_) => const ProfileEditDialog(),
+                  );
+                  if (result != null) {
+                    final db = ref.read(databaseProvider);
+                    await db.profileDao.insertProfile(
+                      name: result['name']!,
+                      avatarIcon: result['icon']!,
+                      avatarColor: result['color']!,
+                    );
+                  }
+                  ref.invalidate(profilesProvider);
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // General section
           _SettingsSection(
             title: l10n.settingsGeneral,
             children: [
@@ -95,19 +214,21 @@ class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final Widget? trailing;
 
   const _SettingsTile({
     required this.icon,
     required this.title,
     required this.subtitle,
-    required this.onTap,
+    this.onTap,
+    this.trailing,
   });
 
   @override
   Widget build(BuildContext context) {
     return FocusableWidget(
-      onPressed: onTap,
+      onPressed: onTap ?? () {},
       borderRadius: const BorderRadius.all(Radius.circular(12)),
       builder: (context, isFocused) {
         return Padding(
@@ -130,11 +251,14 @@ class _SettingsTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                size: 20,
-                color: AppColors.textSecondary,
-              ),
+              if (trailing != null)
+                trailing!
+              else
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: AppColors.textSecondary,
+                ),
             ],
           ),
         );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nebula_iptv/features/shared/widgets/shortcut_context_menu.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/empty_view.dart';
@@ -71,7 +72,7 @@ class _VodScreenState extends ConsumerState<VodScreen> {
               return HeroBannerItem(
                 title: movie.name,
                 subtitle: movie.shortCategory,
-                imageUrl: movie.displayPosterUrl,
+                imageUrl: movie.tmdbBackdropUrl ?? movie.displayPosterUrl,
                 onPlay: () => _openDetail(context, movie),
                 onDetails: () => _openDetail(context, movie),
               );
@@ -146,7 +147,16 @@ class _VodScreenState extends ConsumerState<VodScreen> {
               onItemTap: (index) {
                 _openDetail(context, displayMovies[index]);
               },
-            ),
+              onItemSecondaryTap: (index, position) {
+                final movie = displayMovies[index];
+                showShortcutContextMenu(
+                  context, ref,
+                  position: position,
+                  channelId: movie.id,
+                  channelName: movie.name,
+                );
+              },
+            )
           );
         }),
 
