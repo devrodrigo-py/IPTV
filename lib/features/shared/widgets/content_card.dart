@@ -272,6 +272,8 @@ class _ContentCardState extends State<ContentCard>
       return Image.network(
         widget.imageUrl!,
         fit: BoxFit.cover,
+        cacheWidth: 300,
+        cacheHeight: 450,
         errorBuilder: (_, __, ___) => _buildFallback(),
       );
     }

@@ -106,11 +106,24 @@ abstract interface class VideoPlayerService {
   /// Sets volume (0.0 to 1.0).
   Future<Result<void>> setVolume(double volume);
 
+  /// Seeks to a specific position in the video.
+  Future<Result<void>> seek(Duration position);
+
+  /// Sets the playback speed (e.g. 0.5, 1.0, 1.25, 1.5, 2.0).
+  Future<Result<void>> setPlaybackSpeed(double speed);
+
   /// Selects an audio track by ID.
   Future<Result<void>> selectAudioTrack(String trackId);
 
   /// Selects a subtitle track by ID (null to disable).
   Future<Result<void>> selectSubtitleTrack(String? trackId);
+
+  /// Injects an external subtitle file (.srt, .vtt) from a URL or local file path.
+  Future<Result<void>> addExternalSubtitle(
+    String uri, {
+    String? title,
+    String? language,
+  });
 
   /// Stream of playback state changes.
   Stream<VideoPlaybackState> get playbackState;

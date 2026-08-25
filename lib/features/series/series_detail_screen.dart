@@ -397,10 +397,15 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
         const SizedBox(height: 16),
 
         if (currentSeason != null && currentSeason.episodes.isNotEmpty)
-          ...currentSeason.episodes.map(
-            (episode) => EpisodeTile(
-              episode: episode,
-              onPlay: () => _playEpisode(context, episode),
+          ...currentSeason.episodes.asMap().entries.map(
+            (entry) => EpisodeTile(
+              episode: entry.value,
+              onPlay: () => _playEpisode(
+                context,
+                entry.value,
+                seasonEpisodes: currentSeason.episodes,
+                episodeIndex: entry.key,
+              ),
             ),
           )
         else if (state.isLoadingEpisodes)
@@ -452,7 +457,6 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
     );
   }
 
-
   Widget _buildUserRating() {
     final ratingAsync = ref.watch(ratingProvider(series.id));
     final currentRating = ratingAsync.valueOrNull ?? 0.0;
@@ -493,7 +497,12 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
     );
   }
 
-  void _playEpisode(BuildContext context, EpisodeItem episode) {
+  void _playEpisode(
+    BuildContext context,
+    EpisodeItem episode, {
+    List<EpisodeItem>? seasonEpisodes,
+    int? episodeIndex,
+  }) {
     int? seekToMs;
     if (episode.watchProgress > 0.01 && episode.watchProgress < 0.95) {
       if (episode.watchedDurationMs > 5000) {
@@ -520,6 +529,8 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
             episodeTitle: episode.title,
           ),
           seekToMs: seekToMs != null && seekToMs > 5000 ? seekToMs : null,
+          episodePlaylist: seasonEpisodes,
+          currentEpisodeIndex: episodeIndex,
         ),
       ),
     );

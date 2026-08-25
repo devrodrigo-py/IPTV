@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/data/database/app_database.dart' hide Channel;
 import 'package:nebula_iptv/data/datasources/player/media_kit_player_service.dart';
 import 'package:nebula_iptv/domain/services/video_player_service.dart';
 import 'package:nebula_iptv/features/player/providers/player_provider.dart';
@@ -12,6 +15,9 @@ import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/features/player/widgets/player_controls.dart';
 import 'package:nebula_iptv/features/player/widgets/player_error_overlay.dart';
 import 'package:nebula_iptv/features/player/widgets/quality_selector.dart';
+import 'package:nebula_iptv/features/player/widgets/quick_channel_drawer.dart';
+import 'package:nebula_iptv/features/player/widgets/track_selector_modal.dart';
+import 'package:nebula_iptv/features/series/providers/series_provider.dart' show EpisodeItem;
 import 'package:nebula_iptv/domain/services/quality_service.dart';
 
 /// Full-screen player screen.
@@ -24,6 +30,8 @@ class PlayerScreen extends ConsumerStatefulWidget {
   final String? logoUrl;
   final WatchContentInfo? contentInfo;
   final int? seekToMs;
+  final List<EpisodeItem>? episodePlaylist;
+  final int? currentEpisodeIndex;
 
   const PlayerScreen({
     super.key,
@@ -32,6 +40,8 @@ class PlayerScreen extends ConsumerStatefulWidget {
     this.logoUrl,
     this.contentInfo,
     this.seekToMs,
+    this.episodePlaylist,
+    this.currentEpisodeIndex,
   });
 
   @override
@@ -40,47 +50,192 @@ class PlayerScreen extends ConsumerStatefulWidget {
 
 class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   bool _showControls = true;
+  bool _showQuickDrawer = false;
   VideoController? _videoController;
   List<QualityVariant> _qualityVariants = [];
   String _currentQuality = 'Auto';
+  double _currentSpeed = 1.0;
+  bool _dismissedAutoPlay = false;
+  String? _selectedAudioTrackId;
+  String? _selectedSubtitleTrackId;
+
+  late String _currentChannelName;
+  late String _currentStreamUrl;
+  String? _currentLogoUrl;
+  WatchContentInfo? _currentContentInfo;
+  int? _currentEpisodeIndex;
+  List<EpisodeItem>? _episodePlaylist;
+  Timer? _zapDebounceTimer;
+  Timer? _hideControlsTimer;
+
+  bool get _isLive => _currentContentInfo?.contentType != 'vod' && _currentContentInfo?.contentType != 'series';
+  bool get _hasPrevEpisode => _episodePlaylist != null && _currentEpisodeIndex != null && _currentEpisodeIndex! > 0;
+  bool get _hasNextEpisode => _episodePlaylist != null && _currentEpisodeIndex != null && (_currentEpisodeIndex! + 1) < _episodePlaylist!.length;
 
   @override
   void initState() {
     super.initState();
+    _currentChannelName = widget.channelName;
+    _currentStreamUrl = widget.streamUrl;
+    _currentLogoUrl = widget.logoUrl;
+    _currentContentInfo = widget.contentInfo;
+    _currentEpisodeIndex = widget.currentEpisodeIndex;
+    _episodePlaylist = widget.episodePlaylist;
 
     // Create VideoController for media_kit on native platforms
     if (!kIsWeb) {
       final playerService = ref.read(videoPlayerServiceProvider);
       if (playerService is MediaKitPlayerService) {
-        // Initialize player first if needed, then create controller
-        playerService.initialize().then((_) {
-          if (mounted && playerService.player != null) {
-            setState(() {
-              _videoController = VideoController(playerService.player!);
-            });
-          }
-        });
+        if (playerService.player != null) {
+          _videoController = VideoController(playerService.player!);
+        } else {
+          playerService.initialize().then((_) {
+            if (mounted && playerService.player != null) {
+              setState(() {
+                _videoController = VideoController(playerService.player!);
+              });
+            }
+          });
+        }
       }
     }
 
     // Start playback
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(playerProvider.notifier).playStream(
-        widget.streamUrl,
-        contentInfo: widget.contentInfo,
+        _currentStreamUrl,
+        contentInfo: _currentContentInfo,
         seekToMs: widget.seekToMs,
       );
     });
-    // Auto-hide controls after 3s
-    Future.delayed(const Duration(seconds: 3), () {
+
+    _resetHideControlsTimer();
+    _loadQualityVariants();
+  }
+
+  void _switchEpisode(int newIndex) {
+    if (_episodePlaylist == null || newIndex < 0 || newIndex >= _episodePlaylist!.length) return;
+    final nextEp = _episodePlaylist![newIndex];
+    setState(() {
+      _currentEpisodeIndex = newIndex;
+      _currentChannelName = '${widget.contentInfo?.name ?? 'Série'} - ${nextEp.title}';
+      _currentStreamUrl = nextEp.streamUrl;
+      _currentLogoUrl = nextEp.coverUrl ?? widget.logoUrl;
+      _currentContentInfo = WatchContentInfo(
+        channelId: widget.contentInfo?.channelId ?? nextEp.seriesId,
+        name: widget.contentInfo?.name ?? 'Série',
+        contentType: 'series',
+        thumbnailUrl: nextEp.coverUrl ?? widget.logoUrl,
+        seriesId: nextEp.seriesId,
+        seasonNumber: nextEp.seasonId,
+        episodeNumber: nextEp.episodeNumber,
+        episodeTitle: nextEp.title,
+      );
+      _dismissedAutoPlay = false;
+      _showControls = true;
+    });
+
+    ref.read(playerProvider.notifier).stop().then((_) {
+      ref.read(playerProvider.notifier).playStream(
+        _currentStreamUrl,
+        contentInfo: _currentContentInfo,
+      );
+      _resetHideControlsTimer();
+    });
+  }
+
+  void _showTrackSelectorDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => TrackSelectorModal(
+        contentTitle: _currentChannelName,
+        selectedAudioTrackId: _selectedAudioTrackId,
+        selectedSubtitleTrackId: _selectedSubtitleTrackId,
+        seasonNumber: _currentContentInfo?.seasonNumber,
+        episodeNumber: _currentContentInfo?.episodeNumber,
+        onSelectAudio: (trackId) {
+          setState(() => _selectedAudioTrackId = trackId);
+          ref.read(playerProvider.notifier).selectAudioTrack(trackId);
+        },
+        onSelectSubtitle: (trackId) {
+          setState(() => _selectedSubtitleTrackId = trackId);
+          ref.read(playerProvider.notifier).selectSubtitleTrack(trackId);
+        },
+        onAddExternalSubtitle: (uri) {
+          setState(() => _selectedSubtitleTrackId = 'external');
+          ref.read(playerProvider.notifier).addExternalSubtitle(
+            uri,
+            title: 'Português (Online/Externo)',
+            language: 'pt-BR',
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Legenda carregada com sucesso!')),
+          );
+        },
+      ),
+    );
+  }
+
+  void _resetHideControlsTimer() {
+    _hideControlsTimer?.cancel();
+    _hideControlsTimer = Timer(const Duration(seconds: 4), () {
       if (mounted) setState(() => _showControls = false);
     });
-    // Load quality variants
-    _loadQualityVariants();
+  }
+
+  void _zapChannel(bool next) {
+    if (!_isLive) return;
+
+    final channels = ref.read(channelsScreenProvider).allChannels;
+    if (channels.isEmpty) return;
+
+    final currentId = _currentContentInfo?.channelId;
+    int currentIndex = -1;
+    if (currentId != null) {
+      currentIndex = channels.indexWhere((c) => c.id == currentId);
+    }
+    if (currentIndex == -1) {
+      currentIndex = channels.indexWhere((c) => c.streamUrl == _currentStreamUrl);
+    }
+    if (currentIndex == -1) currentIndex = 0;
+
+    int nextIndex;
+    if (next) {
+      nextIndex = (currentIndex + 1) % channels.length;
+    } else {
+      nextIndex = (currentIndex - 1 + channels.length) % channels.length;
+    }
+
+    final targetChannel = channels[nextIndex];
+    setState(() {
+      _currentChannelName = targetChannel.name;
+      _currentStreamUrl = targetChannel.streamUrl;
+      _currentLogoUrl = targetChannel.logoUrl;
+      _currentContentInfo = WatchContentInfo(
+        channelId: targetChannel.id,
+        name: targetChannel.name,
+        contentType: 'live',
+        thumbnailUrl: targetChannel.logoUrl,
+      );
+      _showControls = true;
+    });
+
+    _zapDebounceTimer?.cancel();
+    _zapDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      ref.read(playerProvider.notifier).playStream(
+        _currentStreamUrl,
+        contentInfo: _currentContentInfo,
+      );
+      _loadQualityVariants();
+    });
+
+    _resetHideControlsTimer();
   }
 
   @override
   void dispose() {
+    _zapDebounceTimer?.cancel();
+    _hideControlsTimer?.cancel();
     _videoController = null;
     super.dispose();
   }
@@ -89,8 +244,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     try {
       final db = ref.read(databaseProvider);
       final qualityService = QualityService(db);
-      // We need a channelId — extract from contentInfo
-      final channelId = widget.contentInfo?.channelId;
+      final channelId = _currentContentInfo?.channelId;
       if (channelId == null) return;
       final variants = await qualityService.getQualityVariants(channelId);
       if (mounted && variants.isNotEmpty) {
@@ -100,10 +254,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   }
 
   Future<void> _switchQuality(QualityVariant? variant) async {
-    final url = variant?.streamUrl ?? widget.streamUrl;
+    final url = variant?.streamUrl ?? _currentStreamUrl;
     setState(() => _currentQuality = variant?.name ?? 'Auto');
     await ref.read(playerProvider.notifier).stop();
-    await ref.read(playerProvider.notifier).playStream(url, contentInfo: widget.contentInfo);
+    await ref.read(playerProvider.notifier).playStream(url, contentInfo: _currentContentInfo);
   }
 
   /// Safely stop playback and navigate back.
@@ -208,13 +362,28 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              widget.channelName,
+                              _currentChannelName,
                               style: AppTypography.title.copyWith(
                                 color: Colors.white,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (_isLive)
+                            IconButton(
+                              icon: Icon(
+                                _showQuickDrawer
+                                    ? Icons.menu_open_rounded
+                                    : Icons.list_rounded,
+                                color: Colors.white,
+                              ),
+                              tooltip: 'Guia Rápido (Seta Esquerda)',
+                              onPressed: () {
+                                setState(() {
+                                  _showQuickDrawer = !_showQuickDrawer;
+                                });
+                              },
+                            ),
                           if (_qualityVariants.isNotEmpty)
                             QualitySelector(
                               variants: _qualityVariants,
@@ -234,6 +403,37 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                   right: 0,
                   child: PlayerControls(
                     playbackState: state.playbackState,
+                    isLive: _isLive,
+                    hasPreviousEpisode: _hasPrevEpisode,
+                    hasNextEpisode: _hasNextEpisode,
+                    playbackSpeed: _currentSpeed,
+                    onSpeedChanged: (speed) {
+                      setState(() => _currentSpeed = speed);
+                      ref.read(playerProvider.notifier).setPlaybackSpeed(speed);
+                    },
+                    onOpenSubtitles: _showTrackSelectorDialog,
+                    onOpenAudio: _showTrackSelectorDialog,
+                    onPreviousEpisode: _hasPrevEpisode
+                        ? () => _switchEpisode(_currentEpisodeIndex! - 1)
+                        : null,
+                    onNextEpisode: _hasNextEpisode
+                        ? () => _switchEpisode(_currentEpisodeIndex! + 1)
+                        : null,
+                    onSeek: (target) {
+                      ref.read(playerProvider.notifier).seek(target);
+                    },
+                    onReplay10: () {
+                      final pos = state.playbackState.position;
+                      final target = pos - const Duration(seconds: 10);
+                      ref.read(playerProvider.notifier).seek(
+                        target < Duration.zero ? Duration.zero : target,
+                      );
+                    },
+                    onForward10: () {
+                      final pos = state.playbackState.position;
+                      final target = pos + const Duration(seconds: 10);
+                      ref.read(playerProvider.notifier).seek(target);
+                    },
                     onPlayPause: () {
                       final notifier = ref.read(playerProvider.notifier);
                       if (state.playbackState.status ==
@@ -253,6 +453,113 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                   ),
                 ),
               ],
+
+              // Auto-Play Next Episode overlay (when 15s remaining in series)
+              if (!_dismissedAutoPlay &&
+                  _hasNextEpisode &&
+                  state.playbackState.duration > const Duration(minutes: 1) &&
+                  state.playbackState.position >=
+                      state.playbackState.duration - const Duration(seconds: 15)) ...[
+                Positioned(
+                  bottom: 90,
+                  right: 24,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.primary, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.35),
+                          blurRadius: 16,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.skip_next_rounded, color: AppColors.primary, size: 24),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Próximo episódio em ${(state.playbackState.duration - state.playbackState.position).inSeconds.clamp(1, 15)}s',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              _episodePlaylist![_currentEpisodeIndex! + 1].title,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 14),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          onPressed: () => _switchEpisode(_currentEpisodeIndex! + 1),
+                          child: const Text('Assistir Agora', style: TextStyle(color: Colors.white, fontSize: 12)),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, color: Colors.white60, size: 18),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () => setState(() => _dismissedAutoPlay = true),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+
+              // Quick Channel Drawer Overlay
+              if (_showQuickDrawer && _isLive)
+                Positioned(
+                  top: 0,
+                  bottom: 0,
+                  left: 0,
+                  child: QuickChannelDrawer(
+                    currentChannelId: _currentContentInfo?.channelId,
+                    onChannelSelected: (channel) {
+                      setState(() {
+                        _currentChannelName = channel.name;
+                        _currentStreamUrl = channel.streamUrl;
+                        _currentLogoUrl = channel.logoUrl;
+                        _currentContentInfo = WatchContentInfo(
+                          channelId: channel.id,
+                          name: channel.name,
+                          contentType: 'live',
+                          thumbnailUrl: channel.logoUrl,
+                        );
+                        _showQuickDrawer = false;
+                      });
+                      ref.read(playerProvider.notifier).playStream(
+                        _currentStreamUrl,
+                        contentInfo: _currentContentInfo,
+                      );
+                      _loadQualityVariants();
+                      _resetHideControlsTimer();
+                    },
+                    onClose: () {
+                      setState(() => _showQuickDrawer = false);
+                    },
+                  ),
+                ),
             ],
           ),
         ),
@@ -263,7 +570,22 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   void _handleKeyEvent(KeyEvent event) {
     if (event is! KeyDownEvent) return;
 
+    if (_showQuickDrawer) {
+      if (event.logicalKey == LogicalKeyboardKey.escape ||
+          event.logicalKey == LogicalKeyboardKey.goBack ||
+          event.logicalKey == LogicalKeyboardKey.arrowRight) {
+        setState(() => _showQuickDrawer = false);
+        return;
+      }
+    }
+
     switch (event.logicalKey) {
+      case LogicalKeyboardKey.select:
+      case LogicalKeyboardKey.enter:
+        setState(() => _showControls = !_showControls);
+        if (_showControls) {
+          _resetHideControlsTimer();
+        }
       case LogicalKeyboardKey.space:
       case LogicalKeyboardKey.mediaPlayPause:
         final notifier = ref.read(playerProvider.notifier);
@@ -274,40 +596,57 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           notifier.resume();
         }
       case LogicalKeyboardKey.escape:
+      case LogicalKeyboardKey.goBack:
         _goBack();
+      case LogicalKeyboardKey.channelUp:
+        _zapChannel(false);
+      case LogicalKeyboardKey.channelDown:
+        _zapChannel(true);
       case LogicalKeyboardKey.arrowUp:
-        ref.read(playerProvider.notifier).setVolume(
-              (ref.read(playerProvider).playbackState.volume + 0.1)
-                  .clamp(0.0, 1.0),
-            );
+        if (_isLive) {
+          _zapChannel(false);
+        } else {
+          ref.read(playerProvider.notifier).setVolume(
+                (ref.read(playerProvider).playbackState.volume + 0.1)
+                    .clamp(0.0, 1.0),
+              );
+        }
       case LogicalKeyboardKey.arrowDown:
-        ref.read(playerProvider.notifier).setVolume(
-              (ref.read(playerProvider).playbackState.volume - 0.1)
-                  .clamp(0.0, 1.0),
-            );
+        if (_isLive) {
+          _zapChannel(true);
+        } else {
+          ref.read(playerProvider.notifier).setVolume(
+                (ref.read(playerProvider).playbackState.volume - 0.1)
+                    .clamp(0.0, 1.0),
+              );
+        }
       case LogicalKeyboardKey.arrowLeft:
-        // Seek -10s
-        final service = ref.read(videoPlayerServiceProvider);
-        if (service is MediaKitPlayerService && service.player != null) {
-          final pos = service.player!.state.position;
-          final target = pos - const Duration(seconds: 10);
-          service.player!.seek(target < Duration.zero ? Duration.zero : target);
+        if (_isLive) {
+          setState(() => _showQuickDrawer = !_showQuickDrawer);
+        } else {
+          // Seek -10s on VOD
+          final service = ref.read(videoPlayerServiceProvider);
+          if (service is MediaKitPlayerService && service.player != null) {
+            final pos = service.player!.state.position;
+            final target = pos - const Duration(seconds: 10);
+            service.player!.seek(target < Duration.zero ? Duration.zero : target);
+          }
         }
       case LogicalKeyboardKey.arrowRight:
-        // Seek +10s
+        // Seek +10s on VOD
         final service = ref.read(videoPlayerServiceProvider);
         if (service is MediaKitPlayerService && service.player != null) {
           final pos = service.player!.state.position;
           service.player!.seek(pos + const Duration(seconds: 10));
         }
-      case LogicalKeyboardKey.keyF:
-        // Toggle fullscreen (maximize/restore window)
-        // Not implemented without window_manager — placeholder
-        break;
       case LogicalKeyboardKey.keyM:
         // Mute toggle
         final currentVol = ref.read(playerProvider).playbackState.volume;
         ref.read(playerProvider.notifier).setVolume(currentVol > 0 ? 0.0 : 1.0);
+      case LogicalKeyboardKey.keyC:
+        _showTrackSelectorDialog();
+      case LogicalKeyboardKey.keyA:
+        _showTrackSelectorDialog();
       default:
         break;
     }

@@ -56,112 +56,123 @@ class _VodScreenState extends ConsumerState<VodScreen> {
     return _buildNetflixView(context, state);
   }
 
+  String? _formatYear(String? date) {
+    if (date == null || date.length < 4) return null;
+    return date.substring(0, 4);
+  }
+
   Widget _buildNetflixView(BuildContext context, VodScreenState state) {
     // Sort categories by item count (largest first), limit to top 15
     final sortedCategories = state.categorizedMovies.entries.toList()
       ..sort((a, b) => b.value.length.compareTo(a.value.length));
     final topCategories = sortedCategories.take(15).toList();
 
-    return ListView(
+    final totalItems = 2 + topCategories.length + 1; // Hero + Search + Categories + Spacing
+
+    return ListView.builder(
       padding: EdgeInsets.zero,
-      children: [
-        // Hero Banner
-        if (state.heroItems.isNotEmpty)
-          HeroBanner(
-            items: state.heroItems.map((movie) {
-              return HeroBannerItem(
-                title: movie.name,
-                subtitle: movie.shortCategory,
-                imageUrl: movie.tmdbBackdropUrl ?? movie.displayPosterUrl,
-                onPlay: () => _openDetail(context, movie),
-                onDetails: () => _openDetail(context, movie),
-              );
-            }).toList(),
-          ),
-
-        const SizedBox(height: 16),
-
-        // Search bar (compact)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: TextField(
-            onChanged: (query) {
-              ref.read(vodScreenProvider.notifier).search(query);
-            },
-            style: AppTypography.body,
-            decoration: InputDecoration(
-              hintText: 'Buscar filmes...',
-              hintStyle: AppTypography.body.copyWith(
-                color: AppColors.textSecondary,
-              ),
-              prefixIcon: const Icon(
-                Icons.search_rounded,
-                color: AppColors.textSecondary,
-                size: 20,
-              ),
-              filled: true,
-              fillColor: AppColors.surface,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 10,
-              ),
-              isDense: true,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 20),
-
-        // Category carousels
-        ...topCategories.map((entry) {
-          final categoryName = entry.key;
-          final movies = entry.value;
-          // Limit to 20 per row for performance
-          final displayMovies = movies.take(20).toList();
-
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 24),
-            child: ContentRow(
-              title: categoryName,
-              items: displayMovies.map((movie) {
-                return ContentRowItem(
+      itemCount: totalItems,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          // Hero Banner
+          if (state.heroItems.isNotEmpty) {
+            return HeroBanner(
+              items: state.heroItems.map((movie) {
+                return HeroBannerItem(
                   title: movie.name,
-                  imageUrl: movie.displayPosterUrl,
-                  subtitle: movie.tmdbReleaseDate?.substring(0, 4),
-                  fallbackIcon: Icons.movie_rounded,
+                  subtitle: movie.shortCategory,
+                  imageUrl: movie.tmdbBackdropUrl ?? movie.displayPosterUrl,
+                  onPlay: () => _openDetail(context, movie),
+                  onDetails: () => _openDetail(context, movie),
                 );
               }).toList(),
-              onSeeAll: () {
-                setState(() {
-                  _showGrid = true;
-                  _gridCategory = movies.first.categoryName;
-                });
-                ref.read(vodScreenProvider.notifier).filterByCategory(
-                  movies.first.categoryName,
-                );
-              },
-              onItemTap: (index) {
-                _openDetail(context, displayMovies[index]);
-              },
-              onItemSecondaryTap: (index, position) {
-                final movie = displayMovies[index];
-                showShortcutContextMenu(
-                  context, ref,
-                  position: position,
-                  channelId: movie.id,
-                  channelName: movie.name,
-                );
-              },
-            )
-          );
-        }),
+            );
+          }
+          return const SizedBox.shrink();
+        }
 
-        const SizedBox(height: 32),
-      ],
+        if (index == 1) {
+          // Search bar
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+            child: TextField(
+              onChanged: (query) {
+                ref.read(vodScreenProvider.notifier).search(query);
+              },
+              style: AppTypography.body,
+              decoration: InputDecoration(
+                hintText: 'Buscar filmes...',
+                hintStyle: AppTypography.body.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  color: AppColors.textSecondary,
+                  size: 20,
+                ),
+                filled: true,
+                fillColor: AppColors.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                isDense: true,
+              ),
+            ),
+          );
+        }
+
+        if (index == totalItems - 1) {
+          return const SizedBox(height: 32);
+        }
+
+        // Category carousels (lazily built)
+        final catIndex = index - 2;
+        final entry = topCategories[catIndex];
+        final categoryName = entry.key;
+        final movies = entry.value;
+        final displayMovies = movies.take(20).toList();
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 24),
+          child: ContentRow(
+            title: categoryName,
+            items: displayMovies.map((movie) {
+              return ContentRowItem(
+                title: movie.name,
+                imageUrl: movie.displayPosterUrl,
+                subtitle: _formatYear(movie.tmdbReleaseDate),
+                fallbackIcon: Icons.movie_rounded,
+              );
+            }).toList(),
+            onSeeAll: () {
+              setState(() {
+                _showGrid = true;
+                _gridCategory = movies.first.categoryName;
+              });
+              ref.read(vodScreenProvider.notifier).filterByCategory(
+                movies.first.categoryName,
+              );
+            },
+            onItemTap: (itemIdx) {
+              _openDetail(context, displayMovies[itemIdx]);
+            },
+            onItemSecondaryTap: (itemIdx, position) {
+              final movie = displayMovies[itemIdx];
+              showShortcutContextMenu(
+                context, ref,
+                position: position,
+                channelId: movie.id,
+                channelName: movie.name,
+              );
+            },
+          ),
+        );
+      },
     );
   }
 

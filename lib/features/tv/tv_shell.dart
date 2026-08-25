@@ -5,6 +5,11 @@ import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/features/tv/tv_channel_grid.dart';
 import 'package:nebula_iptv/features/tv/tv_home.dart';
+import 'package:nebula_iptv/features/vod/vod_screen.dart';
+import 'package:nebula_iptv/features/series/series_screen.dart';
+import 'package:nebula_iptv/features/favorites/favorites_screen.dart';
+import 'package:nebula_iptv/features/playlists/playlists_screen.dart';
+import 'package:nebula_iptv/features/settings/settings_screen.dart';
 import 'package:nebula_iptv/l10n/app_localizations.dart';
 
 /// TV-optimized shell with sidebar navigation via D-pad.
@@ -46,13 +51,19 @@ class _TvShellState extends State<TvShell> {
               labels: [
                 l10n.home,
                 l10n.channels,
+                'Filmes',
+                'Séries',
                 l10n.favorites,
+                l10n.playlists,
                 l10n.settings,
               ],
               icons: const [
                 Icons.home_rounded,
                 Icons.live_tv_rounded,
+                Icons.movie_rounded,
+                Icons.tv_rounded,
                 Icons.favorite_rounded,
+                Icons.playlist_play_rounded,
                 Icons.settings_rounded,
               ],
             ),
@@ -71,6 +82,11 @@ class _TvShellState extends State<TvShell> {
     return switch (_selectedIndex) {
       0 => const TvHome(),
       1 => const TvChannelGrid(),
+      2 => const VodScreen(),
+      3 => const SeriesScreen(),
+      4 => const FavoritesScreen(),
+      5 => const PlaylistsScreen(),
+      6 => const SettingsScreen(),
       _ => const TvHome(),
     };
   }

@@ -60,6 +60,8 @@ class VodCard extends StatelessWidget {
                         Image.network(
                           movie.displayPosterUrl!,
                           fit: BoxFit.cover,
+                          cacheWidth: 300,
+                          cacheHeight: 450,
                           errorBuilder: (_, __, ___) =>
                               _buildPlaceholder(),
                         )

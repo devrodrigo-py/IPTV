@@ -238,22 +238,27 @@ class VodScreenNotifier extends StateNotifier<VodScreenState> {
       // Load legacy TMDB cache for backwards compatibility
       _legacyCache = await db.tmdbCacheDao.getAllCachedByType('movie');
 
-      // Query channels with sourceType vod
-      final channels = await db.channelsDao.getAllActiveChannels();
-      final vodChannels = channels
-          .where((c) => c.sourceType == ChannelSourceType.vod)
-          .map((c) {
-        final cached = _legacyCache?[c.id.toString()];
+      final allMoviesList = <VodItem>[];
+
+      // 1. Load from vodItems table (Xtream VOD import)
+      final dbVod = await db.vodDao.getAllActiveVod();
+      for (final v in dbVod) {
+        final cached = _legacyCache?[v.id.toString()];
         var item = VodItem(
-          id: c.id,
-          playlistId: c.playlistId,
-          name: c.name,
-          streamUrl: c.streamUrl,
-          logoUrl: c.logoUrl,
-          categoryName: c.groupName,
+          id: v.id,
+          playlistId: v.playlistId,
+          name: v.name,
+          streamUrl: v.streamUrl,
+          logoUrl: v.logoUrl,
+          categoryName: v.categoryName,
+          plot: v.plot,
+          cast: v.cast,
+          director: v.director,
+          rating: v.rating?.toString(),
+          duration: v.duration?.toString(),
+          containerExtension: v.containerExtension,
         );
 
-        // Apply cached TMDB data if available (legacy cache)
         if (cached != null) {
           item = item.copyWithEnrichment(
             tmdbPosterUrl: cached.posterUrl,
@@ -268,11 +273,52 @@ class VodScreenNotifier extends StateNotifier<VodScreenState> {
             tmdbId: cached.tmdbId,
           );
         }
-        return item;
-      }).toList();
+        allMoviesList.add(item);
+      }
+
+      // 2. Also load from channels table (M3U imports with sourceType vod)
+      final channels = await db.channelsDao.getAllActiveChannels();
+      final vodChannels = channels
+          .where((c) => c.sourceType == ChannelSourceType.vod)
+          .toList();
+
+      final existingSourceIds = allMoviesList
+          .map((v) => v.id.toString())
+          .toSet();
+
+      for (final c in vodChannels) {
+        if (c.sourceId != null && existingSourceIds.contains(c.sourceId)) {
+          continue;
+        }
+        final cached = _legacyCache?[c.id.toString()];
+        var item = VodItem(
+          id: c.id,
+          playlistId: c.playlistId,
+          name: c.name,
+          streamUrl: c.streamUrl,
+          logoUrl: c.logoUrl,
+          categoryName: c.groupName,
+        );
+
+        if (cached != null) {
+          item = item.copyWithEnrichment(
+            tmdbPosterUrl: cached.posterUrl,
+            tmdbBackdropUrl: cached.backdropUrl,
+            tmdbOverview: cached.overview,
+            tmdbGenres: cached.genres,
+            tmdbCast: cached.castNames,
+            tmdbDirector: cached.director,
+            tmdbRating: cached.voteAverage,
+            tmdbReleaseDate: cached.releaseDate,
+            tmdbRuntime: cached.runtime,
+            tmdbId: cached.tmdbId,
+          );
+        }
+        allMoviesList.add(item);
+      }
 
       // Build categories
-      final categories = vodChannels
+      final categories = allMoviesList
           .map((v) => v.categoryName)
           .where((c) => c != null && c.isNotEmpty)
           .cast<String>()
@@ -282,13 +328,13 @@ class VodScreenNotifier extends StateNotifier<VodScreenState> {
 
       // Build categorized map for Netflix rows
       final categorizedMovies = <String, List<VodItem>>{};
-      for (final movie in vodChannels) {
+      for (final movie in allMoviesList) {
         final cat = movie.shortCategory;
         categorizedMovies.putIfAbsent(cat, () => []).add(movie);
       }
 
       // Pick hero items: movies with poster images, prefer enriched ones
-      final moviesWithPoster = vodChannels
+      final moviesWithPoster = allMoviesList
           .where((m) => m.displayPosterUrl != null && m.displayPosterUrl!.isNotEmpty)
           .toList();
       List<VodItem> heroItems;
@@ -299,12 +345,12 @@ class VodScreenNotifier extends StateNotifier<VodScreenState> {
         heroItems = moviesWithPoster.take(5).toList();
       } else {
         // Fallback: pick first 5 movies
-        heroItems = vodChannels.take(5).toList();
+        heroItems = allMoviesList.take(5).toList();
       }
 
       state = state.copyWith(
-        allMovies: vodChannels,
-        filteredMovies: vodChannels,
+        allMovies: allMoviesList,
+        filteredMovies: allMoviesList,
         categories: categories,
         isLoading: false,
         clearFailure: true,

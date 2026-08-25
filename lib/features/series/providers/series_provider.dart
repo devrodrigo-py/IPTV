@@ -330,11 +330,58 @@ class SeriesScreenNotifier extends StateNotifier<SeriesScreenState> {
       // Load legacy TMDB cache for backwards compatibility
       _legacyCache = await db.tmdbCacheDao.getAllCachedByType('tv');
 
-      // Query channels with sourceType series
+      final allSeriesItems = <SeriesItem>[];
+
+      // 1. Load from seriesItems table (Xtream series import)
+      final dbSeries = await db.seriesDao.getAllActiveSeries();
+      for (final s in dbSeries) {
+        final cached = _legacyCache?[s.id.toString()];
+        var item = SeriesItem(
+          id: s.id,
+          playlistId: s.playlistId,
+          name: s.name,
+          coverUrl: s.coverUrl,
+          categoryName: s.categoryName,
+          sourceId: s.sourceId,
+          plot: s.plot,
+          cast: s.cast,
+          director: s.director,
+          genre: s.genre,
+          rating: s.rating?.toString(),
+        );
+
+        if (cached != null) {
+          item = item.copyWithTmdb(
+            tmdbPosterUrl: cached.posterUrl,
+            tmdbBackdropUrl: cached.backdropUrl,
+            tmdbOverview: cached.overview,
+            tmdbGenres: cached.genres,
+            tmdbCast: cached.castNames,
+            tmdbRating: cached.voteAverage,
+            tmdbReleaseDate: cached.releaseDate,
+            tmdbId: cached.tmdbId,
+            tmdbSeasonsJson: cached.seasonsJson,
+          );
+        }
+        allSeriesItems.add(item);
+      }
+
+      // 2. Also load from channels table (M3U imports with sourceType series)
       final channels = await db.channelsDao.getAllActiveChannels();
-      final seriesChannels = channels
+      final seriesFromChannels = channels
           .where((c) => c.sourceType == ChannelSourceType.series)
-          .map((c) {
+          .toList();
+
+      // Avoid duplicates by checking sourceId
+      final existingSourceIds = allSeriesItems
+          .map((s) => s.sourceId)
+          .whereType<String>()
+          .toSet();
+
+      for (final c in seriesFromChannels) {
+        if (c.sourceId != null && existingSourceIds.contains(c.sourceId)) {
+          continue; // Already loaded from seriesItems
+        }
         final cached = _legacyCache?[c.id.toString()];
         var item = SeriesItem(
           id: c.id,
@@ -358,10 +405,10 @@ class SeriesScreenNotifier extends StateNotifier<SeriesScreenState> {
             tmdbSeasonsJson: cached.seasonsJson,
           );
         }
-        return item;
-      }).toList();
+        allSeriesItems.add(item);
+      }
 
-      final categories = seriesChannels
+      final categories = allSeriesItems
           .map((s) => s.categoryName)
           .where((c) => c != null && c.isNotEmpty)
           .cast<String>()
@@ -371,13 +418,13 @@ class SeriesScreenNotifier extends StateNotifier<SeriesScreenState> {
 
       // Build categorized map for Netflix rows
       final categorizedSeries = <String, List<SeriesItem>>{};
-      for (final series in seriesChannels) {
+      for (final series in allSeriesItems) {
         final cat = series.shortCategory;
         categorizedSeries.putIfAbsent(cat, () => []).add(series);
       }
 
       // Pick hero items: series with poster images
-      final seriesWithPoster = seriesChannels
+      final seriesWithPoster = allSeriesItems
           .where((s) => s.displayPosterUrl != null && s.displayPosterUrl!.isNotEmpty)
           .toList();
       List<SeriesItem> heroItems;
@@ -387,12 +434,12 @@ class SeriesScreenNotifier extends StateNotifier<SeriesScreenState> {
       } else if (seriesWithPoster.isNotEmpty) {
         heroItems = seriesWithPoster.take(5).toList();
       } else {
-        heroItems = seriesChannels.take(5).toList();
+        heroItems = allSeriesItems.take(5).toList();
       }
 
       state = state.copyWith(
-        allSeries: seriesChannels,
-        filteredSeries: seriesChannels,
+        allSeries: allSeriesItems,
+        filteredSeries: allSeriesItems,
         categories: categories,
         isLoading: false,
         clearFailure: true,
@@ -549,23 +596,40 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
       // If not found in state, load from database directly
       if (series == null || series.name.isEmpty) {
         final db = _ref.read(databaseProvider);
-        final rows = await db.customSelect(
-          'SELECT * FROM channels WHERE id = ? AND is_active = 1',
-          variables: [Variable.withInt(_seriesId)],
-        ).get();
-        if (rows.isNotEmpty) {
-          final row = rows.first;
+        final dbSeries = await db.seriesDao.getSeriesById(_seriesId);
+        if (dbSeries != null) {
           series = SeriesItem(
-            id: row.read<int>('id'),
-            playlistId: row.read<int>('playlist_id'),
-            name: row.read<String>('name'),
-            coverUrl: row.readNullable<String>('logo_url'),
-            categoryName: row.readNullable<String>('group_name'),
-            sourceId: row.readNullable<String>('source_id'),
+            id: dbSeries.id,
+            playlistId: dbSeries.playlistId,
+            name: dbSeries.name,
+            coverUrl: dbSeries.coverUrl,
+            categoryName: dbSeries.categoryName,
+            sourceId: dbSeries.sourceId,
+            plot: dbSeries.plot,
+            cast: dbSeries.cast,
+            director: dbSeries.director,
+            genre: dbSeries.genre,
+            rating: dbSeries.rating?.toString(),
           );
         } else {
-          state = state.copyWith(isLoading: false);
-          return;
+          final rows = await db.customSelect(
+            'SELECT * FROM channels WHERE id = ? AND is_active = 1',
+            variables: [Variable.withInt(_seriesId)],
+          ).get();
+          if (rows.isNotEmpty) {
+            final row = rows.first;
+            series = SeriesItem(
+              id: row.read<int>('id'),
+              playlistId: row.read<int>('playlist_id'),
+              name: row.read<String>('name'),
+              coverUrl: row.readNullable<String>('logo_url'),
+              categoryName: row.readNullable<String>('group_name'),
+              sourceId: row.readNullable<String>('source_id'),
+            );
+          } else {
+            state = state.copyWith(isLoading: false);
+            return;
+          }
         }
       }
 
@@ -785,38 +849,61 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
     }
   }
 
-/// Fetches episodes for a season from the Xtream API.
-  Future<List<EpisodeItem>> _fetchXtreamEpisodes(int seasonNumber) async {
-    final series = state.series;
-    if (series == null || series.sourceId == null) return [];
-
+  /// Helper to get playlist credentials (serverUrl, username, password) for a series.
+  Future<({String serverUrl, String username, String password})?> _getPlaylistCredentials(int playlistId) async {
     try {
       final db = _ref.read(databaseProvider);
-
-      // Get playlist credentials
-      final playlistRows = await db.customSelect(
-        'SELECT p.url, p.username, p.credential_key FROM playlists p '
-        'INNER JOIN channels c ON c.playlist_id = p.id '
-        'WHERE c.id = ? LIMIT 1',
-        variables: [Variable.withInt(_seriesId)],
+      var playlistRows = await db.customSelect(
+        'SELECT url, username, credential_key FROM playlists WHERE id = ? LIMIT 1',
+        variables: [Variable.withInt(playlistId)],
       ).get();
 
-      if (playlistRows.isEmpty) return [];
+      if (playlistRows.isEmpty) {
+        playlistRows = await db.customSelect(
+          'SELECT p.url, p.username, p.credential_key FROM playlists p '
+          'INNER JOIN channels c ON c.playlist_id = p.id '
+          'WHERE c.id = ? LIMIT 1',
+          variables: [Variable.withInt(_seriesId)],
+        ).get();
+      }
+
+      if (playlistRows.isEmpty) {
+        playlistRows = await db.customSelect(
+          'SELECT url, username, credential_key FROM playlists LIMIT 1',
+        ).get();
+      }
+
+      if (playlistRows.isEmpty) return null;
 
       final serverUrl = playlistRows.first.read<String>('url');
       final username = playlistRows.first.readNullable<String>('username') ?? '';
       final password = playlistRows.first.readNullable<String>('credential_key') ?? '';
 
-      if (username.isEmpty || password.isEmpty) return [];
+      if (serverUrl.isEmpty || username.isEmpty || password.isEmpty) return null;
+
+      return (serverUrl: serverUrl, username: username, password: password);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Fetches episodes for a season from the Xtream API.
+  Future<List<EpisodeItem>> _fetchXtreamEpisodes(int seasonNumber) async {
+    final series = state.series;
+    if (series == null || series.sourceId == null) return [];
+
+    try {
+      final creds = await _getPlaylistCredentials(series.playlistId);
+      if (creds == null) return [];
 
       final seriesIdInt = int.tryParse(series.sourceId!);
       if (seriesIdInt == null) return [];
 
       final xtream = XtreamDataSource(client: DioClient());
       final result = await xtream.getSeriesInfo(
-        serverUrl: serverUrl,
-        username: username,
-        password: password,
+        serverUrl: creds.serverUrl,
+        username: creds.username,
+        password: creds.password,
         seriesId: seriesIdInt,
       );
 
@@ -825,9 +912,9 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
           final seasonEpisodes = info.episodes[seasonNumber] ?? [];
           return seasonEpisodes.map((ep) {
             final streamUrl = xtream.buildSeriesStreamUrl(
-              serverUrl: serverUrl,
-              username: username,
-              password: password,
+              serverUrl: creds.serverUrl,
+              username: creds.username,
+              password: creds.password,
               episodeId: ep.id,
               extension: ep.containerExtension ?? 'mp4',
             );
@@ -940,42 +1027,24 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
     }
 
     try {
-      final db = _ref.read(databaseProvider);
-
-      // Get playlist credentials (url, username, password stored in credential_key)
-      final playlistRows = await db.customSelect(
-        'SELECT p.url, p.username, p.credential_key FROM playlists p '
-        'INNER JOIN channels c ON c.playlist_id = p.id '
-        'WHERE c.id = ? LIMIT 1',
-        variables: [Variable.withInt(_seriesId)],
-      ).get();
-
-      if (playlistRows.isEmpty) {
+      final creds = await _getPlaylistCredentials(series.playlistId);
+      if (creds == null) {
         state = state.copyWith(isLoading: false);
         return;
       }
 
-      final serverUrl = playlistRows.first.read<String>('url');
-      final username = playlistRows.first.readNullable<String>('username') ?? '';
-      final password = playlistRows.first.readNullable<String>('credential_key') ?? '';
-
-      if (username.isEmpty || password.isEmpty) {
-        state = state.copyWith(isLoading: false);
-        return;
-      }
-
-      // Fetch series info from Xtream API
-      final xtream = XtreamDataSource(client: DioClient());
       final seriesIdInt = int.tryParse(series.sourceId!);
       if (seriesIdInt == null) {
         state = state.copyWith(isLoading: false);
         return;
       }
 
+      // Fetch series info from Xtream API
+      final xtream = XtreamDataSource(client: DioClient());
       final result = await xtream.getSeriesInfo(
-        serverUrl: serverUrl,
-        username: username,
-        password: password,
+        serverUrl: creds.serverUrl,
+        username: creds.username,
+        password: creds.password,
         seriesId: seriesIdInt,
       );
 
@@ -992,9 +1061,9 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
               episodeCount: seasonEpisodes.length,
               episodes: seasonEpisodes.map((ep) {
                 final streamUrl = xtream.buildSeriesStreamUrl(
-                  serverUrl: serverUrl,
-                  username: username,
-                  password: password,
+                  serverUrl: creds.serverUrl,
+                  username: creds.username,
+                  password: creds.password,
                   episodeId: ep.id,
                   extension: ep.containerExtension ?? 'mp4',
                 );

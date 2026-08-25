@@ -90,6 +90,18 @@ class WebPlayerService implements VideoPlayerService {
   }
 
   @override
+  Future<Result<void>> seek(Duration position) async {
+    await _controller?.seekTo(position);
+    return const Success(null);
+  }
+
+  @override
+  Future<Result<void>> setPlaybackSpeed(double speed) async {
+    await _controller?.setPlaybackSpeed(speed);
+    return const Success(null);
+  }
+
+  @override
   Future<Result<void>> selectAudioTrack(String trackId) async {
     // video_player web doesn't support audio track selection
     return const Success(null);
@@ -98,6 +110,15 @@ class WebPlayerService implements VideoPlayerService {
   @override
   Future<Result<void>> selectSubtitleTrack(String? trackId) async {
     // video_player web doesn't support subtitle track selection
+    return const Success(null);
+  }
+
+  @override
+  Future<Result<void>> addExternalSubtitle(
+    String uri, {
+    String? title,
+    String? language,
+  }) async {
     return const Success(null);
   }
 

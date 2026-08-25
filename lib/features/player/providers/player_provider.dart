@@ -172,6 +172,35 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     await _ref.read(videoPlayerServiceProvider).setVolume(volume);
   }
 
+  /// Seeks to a specific target duration.
+  Future<void> seek(Duration target) async {
+    await _ref.read(videoPlayerServiceProvider).seek(target);
+  }
+
+  /// Sets playback speed rate (e.g. 0.5, 1.0, 1.25, 1.5, 2.0).
+  Future<void> setPlaybackSpeed(double speed) async {
+    await _ref.read(videoPlayerServiceProvider).setPlaybackSpeed(speed);
+  }
+
+  /// Selects an audio track by ID.
+  Future<void> selectAudioTrack(String trackId) async {
+    await _ref.read(videoPlayerServiceProvider).selectAudioTrack(trackId);
+  }
+
+  /// Selects a subtitle track by ID (pass null to disable).
+  Future<void> selectSubtitleTrack(String? trackId) async {
+    await _ref.read(videoPlayerServiceProvider).selectSubtitleTrack(trackId);
+  }
+
+  /// Injects an external subtitle (.srt, .vtt).
+  Future<void> addExternalSubtitle(String uri, {String? title, String? language}) async {
+    await _ref.read(videoPlayerServiceProvider).addExternalSubtitle(
+      uri,
+      title: title,
+      language: language,
+    );
+  }
+
   /// Manual retry after reconnection exhausted.
   Future<void> retry(String url) async {
     _reconnectionService?.reset();

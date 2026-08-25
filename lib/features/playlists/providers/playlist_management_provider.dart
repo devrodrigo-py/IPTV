@@ -12,6 +12,8 @@ import 'package:nebula_iptv/domain/services/channel_dedup_service.dart';
 import 'package:nebula_iptv/data/datasources/m3u/m3u_datasource.dart';
 import 'package:nebula_iptv/data/repositories/playlist_import_repository.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
+import 'package:nebula_iptv/features/series/providers/series_provider.dart';
+import 'package:nebula_iptv/features/vod/providers/vod_provider.dart';
 import 'package:nebula_iptv/features/search/providers/search_provider.dart';
 import 'package:nebula_iptv/features/playlists/widgets/playlist_file_picker.dart';
 
@@ -159,6 +161,28 @@ class PlaylistManagementNotifier
   Future<void> refreshPlaylist(int playlistId) async {
     state = state.copyWith(isLoading: true, clearStatus: true);
 
+    final db = _ref.read(databaseProvider);
+    final playlist = await db.playlistsDao.getPlaylistById(playlistId);
+    if (playlist == null) {
+      state = state.copyWith(
+        isLoading: false,
+        statusMessage: 'Fonte não encontrada.',
+        isError: true,
+      );
+      return;
+    }
+
+    if (playlist.type == PlaylistType.xtream) {
+      await importFromXtream(
+        name: playlist.name,
+        serverUrl: playlist.url,
+        username: playlist.username ?? '',
+        password: playlist.credentialKey ?? '',
+        existingPlaylistId: playlist.id,
+      );
+      return;
+    }
+
     final result = await _importRepo.refreshPlaylist(playlistId);
 
     result.when(
@@ -172,6 +196,8 @@ class PlaylistManagementNotifier
         );
         _loadPlaylists();
         _ref.read(channelsScreenProvider.notifier).refresh();
+        _ref.read(seriesScreenProvider.notifier).refresh();
+        _ref.read(vodScreenProvider.notifier).refresh();
       },
       failure: (f) {
         state = state.copyWith(
@@ -191,24 +217,35 @@ class PlaylistManagementNotifier
       'DELETE FROM channels WHERE playlist_id = ?',
       [playlistId],
     );
+    await db.customStatement(
+      'DELETE FROM vod_items WHERE playlist_id = ?',
+      [playlistId],
+    );
+    await db.customStatement(
+      'DELETE FROM series_items WHERE playlist_id = ?',
+      [playlistId],
+    );
     await db.customStatement('DELETE FROM channel_groups');
     await db.customStatement('DELETE FROM channel_group_members');
 
     await db.playlistsDao.deletePlaylist(playlistId);
     await _loadPlaylists();
     _ref.read(channelsScreenProvider.notifier).refresh();
+    _ref.read(seriesScreenProvider.notifier).refresh();
+    _ref.read(vodScreenProvider.notifier).refresh();
     state = state.copyWith(
       statusMessage: 'Fonte removida',
       isError: false,
     );
   }
 
-  /// Imports a source via Xtream Codes API (live + VOD + series).
+  /// Imports a source via Xtream Codes API (live + VOD + series) with fast batch database operations.
   Future<void> importFromXtream({
     required String name,
     required String serverUrl,
     required String username,
     required String password,
+    int? existingPlaylistId,
   }) async {
     state = state.copyWith(isLoading: true, clearStatus: true);
 
@@ -231,43 +268,51 @@ class PlaylistManagementNotifier
 
     final db = _ref.read(databaseProvider);
 
-    // Create playlist entry first
-    final playlistId = await db.playlistsDao.insertPlaylist(
-      PlaylistsCompanion.insert(
-        name: name,
-        type: PlaylistType.xtream,
-        url: Value(serverUrl),
-        username: Value(username),
-        credentialKey: Value(password),
-      ),
-    );
+    int playlistId;
+    if (existingPlaylistId != null) {
+      playlistId = existingPlaylistId;
+      // Clean up previous records for this playlist
+      await db.customStatement('DELETE FROM channels WHERE playlist_id = ?', [playlistId]);
+      await db.customStatement('DELETE FROM vod_items WHERE playlist_id = ?', [playlistId]);
+      await db.customStatement('DELETE FROM series_items WHERE playlist_id = ?', [playlistId]);
+      await db.playlistsDao.updateSyncStatus(playlistId, status: PlaylistSyncStatus.syncing);
+    } else {
+      // Create playlist entry first
+      playlistId = await db.playlistsDao.insertPlaylist(
+        PlaylistsCompanion.insert(
+          name: name,
+          type: PlaylistType.xtream,
+          url: Value(serverUrl),
+          username: Value(username),
+          credentialKey: Value(password),
+          lastSyncAt: Value(DateTime.now()),
+          syncStatus: const Value(PlaylistSyncStatus.idle),
+        ),
+      );
+    }
 
     var liveCount = 0;
     var vodCount = 0;
     var seriesCount = 0;
 
-    // 2. Fetch category maps for name resolution
-    final liveCatMap = await _fetchCategoryMap(
-      serverUrl: serverUrl, username: username, password: password,
-      action: 'live',
-    );
-    final vodCatMap = await _fetchCategoryMap(
-      serverUrl: serverUrl, username: username, password: password,
-      action: 'vod',
-    );
-    final seriesCatMap = await _fetchCategoryMap(
-      serverUrl: serverUrl, username: username, password: password,
-      action: 'series',
-    );
+    // 2. Fetch category maps in parallel
+    final catFutures = await Future.wait([
+      _fetchCategoryMap(serverUrl: serverUrl, username: username, password: password, action: 'live'),
+      _fetchCategoryMap(serverUrl: serverUrl, username: username, password: password, action: 'vod'),
+      _fetchCategoryMap(serverUrl: serverUrl, username: username, password: password, action: 'series'),
+    ]);
+    final liveCatMap = catFutures[0];
+    final vodCatMap = catFutures[1];
+    final seriesCatMap = catFutures[2];
 
-    // 3. Import live streams
+    // 3. Import live streams (BATCH)
     final liveResult = await _xtreamDataSource.getLiveStreams(
       serverUrl: serverUrl,
       username: username,
       password: password,
     );
     if (liveResult case Success(data: final streams)) {
-      for (final stream in streams) {
+      final liveCompanions = streams.map((stream) {
         final streamUrl = _xtreamDataSource.buildStreamUrl(
           serverUrl: serverUrl,
           username: username,
@@ -275,7 +320,7 @@ class PlaylistManagementNotifier
           streamId: stream.streamId,
           extension: stream.containerExtension ?? 'ts',
         );
-        await db.channelsDao.insertChannel(ChannelsCompanion.insert(
+        return ChannelsCompanion.insert(
           playlistId: playlistId,
           name: stream.name,
           streamUrl: streamUrl,
@@ -283,18 +328,26 @@ class PlaylistManagementNotifier
           sourceId: Value(stream.streamId.toString()),
           logoUrl: Value(stream.streamIcon),
           groupName: Value(liveCatMap[stream.categoryId] ?? stream.categoryId),
-        ));
+          tvgId: Value(stream.epgChannelId),
+        );
+      }).toList();
+
+      if (liveCompanions.isNotEmpty) {
+        await db.channelsDao.insertChannels(liveCompanions);
       }
       liveCount = streams.length;
     }
 
-    // 4. Import VOD (movies)
+    // 4. Import VOD (movies) (BATCH)
     final vodResult = await _xtreamDataSource.getVodStreams(
       serverUrl: serverUrl,
       username: username,
       password: password,
     );
     if (vodResult case Success(data: final movies)) {
+      final vodChannels = <ChannelsCompanion>[];
+      final vodItems = <VodItemsCompanion>[];
+
       for (final movie in movies) {
         final streamUrl = _xtreamDataSource.buildVodStreamUrl(
           serverUrl: serverUrl,
@@ -303,48 +356,99 @@ class PlaylistManagementNotifier
           streamId: movie.streamId,
           extension: movie.containerExtension ?? 'mp4',
         );
-        await db.channelsDao.insertChannel(ChannelsCompanion.insert(
+        final cat = vodCatMap[movie.categoryId] ?? movie.categoryId;
+        vodChannels.add(ChannelsCompanion.insert(
           playlistId: playlistId,
           name: movie.name,
           streamUrl: streamUrl,
           sourceType: ChannelSourceType.vod,
           sourceId: Value(movie.streamId.toString()),
           logoUrl: Value(movie.streamIcon),
-          groupName: Value(vodCatMap[movie.categoryId] ?? movie.categoryId),
+          groupName: Value(cat),
         ));
+        vodItems.add(VodItemsCompanion.insert(
+          playlistId: playlistId,
+          sourceId: movie.streamId.toString(),
+          name: movie.name,
+          streamUrl: streamUrl,
+          logoUrl: Value(movie.streamIcon),
+          categoryName: Value(cat),
+          containerExtension: Value(movie.containerExtension ?? 'mp4'),
+        ));
+      }
+
+      if (vodChannels.isNotEmpty) {
+        await db.channelsDao.insertChannels(vodChannels);
+      }
+      if (vodItems.isNotEmpty) {
+        await db.vodDao.insertVodBatch(vodItems);
       }
       vodCount = movies.length;
     }
 
-    // 5. Import Series (metadata only)
+    // 5. Import Series (BATCH)
     final seriesResult = await _xtreamDataSource.getSeries(
       serverUrl: serverUrl,
       username: username,
       password: password,
     );
     if (seriesResult case Success(data: final seriesList)) {
+      final seriesChannels = <ChannelsCompanion>[];
+      final seriesItems = <SeriesItemsCompanion>[];
+
       for (final s in seriesList) {
-        await db.channelsDao.insertChannel(ChannelsCompanion.insert(
+        final cat = seriesCatMap[s.categoryId] ?? s.categoryId;
+        final sourceIdStr = s.seriesId.toString();
+        seriesChannels.add(ChannelsCompanion.insert(
           playlistId: playlistId,
           name: s.name,
-          streamUrl: '', // Series don't have a direct stream URL
+          streamUrl: '',
           sourceType: ChannelSourceType.series,
-          sourceId: Value(s.seriesId.toString()),
+          sourceId: Value(sourceIdStr),
           logoUrl: Value(s.cover),
-          groupName: Value(seriesCatMap[s.categoryId] ?? s.categoryId),
+          groupName: Value(cat),
         ));
+        seriesItems.add(SeriesItemsCompanion.insert(
+          playlistId: playlistId,
+          sourceId: sourceIdStr,
+          name: s.name,
+          coverUrl: Value(s.cover),
+          categoryName: Value(cat),
+          plot: Value(s.plot),
+          cast: Value(s.cast),
+          director: Value(s.director),
+          genre: Value(s.genre),
+          rating: Value(s.rating),
+          year: Value(s.year),
+          backdropUrl: Value(s.backdropPath),
+        ));
+      }
+
+      if (seriesChannels.isNotEmpty) {
+        await db.channelsDao.insertChannels(seriesChannels);
+      }
+      if (seriesItems.isNotEmpty) {
+        await db.seriesDao.insertSeriesBatch(seriesItems);
       }
       seriesCount = seriesList.length;
     }
 
+    await db.playlistsDao.updateSyncStatus(
+      playlistId,
+      status: PlaylistSyncStatus.idle,
+      syncedAt: DateTime.now(),
+    );
+
     state = state.copyWith(
       isLoading: false,
       statusMessage:
-          '\u2713 Importado: $liveCount canais, $vodCount filmes, $seriesCount s\u00e9ries',
+          '✓ Importado: $liveCount canais, $vodCount filmes, $seriesCount séries',
       isError: false,
     );
     _loadPlaylists();
     _ref.read(channelsScreenProvider.notifier).refresh();
+    _ref.read(seriesScreenProvider.notifier).refresh();
+    _ref.read(vodScreenProvider.notifier).refresh();
 
     // Run channel deduplication in background (non-blocking)
     _runDeduplicationInBackground();

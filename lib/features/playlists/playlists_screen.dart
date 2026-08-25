@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
@@ -208,10 +209,53 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  // Focus nodes for TV remote / keyboard navigation
+  final _xtreamNameFocus = FocusNode(debugLabel: 'xtreamName');
+  final _serverUrlFocus = FocusNode(debugLabel: 'serverUrl');
+  final _usernameFocus = FocusNode(debugLabel: 'username');
+  final _passwordFocus = FocusNode(debugLabel: 'password');
+
+  final _m3uNameFocus = FocusNode(debugLabel: 'm3uName');
+  final _urlFocus = FocusNode(debugLabel: 'm3uUrl');
+  final _fileButtonFocus = FocusNode(debugLabel: 'fileButton');
+
+  final _cancelButtonFocus = FocusNode(debugLabel: 'cancelButton');
+  final _importButtonFocus = FocusNode(debugLabel: 'importButton');
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+
+    _xtreamNameFocus.onKeyEvent = (node, event) =>
+        _handleFieldKeyEvent(_serverUrlFocus, null, event);
+    _serverUrlFocus.onKeyEvent = (node, event) =>
+        _handleFieldKeyEvent(_usernameFocus, _xtreamNameFocus, event);
+    _usernameFocus.onKeyEvent = (node, event) =>
+        _handleFieldKeyEvent(_passwordFocus, _serverUrlFocus, event);
+    _passwordFocus.onKeyEvent = (node, event) =>
+        _handleFieldKeyEvent(_importButtonFocus, _usernameFocus, event);
+
+    _m3uNameFocus.onKeyEvent = (node, event) =>
+        _handleFieldKeyEvent(_urlFocus, null, event);
+    _urlFocus.onKeyEvent = (node, event) =>
+        _handleFieldKeyEvent(_fileButtonFocus, _m3uNameFocus, event);
+    _fileButtonFocus.onKeyEvent = (node, event) =>
+        _handleFieldKeyEvent(_importButtonFocus, _urlFocus, event);
+  }
+
+  KeyEventResult _handleFieldKeyEvent(FocusNode nextFocus, FocusNode? prevFocus, KeyEvent event) {
+    if (event is KeyDownEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        nextFocus.requestFocus();
+        return KeyEventResult.handled;
+      }
+      if (event.logicalKey == LogicalKeyboardKey.arrowUp && prevFocus != null) {
+        prevFocus.requestFocus();
+        return KeyEventResult.handled;
+      }
+    }
+    return KeyEventResult.ignored;
   }
 
   @override
@@ -222,8 +266,38 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
     _serverUrlController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
+
+    _xtreamNameFocus.dispose();
+    _serverUrlFocus.dispose();
+    _usernameFocus.dispose();
+    _passwordFocus.dispose();
+    _m3uNameFocus.dispose();
+    _urlFocus.dispose();
+    _fileButtonFocus.dispose();
+    _cancelButtonFocus.dispose();
+    _importButtonFocus.dispose();
+
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _submit() {
+    if (_tabController.index == 0) {
+      // Xtream
+      final name = _xtreamNameController.text.trim();
+      final serverUrl = _serverUrlController.text.trim();
+      final username = _usernameController.text.trim();
+      final password = _passwordController.text.trim();
+      if (name.isEmpty || serverUrl.isEmpty ||
+          username.isEmpty || password.isEmpty) return;
+      widget.onImportXtream(name, serverUrl, username, password);
+    } else {
+      // M3U
+      final name = _nameController.text.trim();
+      final url = _urlController.text.trim();
+      if (name.isEmpty || url.isEmpty) return;
+      widget.onImportUrl(name, url);
+    }
   }
 
   @override
@@ -233,7 +307,7 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
       title: const Text('Adicionar fonte'),
       content: SizedBox(
         width: 400,
-        height: 320,
+        height: 340,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -259,6 +333,10 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
                       children: [
                         TextField(
                           controller: _xtreamNameController,
+                          focusNode: _xtreamNameFocus,
+                          autofocus: true,
+                          textInputAction: TextInputAction.next,
+                          onSubmitted: (_) => _serverUrlFocus.requestFocus(),
                           decoration: const InputDecoration(
                             labelText: 'Nome',
                             hintText: 'Ex: Minha IPTV',
@@ -267,6 +345,10 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
                         const SizedBox(height: 10),
                         TextField(
                           controller: _serverUrlController,
+                          focusNode: _serverUrlFocus,
+                          textInputAction: TextInputAction.next,
+                          keyboardType: TextInputType.url,
+                          onSubmitted: (_) => _usernameFocus.requestFocus(),
                           decoration: const InputDecoration(
                             labelText: 'URL do servidor',
                             hintText: 'http://servidor.com',
@@ -275,6 +357,9 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
                         const SizedBox(height: 10),
                         TextField(
                           controller: _usernameController,
+                          focusNode: _usernameFocus,
+                          textInputAction: TextInputAction.next,
+                          onSubmitted: (_) => _passwordFocus.requestFocus(),
                           decoration: const InputDecoration(
                             labelText: 'Usuário',
                           ),
@@ -282,7 +367,10 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
                         const SizedBox(height: 10),
                         TextField(
                           controller: _passwordController,
+                          focusNode: _passwordFocus,
                           obscureText: true,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) => _submit(),
                           decoration: const InputDecoration(
                             labelText: 'Senha',
                           ),
@@ -297,6 +385,9 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
                       children: [
                         TextField(
                           controller: _nameController,
+                          focusNode: _m3uNameFocus,
+                          textInputAction: TextInputAction.next,
+                          onSubmitted: (_) => _urlFocus.requestFocus(),
                           decoration: const InputDecoration(
                             labelText: 'Nome',
                             hintText: 'Ex: Minha Playlist',
@@ -305,6 +396,10 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
                         const SizedBox(height: 12),
                         TextField(
                           controller: _urlController,
+                          focusNode: _urlFocus,
+                          textInputAction: TextInputAction.done,
+                          keyboardType: TextInputType.url,
+                          onSubmitted: (_) => _submit(),
                           decoration: const InputDecoration(
                             labelText: 'URL da playlist (M3U/M3U8)',
                             hintText: 'https://exemplo.com/playlist.m3u',
@@ -312,6 +407,7 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
                         ),
                         const SizedBox(height: 16),
                         TextButton.icon(
+                          focusNode: _fileButtonFocus,
                           onPressed: widget.onImportFile,
                           icon: const Icon(Icons.file_open_rounded),
                           label: const Text('Importar de arquivo'),
@@ -327,28 +423,13 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
       ),
       actions: [
         TextButton(
+          focusNode: _cancelButtonFocus,
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),
         ),
         ElevatedButton(
-          onPressed: () {
-            if (_tabController.index == 0) {
-              // Xtream
-              final name = _xtreamNameController.text.trim();
-              final serverUrl = _serverUrlController.text.trim();
-              final username = _usernameController.text.trim();
-              final password = _passwordController.text.trim();
-              if (name.isEmpty || serverUrl.isEmpty ||
-                  username.isEmpty || password.isEmpty) return;
-              widget.onImportXtream(name, serverUrl, username, password);
-            } else {
-              // M3U
-              final name = _nameController.text.trim();
-              final url = _urlController.text.trim();
-              if (name.isEmpty || url.isEmpty) return;
-              widget.onImportUrl(name, url);
-            }
-          },
+          focusNode: _importButtonFocus,
+          onPressed: _submit,
           child: const Text('Importar'),
         ),
       ],

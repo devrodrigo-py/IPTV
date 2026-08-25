@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
+import 'package:nebula_iptv/data/database/app_database.dart';
+import 'package:nebula_iptv/data/database/tables/playlists_table.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
+import 'package:nebula_iptv/features/parental_control/parental_control_service.dart';
+import 'package:nebula_iptv/features/playlists/providers/playlist_management_provider.dart';
 import 'package:nebula_iptv/features/profiles/profile_edit_dialog.dart';
 import 'package:nebula_iptv/features/profiles/providers/profile_provider.dart';
+import 'package:nebula_iptv/domain/services/subtitle_search_service.dart';
 import 'package:nebula_iptv/l10n/app_localizations.dart';
 
 /// Settings screen.
 ///
-/// Provides access to application configuration including profiles.
+/// Provides access to application configuration including profiles,
+/// accounts/subscriptions, parental control, and audio/subtitle preferences.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -19,6 +26,8 @@ class SettingsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final profilesAsync = ref.watch(profilesProvider);
     final activeId = ref.watch(activeProfileProvider);
+    final playlistState = ref.watch(playlistManagementProvider);
+    final parentalState = ref.watch(parentalControlProvider);
 
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -30,7 +39,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-          // Profiles section
+          // 1. Profiles section
           _SettingsSection(
             title: 'Perfis',
             children: [
@@ -110,14 +119,18 @@ class SettingsScreen extends ConsumerWidget {
                     },
                   );
                 }).toList(),
-                loading: () => [const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: CircularProgressIndicator(),
-                )],
-                error: (_, __) => [const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('Erro ao carregar perfis'),
-                )],
+                loading: () => [
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: CircularProgressIndicator(),
+                  )
+                ],
+                error: (_, __) => [
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('Erro ao carregar perfis'),
+                  )
+                ],
               ),
               _SettingsTile(
                 icon: Icons.add_rounded,
@@ -143,7 +156,118 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
 
-          // General section
+          // 2. Subscriptions / Accounts Info
+          _SettingsSection(
+            title: 'Assinaturas & Servidores IPTV',
+            children: [
+              if (playlistState.playlists.isEmpty)
+                const _SettingsTile(
+                  icon: Icons.cloud_off_rounded,
+                  title: 'Nenhuma fonte cadastrada',
+                  subtitle: 'Adicione uma lista M3U ou Xtream na aba Fontes',
+                )
+              else
+                ...playlistState.playlists.map((playlist) {
+                  final isXtream = playlist.type == PlaylistType.xtream;
+                  final user = playlist.username ?? 'Anônimo';
+                  final lastSync = playlist.lastSyncAt != null
+                      ? '${playlist.lastSyncAt!.day.toString().padLeft(2, '0')}/${playlist.lastSyncAt!.month.toString().padLeft(2, '0')}/${playlist.lastSyncAt!.year}'
+                      : 'Nunca sincronizado';
+
+                  return _SettingsTile(
+                    icon: isXtream ? Icons.dns_rounded : Icons.playlist_play_rounded,
+                    title: playlist.name,
+                    subtitle: isXtream
+                        ? 'Xtream Codes • Usuário: $user • Atualizado: $lastSync'
+                        : 'Lista M3U • Atualizado: $lastSync',
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: playlist.isActive
+                            ? AppColors.success.withValues(alpha: 0.15)
+                            : AppColors.textSecondary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        playlist.isActive ? 'Ativa' : 'Inativa',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: playlist.isActive ? AppColors.success : AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // 3. Parental Control Section
+          _SettingsSection(
+            title: 'Controle Parental',
+            children: [
+              _SettingsTile(
+                icon: parentalState.isEnabled ? Icons.lock_rounded : Icons.lock_open_rounded,
+                title: 'Bloqueio de Conteúdo Adulto (+18)',
+                subtitle: parentalState.isEnabled
+                    ? 'Ativado • Protegido por PIN de 4 dígitos'
+                    : 'Desativado • Categorias adultas visíveis sem senha',
+                trailing: Switch(
+                  value: parentalState.isEnabled,
+                  activeColor: AppColors.primary,
+                  onChanged: (enabled) async {
+                    if (enabled) {
+                      _showSetPinDialog(context, ref);
+                    } else {
+                      final unlocked = await ref
+                          .read(parentalControlProvider.notifier)
+                          .requestPinUnlock(context);
+                      if (unlocked) {
+                        ref.read(parentalControlProvider.notifier).toggleEnabled(false);
+                      }
+                    }
+                  },
+                ),
+              ),
+              if (parentalState.isEnabled)
+                _SettingsTile(
+                  icon: Icons.pin_rounded,
+                  title: 'Alterar PIN de Segurança',
+                  subtitle: 'Definir novo código de 4 dígitos',
+                  onTap: () => _showSetPinDialog(context, ref),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // 4. Audio & Subtitles preferences
+          _SettingsSection(
+            title: 'Áudio & Legendas',
+            children: [
+              _SettingsTile(
+                icon: Icons.audiotrack_rounded,
+                title: 'Áudio Padrão',
+                subtitle: 'Português (Brasil) • Dublado por padrão quando disponível',
+                onTap: () {},
+              ),
+              _SettingsTile(
+                icon: Icons.subtitles_rounded,
+                title: 'Legendas Padrão',
+                subtitle: 'Desativadas automaticamente em conteúdos dublados',
+                onTap: () {},
+              ),
+              _SettingsTile(
+                icon: Icons.key_rounded,
+                title: 'API Key OpenSubtitles',
+                subtitle: 'Necessária para buscar legendas online (gratuita)',
+                onTap: () => _showApiKeyDialog(context, ref),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // 5. General & About section
           _SettingsSection(
             title: l10n.settingsGeneral,
             children: [
@@ -159,19 +283,183 @@ class SettingsScreen extends ConsumerWidget {
                 subtitle: l10n.settingsLanguagePtBr,
                 onTap: () {},
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _SettingsSection(
-            title: l10n.settingsAbout,
-            children: [
               _SettingsTile(
                 icon: Icons.info_outline_rounded,
                 title: l10n.appTitle,
-                subtitle: 'v0.1.0',
+                subtitle: 'v1.0.0 (Android TV & Fire TV Edition)',
                 onTap: () {},
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSetPinDialog(BuildContext context, WidgetRef ref) {
+    final pinController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.security_rounded, color: AppColors.primary, size: 24),
+            const SizedBox(width: 10),
+            Text('Definir PIN de 4 Dígitos', style: AppTypography.title.copyWith(fontSize: 18)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Escolha um PIN de 4 números para bloquear canais e conteúdos adultos.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: 160,
+              child: TextField(
+                controller: pinController,
+                autofocus: true,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                maxLength: 4,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 24, letterSpacing: 12, fontWeight: FontWeight.bold),
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(
+                  counterText: '',
+                  hintText: '0000',
+                  filled: true,
+                  fillColor: AppColors.surfaceElevated,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancelar', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () {
+              if (pinController.text.length == 4) {
+                ref.read(parentalControlProvider.notifier).setPin(pinController.text);
+                ref.read(parentalControlProvider.notifier).toggleEnabled(true);
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Controle parental ativado com sucesso!')),
+                );
+              }
+            },
+            child: const Text('Salvar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showApiKeyDialog(BuildContext context, WidgetRef ref) async {
+    final keyController = TextEditingController();
+    final existingKey = await SubtitleSearchService.getSavedApiKey();
+    if (existingKey != null) {
+      keyController.text = existingKey;
+    }
+
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.key_rounded, color: AppColors.primary, size: 24),
+            const SizedBox(width: 10),
+            Text('API Key OpenSubtitles',
+                style: AppTypography.title.copyWith(fontSize: 18)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Para buscar legendas online, você precisa de uma chave gratuita do OpenSubtitles.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              '1. Acesse opensubtitles.com e crie uma conta\n'
+              '2. Vá em API Consumers e clique "New Consumer"\n'
+              '3. Cole a chave aqui',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: keyController,
+              autofocus: true,
+              style: const TextStyle(fontSize: 14),
+              decoration: const InputDecoration(
+                hintText: 'Cole sua API Key aqui...',
+                filled: true,
+                fillColor: AppColors.surfaceElevated,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          if (existingKey != null && existingKey.isNotEmpty)
+            TextButton(
+              onPressed: () async {
+                await SubtitleSearchService.clearApiKey();
+                if (ctx.mounted) Navigator.of(ctx).pop();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('API Key removida')),
+                  );
+                }
+              },
+              child: const Text('Remover',
+                  style: TextStyle(color: Colors.redAccent)),
+            ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancelar',
+                style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary),
+            onPressed: () async {
+              final key = keyController.text.trim();
+              if (key.isNotEmpty) {
+                await SubtitleSearchService.saveApiKey(key);
+                if (ctx.mounted) Navigator.of(ctx).pop();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text(
+                            'API Key salva! Busca de legendas ativada.')),
+                  );
+                }
+              }
+            },
+            child: const Text('Salvar',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -238,7 +526,7 @@ class _SettingsTile extends StatelessWidget {
               Icon(
                 icon,
                 size: 22,
-                color: AppColors.textSecondary,
+                color: isFocused ? AppColors.primary : AppColors.textSecondary,
               ),
               const SizedBox(width: 14),
               Expanded(

@@ -12,6 +12,9 @@ import 'package:nebula_iptv/core/constants/tmdb_constants.dart';
 import 'package:nebula_iptv/core/result/result.dart';
 import 'package:nebula_iptv/features/shared/widgets/star_rating.dart';
 import 'package:nebula_iptv/features/shared/providers/rating_provider.dart';
+import 'package:nebula_iptv/data/database/app_database.dart' hide VodItem;
+import 'package:nebula_iptv/data/datasources/xtream/xtream_datasource.dart';
+import 'package:nebula_iptv/core/network/dio_client.dart';
 import 'package:nebula_iptv/features/profiles/providers/profile_provider.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 
@@ -537,12 +540,34 @@ class _VodDetailScreenState extends ConsumerState<VodDetailScreen> {
     );
   }
 
-  void _playMovie(BuildContext context) {
+  Future<void> _playMovie(BuildContext context) async {
+    var url = _movie.streamUrl;
+    if (url.isEmpty || !url.startsWith('http')) {
+      final db = ref.read(databaseProvider);
+      final ch = await db.channelsDao.getChannelById(_movie.id);
+      if (ch != null && ch.streamUrl.isNotEmpty && ch.streamUrl.startsWith('http')) {
+        url = ch.streamUrl;
+      } else {
+        final playlist = await db.playlistsDao.getPlaylistById(_movie.playlistId);
+        if (playlist != null && playlist.url.isNotEmpty) {
+          final xtream = XtreamDataSource(client: DioClient());
+          url = xtream.buildVodStreamUrl(
+            serverUrl: playlist.url,
+            username: playlist.username ?? '',
+            password: playlist.credentialKey ?? '',
+            streamId: _movie.id,
+            extension: _movie.containerExtension ?? 'mp4',
+          );
+        }
+      }
+    }
+
+    if (!context.mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => PlayerScreen(
           channelName: _movie.name,
-          streamUrl: _movie.streamUrl,
+          streamUrl: url,
           logoUrl: _movie.logoUrl,
           contentInfo: WatchContentInfo(
             channelId: _movie.id,

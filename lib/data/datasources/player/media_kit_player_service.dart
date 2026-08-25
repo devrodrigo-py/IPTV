@@ -29,10 +29,29 @@ class MediaKitPlayerService implements VideoPlayerService {
 
   @override
   Future<Result<void>> initialize() async {
+    if (_player != null) return const Success(null);
     try {
-      _player = Player();
+      _player = Player(
+        configuration: const PlayerConfiguration(
+          bufferSize: 32 * 1024 * 1024,
+          logLevel: MPVLogLevel.warn,
+        ),
+      );
       _setupListeners();
-      appLogger.i('MediaKit player initialized');
+
+      // Configure hardware decoding and network reconnection
+      if (_player?.platform is dynamic) {
+        try {
+          final mpv = _player!.platform as dynamic;
+          await mpv.setProperty('hwdec', 'auto-safe');
+          await mpv.setProperty(
+            'stream-lavf-o',
+            'reconnect=1,reconnect_streamed=1,reconnect_delay_max=5',
+          );
+        } catch (_) {}
+      }
+
+      appLogger.i('MediaKit player initialized with hardware decoding and resilient reconnection');
       return const Success(null);
     } catch (e) {
       return Failure(
@@ -53,6 +72,16 @@ class MediaKitPlayerService implements VideoPlayerService {
 
     try {
       _updateState(_currentState.copyWith(status: PlaybackStatus.buffering));
+
+      // Dynamic buffer: 2s for live zapping, 15s for VOD
+      final isLive = url.contains('/live/') || url.contains('.m3u8') || url.endsWith('.ts');
+      if (_player?.platform is dynamic) {
+        try {
+          final mpv = _player!.platform as dynamic;
+          await mpv.setProperty('demuxer-readahead-secs', isLive ? '2' : '15');
+        } catch (_) {}
+      }
+
       // For live streams, use .m3u8 extension (HLS) instead of .ts
       // This enables proper live streaming behavior (no download-and-play)
       var playUrl = url;
@@ -132,6 +161,30 @@ class MediaKitPlayerService implements VideoPlayerService {
   }
 
   @override
+  Future<Result<void>> seek(Duration position) async {
+    try {
+      await _player?.seek(position);
+      return const Success(null);
+    } catch (e) {
+      return const Failure(
+        StreamUnavailableFailure(message: 'Erro ao avançar/retroceder.'),
+      );
+    }
+  }
+
+  @override
+  Future<Result<void>> setPlaybackSpeed(double speed) async {
+    try {
+      await _player?.setRate(speed);
+      return const Success(null);
+    } catch (e) {
+      return const Failure(
+        StreamUnavailableFailure(message: 'Erro ao ajustar velocidade.'),
+      );
+    }
+  }
+
+  @override
   Future<Result<void>> selectAudioTrack(String trackId) async {
     try {
       final tracks = _player?.state.tracks.audio ?? [];
@@ -151,7 +204,7 @@ class MediaKitPlayerService implements VideoPlayerService {
   @override
   Future<Result<void>> selectSubtitleTrack(String? trackId) async {
     try {
-      if (trackId == null) {
+      if (trackId == null || trackId == 'no') {
         await _player?.setSubtitleTrack(SubtitleTrack.no());
       } else {
         final tracks = _player?.state.tracks.subtitle ?? [];
@@ -165,6 +218,27 @@ class MediaKitPlayerService implements VideoPlayerService {
     } catch (e) {
       return const Failure(
         StreamUnavailableFailure(message: 'Erro ao selecionar legenda.'),
+      );
+    }
+  }
+
+  @override
+  Future<Result<void>> addExternalSubtitle(
+    String uri, {
+    String? title,
+    String? language,
+  }) async {
+    try {
+      final track = SubtitleTrack.uri(
+        uri,
+        title: title ?? 'Português (SRT)',
+        language: language ?? 'pt-BR',
+      );
+      await _player?.setSubtitleTrack(track);
+      return const Success(null);
+    } catch (e) {
+      return const Failure(
+        StreamUnavailableFailure(message: 'Erro ao carregar legenda externa.'),
       );
     }
   }
@@ -221,13 +295,29 @@ class MediaKitPlayerService implements VideoPlayerService {
           _updateState(
             _currentState.copyWith(status: PlaybackStatus.buffering),
           );
+        } else if (_currentState.status == PlaybackStatus.buffering) {
+          final isPlaying = player.state.playing;
+          _updateState(
+            _currentState.copyWith(
+              status: isPlaying ? PlaybackStatus.playing : PlaybackStatus.paused,
+            ),
+          );
         }
       }),
     );
 
     _subscriptions.add(
       player.stream.position.listen((position) {
-        _updateState(_currentState.copyWith(position: position));
+        if (_currentState.status == PlaybackStatus.buffering && position > Duration.zero) {
+          _updateState(
+            _currentState.copyWith(
+              position: position,
+              status: player.state.playing ? PlaybackStatus.playing : PlaybackStatus.paused,
+            ),
+          );
+        } else {
+          _updateState(_currentState.copyWith(position: position));
+        }
       }),
     );
 

@@ -38,6 +38,8 @@ class CachedLogo extends StatelessWidget {
     return Image.network(
       imageUrl!,
       fit: BoxFit.cover,
+      cacheWidth: 96,
+      cacheHeight: 96,
       errorBuilder: (_, __, ___) => _placeholder(),
       loadingBuilder: (context, child, progress) {
         if (progress == null) return child;
