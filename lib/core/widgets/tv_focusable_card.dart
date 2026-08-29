@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nebula_iptv/core/constants/tv_constants.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
+import 'package:nebula_iptv/core/widgets/nebula_focus_ring.dart';
 
 /// A card widget optimized for TV/10-foot viewing distance.
 ///
@@ -90,29 +91,23 @@ class _TvFocusableCardState extends State<TvFocusableCard>
           builder: (context, child) {
             return Transform.scale(
               scale: _scaleAnimation.value,
-              child: Container(
-                width: widget.width,
-                height: widget.height,
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color:
-                        _isFocused ? AppColors.focusRing : Colors.transparent,
-                    width: 3,
+              child: NebulaFocusRing(
+                focused: _isFocused,
+                radius: 12,
+                child: Container(
+                  width: widget.width,
+                  height: widget.height,
+                  decoration: BoxDecoration(
+                    color: AppColors.card,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.transparent,
+                      width: 3,
+                    ),
                   ),
-                  boxShadow: _isFocused
-                      ? [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.3),
-                            blurRadius: 16,
-                            spreadRadius: 2,
-                          ),
-                        ]
-                      : null,
+                  clipBehavior: Clip.antiAlias,
+                  child: child,
                 ),
-                clipBehavior: Clip.antiAlias,
-                child: child,
               ),
             );
           },

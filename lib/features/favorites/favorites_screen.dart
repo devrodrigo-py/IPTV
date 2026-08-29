@@ -5,7 +5,7 @@ import 'package:nebula_iptv/core/widgets/loading_view.dart';
 import 'package:nebula_iptv/data/database/app_database.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/features/channels/widgets/channel_list_tile.dart';
-import 'package:nebula_iptv/l10n/app_localizations.dart';
+import 'package:nebula_iptv/features/shell/providers/shell_navigation_provider.dart';
 
 /// Provider for favorite channels list.
 final favoriteChannelsProvider = FutureProvider<List<Channel>>((ref) async {
@@ -19,20 +19,26 @@ class FavoritesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
     final favoritesAsync = ref.watch(favoriteChannelsProvider);
 
     return favoritesAsync.when(
       loading: () => const LoadingView(),
       error: (_, __) => EmptyView(
         icon: Icons.favorite_rounded,
-        message: l10n.favorites,
+        message: 'Não foi possível carregar os favoritos',
+        isError: true,
+        actionLabel: 'Tentar novamente',
+        onAction: () => ref.invalidate(favoriteChannelsProvider),
       ),
       data: (channels) {
         if (channels.isEmpty) {
-          return const EmptyView(
+          return EmptyView(
             icon: Icons.favorite_border_rounded,
             message: 'Adicione canais aos favoritos para vê-los aqui',
+            actionLabel: 'Ver Canais',
+            onAction: () {
+              ref.read(shellNavigationProvider.notifier).state = 1;
+            },
           );
         }
 

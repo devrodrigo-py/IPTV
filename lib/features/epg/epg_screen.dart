@@ -8,7 +8,11 @@ import 'package:nebula_iptv/core/theme/app_typography.dart';
 
 import 'package:nebula_iptv/core/widgets/empty_view.dart';
 
+import 'package:nebula_iptv/core/widgets/live_indicator.dart';
+
 import 'package:nebula_iptv/core/widgets/loading_view.dart';
+
+import 'package:nebula_iptv/features/shell/providers/shell_navigation_provider.dart';
 
 import 'package:nebula_iptv/data/database/app_database.dart';
 
@@ -48,6 +52,8 @@ class EpgScreen extends ConsumerWidget {
       return EmptyView(
         icon: Icons.schedule_rounded,
         message: l10n.epg,
+        actionLabel: 'Gerenciar Fontes',
+        onAction: () => ref.read(shellNavigationProvider.notifier).state = 6,
       );
     }
 
@@ -101,17 +107,17 @@ class _EpgChannelRow extends ConsumerWidget {
 
           Expanded(
             child: programsAsync.when(
-              loading: () => const Text(
+              loading: () => Text(
                 '...',
                 style: AppTypography.caption,
               ),
-              error: (_, __) => const Text(
+              error: (_, __) => Text(
                 'Sem programação',
                 style: AppTypography.caption,
               ),
               data: (programs) {
                 if (programs.isEmpty) {
-                  return const Text(
+                  return Text(
                     'Sem programação',
                     style: AppTypography.caption,
                   );
@@ -174,26 +180,12 @@ class _ProgramInfo extends StatelessWidget {
       children: [
         Row(
           children: [
-            if (isLive)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 2,
-                ),
-                margin: const EdgeInsets.only(right: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.error,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  label,
-                  style: AppTypography.caption.copyWith(
-                    color: Colors.white,
-                    fontSize: 9,
-                  ),
-                ),
-              )
-            else
+            if (isLive) ...[
+              // "Agora" — ponto pulsante em auroraTeal (papel semântico de
+              // status ao vivo), no lugar do chip vermelho.
+              LiveIndicator(label: label),
+              const SizedBox(width: 6),
+            ] else
               Text(
                 '$label: ',
                 style: AppTypography.caption,

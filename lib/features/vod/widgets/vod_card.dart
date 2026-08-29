@@ -29,20 +29,10 @@ class VodCard extends StatelessWidget {
           transform: isFocused
               ? (Matrix4.identity()..scale(1.03))
               : Matrix4.identity(),
-          decoration: BoxDecoration(
-            borderRadius: const BorderRadius.all(Radius.circular(12)),
-            border: isFocused
-                ? Border.all(color: AppColors.primary, width: 2)
-                : null,
-            boxShadow: isFocused
-                ? [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                : null,
+          // O anel de foco (3px, gradiente violeta→teal) é desenhado pelo
+          // FocusableWidget que envolve este builder.
+          decoration: const BoxDecoration(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
           ),
           child: ClipRRect(
             borderRadius: const BorderRadius.all(Radius.circular(12)),

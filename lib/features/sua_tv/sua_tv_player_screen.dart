@@ -176,7 +176,7 @@ class _SuaTvPlayerScreenState extends ConsumerState<SuaTvPlayerScreen> {
                                 horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
-                                colors: [AppColors.primary, Color(0xFFF107A3)],
+                                colors: [AppColors.primary, AppColors.solarCoral],
                               ),
                               borderRadius: BorderRadius.circular(12),
                             ),

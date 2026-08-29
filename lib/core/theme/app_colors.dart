@@ -4,28 +4,50 @@ import 'package:flutter/material.dart';
 ///
 /// All UI colors must reference these tokens — never use hardcoded
 /// hex values directly in widgets.
+///
+/// Palette defined in DESIGN.md: trio violeta + teal + coral com papéis
+/// semânticos próprios sobre a família "void" de fundos.
+/// Regra de uso: violeta = ação, teal = ao vivo/positivo,
+/// coral = preferência do usuário (favoritos/notas) — uso esparso.
 abstract final class AppColors {
-  // --- Backgrounds & Surfaces ---
-  static const background = Color(0xFF0D0D0F);
-  static const surface = Color(0xFF1A1A1E);
-  static const surfaceElevated = Color(0xFF242428);
-  static const card = Color(0xFF1E1E22);
+  // --- Brand (trio de accents) ---
+  static const nebulaViolet = Color(0xFF6B4FE0);
+  static const nebulaVioletDeep = Color(0xFF2A1D6B);
+  static const auroraTeal = Color(0xFF1FCFAE);
+  static const solarCoral = Color(0xFFFF6F91);
 
-  // --- Brand ---
-  static const primary = Color(0xFF6C63FF);
-  static const primaryVariant = Color(0xFF5A52E0);
-  static const secondary = Color(0xFF03DAC6);
+  // --- Void (fundos e superfícies) ---
+  static const void950 = Color(0xFF07070F);
+  static const void800 = Color(0xFF16162A);
+  static const void600 = Color(0xFF2A2A45);
 
   // --- Text ---
-  static const textPrimary = Color(0xFFF5F5F5);
-  static const textSecondary = Color(0xFFB0B0B8);
+  static const textPrimary = Color(0xFFF5F3FF);
+  static const textSecondary = Color(0xFFA8A6C0);
 
-  // --- Utilities ---
-  static const divider = Color(0xFF2A2A2E);
-  static const error = Color(0xFFCF6679);
-  static const success = Color(0xFF4CAF50);
-  static const warning = Color(0xFFFFA726);
+  // --- Status semânticos ---
+  static const statusSuccess = Color(0xFF3ECF8E);
+  static const statusWarning = Color(0xFFF5B94D);
+  static const statusDanger = Color(0xFFFF5468);
 
-  // --- Focus (for D-pad / keyboard navigation) ---
-  static const focusRing = Color(0xFF6C63FF);
+  // --- Aliases semânticos (nomes legados preservados) ---
+  static const background = void950;
+  static const surface = void800;
+  static const card = void800;
+
+  /// Superfície um passo acima de [void800] (inputs, placeholders) —
+  /// não tem token próprio no DESIGN.md; intermediário void800↔void600.
+  static const surfaceElevated = Color(0xFF1E1E38);
+
+  static const divider = void600;
+  static const primary = nebulaViolet;
+  static const primaryVariant = nebulaVioletDeep;
+  static const secondary = auroraTeal;
+  static const success = statusSuccess;
+  static const warning = statusWarning;
+  static const error = statusDanger;
+
+  /// Cor base do anel de foco (o anel em si é um gradiente violeta→teal —
+  /// ver NebulaFocusRingPainter). Mantido para usos pontuais.
+  static const focusRing = nebulaViolet;
 }

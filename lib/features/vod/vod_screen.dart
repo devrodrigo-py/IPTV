@@ -9,6 +9,7 @@ import 'package:nebula_iptv/core/widgets/loading_view.dart';
 import 'package:nebula_iptv/features/shared/widgets/content_row.dart';
 import 'package:nebula_iptv/features/shared/widgets/hero_banner.dart';
 import 'package:nebula_iptv/features/vod/providers/vod_provider.dart';
+import 'package:nebula_iptv/features/shell/providers/shell_navigation_provider.dart';
 import 'package:nebula_iptv/features/vod/vod_detail_screen.dart';
 import 'package:nebula_iptv/features/vod/widgets/vod_card.dart';
 import 'package:nebula_iptv/features/vod/widgets/vod_category_chips.dart';
@@ -42,9 +43,11 @@ class _VodScreenState extends ConsumerState<VodScreen> {
     }
 
     if (state.allMovies.isEmpty) {
-      return const EmptyView(
+      return EmptyView(
         icon: Icons.movie_rounded,
         message: 'Nenhum filme disponível',
+        actionLabel: 'Gerenciar Fontes',
+        onAction: () => ref.read(shellNavigationProvider.notifier).state = 6,
       );
     }
 

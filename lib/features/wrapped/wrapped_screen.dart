@@ -133,7 +133,7 @@ class _WrappedScreenState extends ConsumerState<WrappedScreen> {
     return [
       // Slide 1: Intro
       _WrappedSlide(
-        gradient: const [Color(0xFF6C63FF), Color(0xFF3F37C9)],
+        gradient: const [AppColors.nebulaViolet, AppColors.nebulaVioletDeep],
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -162,7 +162,7 @@ class _WrappedScreenState extends ConsumerState<WrappedScreen> {
 
       // Slide 2: Total hours
       _WrappedSlide(
-        gradient: const [Color(0xFF7B2FF7), Color(0xFFF107A3)],
+        gradient: const [AppColors.nebulaViolet, AppColors.solarCoral],
         child: _AnimatedStat(
           icon: Icons.schedule_rounded,
           label: 'Você assistiu',
@@ -232,7 +232,7 @@ class _WrappedScreenState extends ConsumerState<WrappedScreen> {
 
       // Slide 8: Summary
       _WrappedSlide(
-        gradient: const [Color(0xFF6C63FF), Color(0xFF3F37C9)],
+        gradient: const [AppColors.nebulaViolet, AppColors.nebulaVioletDeep],
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

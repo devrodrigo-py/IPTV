@@ -91,14 +91,15 @@ class ChannelListTile extends StatelessWidget {
                   ),
                 ),
 
-                // Favorite button
+                // Favorite button — coral é o papel semântico de
+                // favoritos na paleta (DESIGN.md §1).
                 IconButton(
                   icon: Icon(
                     isFavorite
                         ? Icons.favorite_rounded
                         : Icons.favorite_border_rounded,
                     color: isFavorite
-                        ? AppColors.primary
+                        ? AppColors.solarCoral
                         : AppColors.textSecondary,
                     size: 20,
                   ),

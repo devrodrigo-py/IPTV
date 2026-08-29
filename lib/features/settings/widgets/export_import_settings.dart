@@ -21,7 +21,7 @@ class ExportImportSettings extends StatelessWidget {
         FocusableWidget(
           onPressed: onExport,
           borderRadius: const BorderRadius.all(Radius.circular(12)),
-          builder: (context, isFocused) => const Padding(
+          builder: (context, isFocused) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
@@ -35,9 +35,9 @@ class ExportImportSettings extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Exportar dados', style: AppTypography.body),
+                      Text('Exportar dados', style: AppTypography.body),
                       const SizedBox(height: 2),
-                      const Text(
+                      Text(
                         'Playlists, favoritos e configurações',
                         style: AppTypography.caption,
                       ),
@@ -56,7 +56,7 @@ class ExportImportSettings extends StatelessWidget {
         FocusableWidget(
           onPressed: onImport,
           borderRadius: const BorderRadius.all(Radius.circular(12)),
-          builder: (context, isFocused) => const Padding(
+          builder: (context, isFocused) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
@@ -70,9 +70,9 @@ class ExportImportSettings extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Importar dados', style: AppTypography.body),
+                      Text('Importar dados', style: AppTypography.body),
                       const SizedBox(height: 2),
-                      const Text(
+                      Text(
                         'Restaurar de arquivo JSON',
                         style: AppTypography.caption,
                       ),

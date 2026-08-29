@@ -22,27 +22,49 @@ class ErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
+    // Variante de erro usa solarCoral — papel semântico da paleta da marca
+    // para erros/falhas (ver DESIGN.md §3).
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.error_outline_rounded,
-              size: 48,
-              color: AppColors.error,
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.solarCoral.withValues(alpha: 0.12),
+              ),
+              child: const Icon(
+                Icons.error_outline_rounded,
+                size: 40,
+                color: AppColors.solarCoral,
+              ),
             ),
             const SizedBox(height: 16),
             Text(
               failure.message,
-              style: AppTypography.body,
+              style: AppTypography.body.copyWith(
+                color: AppColors.textSecondary,
+              ),
               textAlign: TextAlign.center,
             ),
             if (onRetry != null) ...[
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
+              const SizedBox(height: 20),
+              FilledButton.icon(
                 onPressed: onRetry,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.solarCoral,
+                  foregroundColor: AppColors.void950,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
                 icon: const Icon(Icons.refresh_rounded, size: 18),
                 label: Text(l10n.retry),
               ),

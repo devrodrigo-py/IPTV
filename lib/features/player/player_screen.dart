@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/core/widgets/live_indicator.dart';
 import 'package:nebula_iptv/data/database/app_database.dart' hide Channel;
 import 'package:nebula_iptv/data/datasources/player/media_kit_player_service.dart';
 import 'package:nebula_iptv/domain/services/video_player_service.dart';
@@ -13,6 +14,7 @@ import 'package:nebula_iptv/features/player/providers/player_provider.dart';
 import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/features/player/widgets/player_controls.dart';
+import 'package:nebula_iptv/features/player/widgets/nebula_buffering_indicator.dart';
 import 'package:nebula_iptv/features/player/widgets/player_error_overlay.dart';
 import 'package:nebula_iptv/features/player/widgets/quality_selector.dart';
 import 'package:nebula_iptv/features/player/widgets/quick_channel_drawer.dart';
@@ -307,18 +309,13 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
               else
                 const SizedBox.expand(child: ColoredBox(color: Colors.black)),
 
-              // Buffering indicator — small spinner in bottom-left corner
+              // Buffering — indicador da marca (triângulo de play pulsante)
+              // com grace period de 2s: não pisca em streams que conectam
+              // rápido (Issue #1 da crítica; DESIGN.md §3).
               if (state.playbackState.status == PlaybackStatus.buffering)
-                const Positioned(
-                  bottom: 80,
-                  left: 16,
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: Colors.white54,
-                    ),
+                const Positioned.fill(
+                  child: Center(
+                    child: NebulaBufferingIndicator(size: 72),
                   ),
                 ),
 
@@ -369,6 +366,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (_isLive) ...[
+                            const LiveIndicator(label: 'Ao vivo'),
+                            const SizedBox(width: 12),
+                          ],
                           if (_isLive)
                             IconButton(
                               icon: Icon(

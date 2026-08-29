@@ -14,12 +14,16 @@ abstract final class AppTheme {
       colorScheme: const ColorScheme.dark(
         primary: AppColors.primary,
         secondary: AppColors.secondary,
+        tertiary: AppColors.solarCoral,
         surface: AppColors.surface,
         error: AppColors.error,
         onPrimary: AppColors.textPrimary,
         onSecondary: AppColors.background,
+        onTertiary: AppColors.void950,
         onSurface: AppColors.textPrimary,
-        onError: AppColors.textPrimary,
+        onSurfaceVariant: AppColors.textSecondary,
+        outline: AppColors.void600,
+        onError: AppColors.void950,
       ),
       cardTheme: const CardThemeData(
         color: AppColors.card,
@@ -38,7 +42,9 @@ abstract final class AppTheme {
         elevation: 0,
         centerTitle: false,
       ),
-      textTheme: const TextTheme(
+      // AppTypography usa google_fonts (static final) — o TextTheme não
+      // pode mais ser const.
+      textTheme: TextTheme(
         displayLarge: AppTypography.display,
         headlineMedium: AppTypography.headline,
         titleMedium: AppTypography.title,

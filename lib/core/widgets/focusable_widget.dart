@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:nebula_iptv/core/theme/app_colors.dart';
+import 'package:nebula_iptv/core/widgets/nebula_focus_ring.dart';
 
 /// Focus management infrastructure for keyboard and D-pad navigation.
 ///
@@ -79,21 +79,22 @@ class _FocusableWidgetState extends State<FocusableWidget> {
       child: GestureDetector(
         onTap: widget.onPressed,
         onLongPress: widget.onLongPress,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          decoration: BoxDecoration(
-            borderRadius: widget.borderRadius,
-            border: _isFocused
-                ? Border.all(
-                    color: AppColors.focusRing,
-                    width: 2,
-                  )
-                : Border.all(
-                    color: Colors.transparent,
-                    width: 2,
-                  ),
+        child: NebulaFocusRing(
+          focused: _isFocused,
+          radius: widget.borderRadius.topLeft.x,
+          // Borda transparente de 3px mantém o layout estável entre os
+          // estados focado/não focado; o anel em gradiente é pintado por cima.
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            decoration: BoxDecoration(
+              borderRadius: widget.borderRadius,
+              border: Border.all(
+                color: Colors.transparent,
+                width: 3,
+              ),
+            ),
+            child: widget.builder(context, _isFocused),
           ),
-          child: widget.builder(context, _isFocused),
         ),
       ),
     );

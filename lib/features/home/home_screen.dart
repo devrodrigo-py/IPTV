@@ -1,33 +1,34 @@
 import 'package:drift/drift.dart' hide Column;
-import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/core/widgets/nebula_brand.dart';
 import 'package:nebula_iptv/data/database/app_database.dart' hide SeriesItem;
 import 'package:nebula_iptv/domain/providers/watch_providers.dart';
 import 'package:nebula_iptv/domain/services/smart_favorites_service.dart';
+import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/features/player/player_screen.dart';
-import 'package:nebula_iptv/features/series/series_detail_screen.dart';
-import 'package:nebula_iptv/features/series/providers/series_provider.dart' show SeriesItem;
-import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
+import 'package:nebula_iptv/features/playlists/playlists_screen.dart';
 import 'package:nebula_iptv/features/search/providers/search_provider.dart';
+import 'package:nebula_iptv/features/series/providers/series_provider.dart'
+    show SeriesItem;
+import 'package:nebula_iptv/features/series/series_detail_screen.dart';
+import 'package:nebula_iptv/features/shared/providers/rating_provider.dart';
 import 'package:nebula_iptv/features/shared/widgets/content_card.dart';
 import 'package:nebula_iptv/features/shared/widgets/content_row.dart';
 import 'package:nebula_iptv/features/shared/widgets/hero_banner.dart';
-import 'package:nebula_iptv/features/shortcuts/providers/shortcut_provider.dart';
-import 'package:nebula_iptv/features/profiles/providers/profile_provider.dart';
-import 'package:nebula_iptv/l10n/app_localizations.dart';
-import 'package:nebula_iptv/features/shared/providers/rating_provider.dart';
 import 'package:nebula_iptv/features/shared/widgets/shortcut_context_menu.dart';
-import 'package:nebula_iptv/features/sua_tv/sua_tv_player_screen.dart';
-import 'package:nebula_iptv/core/widgets/nebula_brand.dart';
-import 'package:nebula_iptv/features/playlists/playlists_screen.dart';
 import 'package:nebula_iptv/features/shell/providers/shell_navigation_provider.dart';
+import 'package:nebula_iptv/features/shortcuts/providers/shortcut_provider.dart';
+import 'package:nebula_iptv/features/sua_tv/sua_tv_player_screen.dart';
+import 'package:nebula_iptv/l10n/app_localizations.dart';
 
 /// Provider for favorite channels on Home.
-final homeFavoritesProvider = FutureProvider.autoDispose<List<Channel>>((ref) async {
+final homeFavoritesProvider =
+    FutureProvider.autoDispose<List<Channel>>((ref) async {
   final db = ref.read(databaseProvider);
   return db.favoritesDao.getFavoriteChannels();
 });
@@ -83,14 +84,20 @@ class HomeScreen extends ConsumerWidget {
               MaterialPageRoute(builder: (_) => const PlaylistsScreen()),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(24, 4, 24, 12),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
             child: Text(
               'Comece conectando uma playlist. Em poucos instantes, sua biblioteca ganha vida.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              // Texto de apoio em tom claro (não some no void950) e peso
+              // médio — contraste fraco era ponto da review de UX.
+              style: AppTypography.body.copyWith(
+                color: AppColors.textPrimary.withValues(alpha: .87),
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
+          const _WelcomeSkeletonPreview(),
         ],
       );
     }
@@ -160,10 +167,13 @@ class HomeScreen extends ConsumerWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.surfaceElevated,
                 foregroundColor: AppColors.textPrimary,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
-                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                  side: BorderSide(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                  ),
                 ),
               ),
             ),
@@ -187,36 +197,41 @@ class HomeScreen extends ConsumerWidget {
     final cwItems = continueWatching.valueOrNull ?? [];
     for (final entry in cwItems.take(3)) {
       final name = entry['content_name'] as String? ??
-          entry['channel_name'] as String? ?? 'Canal';
-      final thumbnailUrl = entry['thumbnail_url'] as String? ??
-          entry['logo_url'] as String?;
+          entry['channel_name'] as String? ??
+          'Canal';
+      final thumbnailUrl =
+          entry['thumbnail_url'] as String? ?? entry['logo_url'] as String?;
       final progress = (entry['progress_percent'] as num?)?.toDouble() ?? 0.0;
       final remainingMin = (() {
         final totalMs = entry['total_duration_ms'] as int? ?? 0;
         return ((totalMs - (totalMs * progress)) / 60000).round();
       })();
 
-      heroItems.add(HeroBannerItem(
-        title: name,
-        subtitle: remainingMin > 0
-            ? '${remainingMin}min restantes'
-            : 'Continuar assistindo',
-        imageUrl: thumbnailUrl,
-        onPlay: () => _playFromHistory(context, ref, entry),
-      ));
+      heroItems.add(
+        HeroBannerItem(
+          title: name,
+          subtitle: remainingMin > 0
+              ? '${remainingMin}min restantes'
+              : 'Continuar assistindo',
+          imageUrl: thumbnailUrl,
+          onPlay: () => _playFromHistory(context, ref, entry),
+        ),
+      );
     }
 
     // Fill from discovery if not enough
     final discItems = discovery.valueOrNull ?? [];
     for (final item in discItems.take(5 - heroItems.length)) {
       if (item.logoUrl != null && item.logoUrl!.isNotEmpty) {
-        heroItems.add(HeroBannerItem(
-          title: item.name,
-          subtitle: item.groupName?.split('|').last.trim(),
-          imageUrl: item.logoUrl,
-          onPlay: () => _openSearchResult(context, ref, item),
-          onDetails: () => _openSearchResult(context, ref, item),
-        ));
+        heroItems.add(
+          HeroBannerItem(
+            title: item.name,
+            subtitle: item.groupName?.split('|').last.trim(),
+            imageUrl: item.logoUrl,
+            onPlay: () => _openSearchResult(context, ref, item),
+            onDetails: () => _openSearchResult(context, ref, item),
+          ),
+        );
       }
     }
 
@@ -237,8 +252,10 @@ class HomeScreen extends ConsumerWidget {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text('Continuar assistindo',
-                style: AppTypography.title.copyWith(fontSize: 16)),
+            child: Text(
+              'Continuar assistindo',
+              style: AppTypography.title.copyWith(fontSize: 16),
+            ),
           ),
           const SizedBox(height: 10),
           SizedBox(
@@ -250,21 +267,23 @@ class HomeScreen extends ConsumerWidget {
               itemBuilder: (context, index) {
                 final entry = items[index];
                 final name = entry['content_name'] as String? ??
-                    entry['channel_name'] as String? ?? 'Canal';
+                    entry['channel_name'] as String? ??
+                    'Canal';
                 final thumbnailUrl = entry['thumbnail_url'] as String? ??
                     entry['logo_url'] as String?;
                 final progress =
                     (entry['progress_percent'] as num?)?.toDouble() ?? 0.0;
 
                 return Padding(
-                  padding: EdgeInsets.only(
-                      right: index < items.length - 1 ? 12 : 0),
+                  padding:
+                      EdgeInsets.only(right: index < items.length - 1 ? 12 : 0),
                   child: ContentCard(
                     title: name,
                     imageUrl: thumbnailUrl,
                     progress: progress > 0.01 ? progress : null,
                     fallbackIcon: _iconForContentType(
-                        entry['content_type'] as String? ?? 'live'),
+                      entry['content_type'] as String? ?? 'live',
+                    ),
                     onTap: () => _playFromHistory(context, ref, entry),
                   ),
                 );
@@ -295,24 +314,27 @@ class HomeScreen extends ConsumerWidget {
         }).toList(),
         onItemTap: (index) {
           final channel = channels[index];
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => PlayerScreen(
-              channelName: channel.name,
-              streamUrl: channel.streamUrl,
-              logoUrl: channel.logoUrl,
-              contentInfo: WatchContentInfo(
-                channelId: channel.id,
-                name: channel.name,
-                contentType: 'live',
-                thumbnailUrl: channel.logoUrl,
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => PlayerScreen(
+                channelName: channel.name,
+                streamUrl: channel.streamUrl,
+                logoUrl: channel.logoUrl,
+                contentInfo: WatchContentInfo(
+                  channelId: channel.id,
+                  name: channel.name,
+                  contentType: 'live',
+                  thumbnailUrl: channel.logoUrl,
+                ),
               ),
             ),
-          ));
+          );
         },
         onItemSecondaryTap: (index, position) {
           final channel = channels[index];
           showShortcutContextMenu(
-            context, ref,
+            context,
+            ref,
             position: position,
             channelId: channel.id,
             channelName: channel.name,
@@ -382,7 +404,8 @@ class HomeScreen extends ConsumerWidget {
         onItemSecondaryTap: (index, position) {
           final item = items[index];
           showShortcutContextMenu(
-            context, ref,
+            context,
+            ref,
             position: position,
             channelId: item['id'] as int,
             channelName: item['name'] as String? ?? '',
@@ -392,8 +415,10 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-
-  Widget _buildTopRatedRow(BuildContext context, List<Map<String, dynamic>> items) {
+  Widget _buildTopRatedRow(
+    BuildContext context,
+    List<Map<String, dynamic>> items,
+  ) {
     final rowItems = items.map((item) {
       return ContentRowItem(
         title: item['name'] as String? ?? '',
@@ -412,12 +437,14 @@ class HomeScreen extends ConsumerWidget {
           final streamUrl = item['stream_url'] as String? ?? '';
           final name = item['name'] as String? ?? '';
           if (streamUrl.isNotEmpty) {
-            Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => PlayerScreen(
-                channelName: name,
-                streamUrl: streamUrl,
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => PlayerScreen(
+                  channelName: name,
+                  streamUrl: streamUrl,
+                ),
               ),
-            ));
+            );
           }
         },
       ),
@@ -443,12 +470,14 @@ class HomeScreen extends ConsumerWidget {
         onItemTap: (index) {
           final item = items[index];
           if (item.streamUrl != null && item.streamUrl!.isNotEmpty) {
-            Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => PlayerScreen(
-                channelName: item.name,
-                streamUrl: item.streamUrl!,
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => PlayerScreen(
+                  channelName: item.name,
+                  streamUrl: item.streamUrl!,
+                ),
               ),
-            ));
+            );
           }
         },
       ),
@@ -466,7 +495,11 @@ class HomeScreen extends ConsumerWidget {
     }
   }
 
-  void _openSearchResult(BuildContext context, WidgetRef ref, SearchResultItem item) {
+  void _openSearchResult(
+    BuildContext context,
+    WidgetRef ref,
+    SearchResultItem item,
+  ) {
     if (item.isSeries) {
       final seriesItem = SeriesItem(
         id: item.id,
@@ -476,24 +509,28 @@ class HomeScreen extends ConsumerWidget {
         categoryName: item.groupName,
         sourceId: item.sourceId,
       );
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => SeriesDetailScreen(series: seriesItem),
-      ));
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => SeriesDetailScreen(series: seriesItem),
+        ),
+      );
     } else {
       if (item.streamUrl == null || item.streamUrl!.isEmpty) return;
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => PlayerScreen(
-          channelName: item.name,
-          streamUrl: item.streamUrl!,
-          logoUrl: item.logoUrl,
-          contentInfo: WatchContentInfo(
-            channelId: item.id,
-            name: item.name,
-            contentType: item.isVod ? 'vod' : 'live',
-            thumbnailUrl: item.logoUrl,
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PlayerScreen(
+            channelName: item.name,
+            streamUrl: item.streamUrl!,
+            logoUrl: item.logoUrl,
+            contentInfo: WatchContentInfo(
+              channelId: item.id,
+              name: item.name,
+              contentType: item.isVod ? 'vod' : 'live',
+              thumbnailUrl: item.logoUrl,
+            ),
           ),
         ),
-      ));
+      );
     }
   }
 
@@ -570,11 +607,13 @@ class HomeScreen extends ConsumerWidget {
           } else {
             whereClause = "source_type IN ('xtream', 'm3u')";
           }
-          final rows = await db.customSelect(
-            'SELECT id, playlist_id, name, logo_url, stream_url, group_name, source_id, source_type '
-            'FROM channels WHERE $whereClause AND is_active = 1 '
-            'ORDER BY RANDOM() LIMIT 1',
-          ).get();
+          final rows = await db
+              .customSelect(
+                'SELECT id, playlist_id, name, logo_url, stream_url, group_name, source_id, source_type '
+                'FROM channels WHERE $whereClause AND is_active = 1 '
+                'ORDER BY RANDOM() LIMIT 1',
+              )
+              .get();
           if (rows.isEmpty || !context.mounted) return;
           final row = rows.first;
           final item = SearchResultItem(
@@ -593,10 +632,15 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  void _playFromHistory(BuildContext context, WidgetRef ref, Map<String, dynamic> entry) async {
+  void _playFromHistory(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> entry,
+  ) async {
     final streamUrl = entry['stream_url'] as String?;
     final name = entry['content_name'] as String? ??
-        entry['channel_name'] as String? ?? 'Canal';
+        entry['channel_name'] as String? ??
+        'Canal';
     final contentType = entry['content_type'] as String? ?? 'live';
     final channelId = entry['channel_id'] as int? ?? 0;
     final thumbnailUrl = entry['thumbnail_url'] as String?;
@@ -619,9 +663,11 @@ class HomeScreen extends ConsumerWidget {
             categoryName: ch.readNullable<String>('group_name'),
             sourceId: ch.readNullable<String>('source_id'),
           );
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => SeriesDetailScreen(series: seriesItem),
-          ));
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => SeriesDetailScreen(series: seriesItem),
+            ),
+          );
         }
       } catch (e, st) {
         appLogger.e('[Home] Error opening series: $e\n$st');
@@ -631,27 +677,31 @@ class HomeScreen extends ConsumerWidget {
 
     if (streamUrl == null || streamUrl.isEmpty) return;
 
-    final progressPercent = (entry['progress_percent'] as num?)?.toDouble() ?? 0.0;
+    final progressPercent =
+        (entry['progress_percent'] as num?)?.toDouble() ?? 0.0;
     final totalDurationMs = entry['total_duration_ms'] as int? ?? 0;
     final watchedDurationMs = entry['watched_duration_ms'] as int? ?? 0;
     final seekToMs = (progressPercent > 0 && totalDurationMs > 0)
         ? (progressPercent * totalDurationMs).round()
         : watchedDurationMs;
 
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => PlayerScreen(
-        channelName: name,
-        streamUrl: streamUrl,
-        contentInfo: WatchContentInfo(
-          channelId: channelId,
-          name: name,
-          contentType: contentType,
-          thumbnailUrl: thumbnailUrl,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PlayerScreen(
+          channelName: name,
+          streamUrl: streamUrl,
+          contentInfo: WatchContentInfo(
+            channelId: channelId,
+            name: name,
+            contentType: contentType,
+            thumbnailUrl: thumbnailUrl,
+          ),
+          seekToMs: seekToMs > 5000 ? seekToMs : null,
         ),
-        seekToMs: seekToMs > 5000 ? seekToMs : null,
       ),
-    ));
+    );
   }
+
   Widget _buildSuaTvButton(BuildContext context) {
     return GestureDetector(
       onTap: () {
@@ -663,7 +713,7 @@ class HomeScreen extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [AppColors.primary, Color(0xFFF107A3)],
+            colors: [AppColors.primary, AppColors.solarCoral],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -679,9 +729,19 @@ class HomeScreen extends ConsumerWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.play_circle_filled_rounded, color: Colors.white, size: 22),
+            const Icon(
+              Icons.play_circle_filled_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
             const SizedBox(width: 10),
-            Text('Sua TV', style: AppTypography.body.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
+            Text(
+              'Sua TV',
+              style: AppTypography.body.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),
@@ -765,11 +825,156 @@ class _SurpriseOption extends StatelessWidget {
           children: [
             Icon(icon, color: AppColors.primary, size: 32),
             const SizedBox(height: 8),
-            Text(label,
-                style: AppTypography.caption
-                    .copyWith(fontWeight: FontWeight.w500)),
+            Text(
+              label,
+              style:
+                  AppTypography.caption.copyWith(fontWeight: FontWeight.w500),
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Prévia ilustrativa (skeleton) de como a Home fica depois de conectar uma
+/// fonte — o vazio total abaixo do banner passava a impressão de tela
+/// quebrada antes do primeiro uso.
+class _WelcomeSkeletonPreview extends StatefulWidget {
+  const _WelcomeSkeletonPreview();
+
+  @override
+  State<_WelcomeSkeletonPreview> createState() =>
+      _WelcomeSkeletonPreviewState();
+}
+
+class _WelcomeSkeletonPreviewState extends State<_WelcomeSkeletonPreview>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pulso limitado (2 oscilações no mount e para): animação infinita aqui
+    // travaria pumpAndSettle nos testes e gastaria bateria na tela vazia.
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3200),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Pulso: 0.55→1→0.55→1→0.55 (duas oscilações em ~3s, depois para).
+    final halfPulse = CurveTween(curve: Curves.easeInOut);
+    return FadeTransition(
+      opacity: TweenSequence<double>([
+        TweenSequenceItem(
+          tween: Tween(begin: 0.55, end: 1.0).chain(halfPulse),
+          weight: 25,
+        ),
+        TweenSequenceItem(
+          tween: Tween(begin: 1.0, end: 0.55).chain(halfPulse),
+          weight: 25,
+        ),
+        TweenSequenceItem(
+          tween: Tween(begin: 0.55, end: 1.0).chain(halfPulse),
+          weight: 25,
+        ),
+        TweenSequenceItem(
+          tween: Tween(begin: 1.0, end: 0.55).chain(halfPulse),
+          weight: 25,
+        ),
+      ]).animate(_pulseController),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Prévia ilustrativa da sua Home',
+              style: AppTypography.label,
+            ),
+            const SizedBox(height: 12),
+            // Título de seção esquelético
+            const _SkeletonBar(width: 160, height: 14, radius: 6),
+            const SizedBox(height: 16),
+            // Fileira de posters 2:3 com legendas, na mesma largura dos
+            // ContentCards reais (140px) — prévia fiel, não placeholders
+            // gigantes.
+            LayoutBuilder(
+              builder: (context, constraints) {
+                const cardWidth = 140.0;
+                const gap = 12.0;
+                final count = ((constraints.maxWidth + gap) / (cardWidth + gap))
+                    .floor()
+                    .clamp(2, 8);
+                return Row(
+                  children: [
+                    for (var i = 0; i < count; i++) ...[
+                      if (i > 0) const SizedBox(width: gap),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AspectRatio(
+                              aspectRatio: 2 / 3,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.void800,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppColors.void600),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const _SkeletonBar(
+                              width: double.infinity,
+                              height: 8,
+                              radius: 4,
+                            ),
+                            const SizedBox(height: 6),
+                            const _SkeletonBar(width: 56, height: 7, radius: 4),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SkeletonBar extends StatelessWidget {
+  final double width;
+  final double height;
+  final double radius;
+
+  const _SkeletonBar({
+    required this.width,
+    required this.height,
+    required this.radius,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: AppColors.void600,
+        borderRadius: BorderRadius.circular(radius),
       ),
     );
   }

@@ -40,7 +40,7 @@ class _CacheSettingsState extends State<CacheSettings> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Limpar cache de imagens',
                       style: AppTypography.body,
                     ),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:nebula_iptv/core/constants/tv_constants.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/core/widgets/nebula_focus_ring.dart';
 import 'package:nebula_iptv/features/tv/tv_channel_grid.dart';
 import 'package:nebula_iptv/features/tv/tv_home.dart';
 import 'package:nebula_iptv/features/vod/vod_screen.dart';
@@ -174,41 +175,45 @@ class _TvNavButtonState extends State<_TvNavButton> {
       },
       child: GestureDetector(
         onTap: widget.onPressed,
-        child: AnimatedContainer(
-          duration: TvConstants.focusAnimationDuration,
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            color: isHighlighted
-                ? AppColors.primary.withValues(alpha: 0.15)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: _isFocused ? AppColors.focusRing : Colors.transparent,
-              width: 2,
+        child: NebulaFocusRing(
+          focused: _isFocused,
+          radius: 16,
+          child: AnimatedContainer(
+            duration: TvConstants.focusAnimationDuration,
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: isHighlighted
+                  ? AppColors.primary.withValues(alpha: 0.15)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.transparent,
+                width: 3,
+              ),
             ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                widget.icon,
-                color:
-                    isHighlighted ? AppColors.primary : AppColors.textSecondary,
-                size: 28,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                widget.label,
-                style: AppTypography.caption.copyWith(
-                  color: isHighlighted
-                      ? AppColors.textPrimary
-                      : AppColors.textSecondary,
-                  fontSize: 9,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  widget.icon,
+                  color:
+                      isHighlighted ? AppColors.primary : AppColors.textSecondary,
+                  size: 28,
                 ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  widget.label,
+                  style: AppTypography.caption.copyWith(
+                    color: isHighlighted
+                        ? AppColors.textPrimary
+                        : AppColors.textSecondary,
+                    fontSize: 9,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ),
       ),

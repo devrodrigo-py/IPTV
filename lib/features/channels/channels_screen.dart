@@ -8,6 +8,7 @@ import 'package:nebula_iptv/core/widgets/loading_view.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/features/multiview/multiview_channel_picker.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
+import 'package:nebula_iptv/features/shell/providers/shell_navigation_provider.dart';
 import 'package:nebula_iptv/features/channels/widgets/channel_list_tile.dart';
 import 'package:nebula_iptv/features/channels/widgets/channel_search_bar.dart';
 import 'package:nebula_iptv/features/channels/widgets/group_filter_chips.dart';
@@ -95,11 +96,18 @@ class ChannelsScreen extends ConsumerWidget {
     }
 
     if (state.filteredChannels.isEmpty) {
+      // Sem resultado de busca = beco sem saída; sem canais = biblioteca
+      // vazia → CTA pra conectar uma fonte (Issue #4 da crítica).
+      final isSearching = state.searchQuery.isNotEmpty;
       return EmptyView(
         icon: Icons.live_tv_rounded,
-        message: state.searchQuery.isNotEmpty
+        message: isSearching
             ? 'Nenhum canal encontrado para "${state.searchQuery}"'
             : l10n.channels,
+        actionLabel: isSearching ? null : 'Gerenciar Fontes',
+        onAction: isSearching
+            ? null
+            : () => ref.read(shellNavigationProvider.notifier).state = 6,
       );
     }
 
