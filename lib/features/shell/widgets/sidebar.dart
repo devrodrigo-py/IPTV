@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
-import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/features/shell/widgets/nav_item.dart';
 import 'package:nebula_iptv/l10n/app_localizations.dart';
+import 'package:nebula_iptv/core/widgets/nebula_brand.dart';
 
 /// Sidebar navigation for desktop and tablet layouts.
 ///
@@ -35,6 +35,7 @@ class Sidebar extends StatelessWidget {
       _NavDestination(Icons.schedule_rounded, l10n.epg),
       _NavDestination(Icons.bar_chart_rounded, 'Estatísticas'),
       _NavDestination(Icons.settings_rounded, l10n.settings),
+      _NavDestination(Icons.library_music_rounded, 'Biblioteca'),
     ];
 
     return FocusTraversalGroup(
@@ -54,25 +55,17 @@ class Sidebar extends StatelessWidget {
             // Logo / Title
             Padding(
               padding: EdgeInsets.symmetric(
-                horizontal: isCollapsed ? 12 : 20,
-                vertical: 24,
+                horizontal: isCollapsed ? 12 : 22,
+                vertical: 22,
               ),
               child: Row(
                 mainAxisAlignment: isCollapsed
                     ? MainAxisAlignment.center
                     : MainAxisAlignment.start,
                 children: [
-                  const Icon(
-                    Icons.blur_on_rounded,
-                    color: AppColors.primary,
-                    size: 28,
-                  ),
+                  NebulaBrand(height: isCollapsed ? 38 : 48, compact: isCollapsed),
                   if (!isCollapsed) ...[
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Nebula',
-                      style: AppTypography.title,
-                    ),
+                    const SizedBox(width: 6),
                   ],
                 ],
               ),

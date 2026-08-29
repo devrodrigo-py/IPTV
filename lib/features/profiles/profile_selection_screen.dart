@@ -5,6 +5,7 @@ import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/features/profiles/profile_edit_dialog.dart';
 import 'package:nebula_iptv/features/profiles/providers/profile_provider.dart';
+import 'package:nebula_iptv/core/widgets/nebula_brand.dart';
 
 /// Netflix-style profile selection screen shown at app startup.
 class ProfileSelectionScreen extends ConsumerStatefulWidget {
@@ -35,11 +36,7 @@ class _ProfileSelectionScreenState
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Logo
-            const Icon(
-              Icons.blur_on_rounded,
-              color: AppColors.primary,
-              size: 56,
-            ),
+            const NebulaBrand(height: 72),
             const SizedBox(height: 16),
             Text(
               'Quem está assistindo?',

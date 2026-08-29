@@ -422,6 +422,10 @@ class SeriesScreenNotifier extends StateNotifier<SeriesScreenState> {
         final cat = series.shortCategory;
         categorizedSeries.putIfAbsent(cat, () => []).add(series);
       }
+      for (final series in categorizedSeries.values) {
+        _sortForDiscovery(series);
+      }
+      _sortForDiscovery(allSeriesItems);
 
       // Pick hero items: series with poster images
       final seriesWithPoster = allSeriesItems
@@ -455,6 +459,21 @@ class SeriesScreenNotifier extends StateNotifier<SeriesScreenState> {
         ),
       );
     }
+  }
+
+  /// Prevent rows from mirroring the alphabetical order of the IPTV source.
+  void _sortForDiscovery(List<SeriesItem> series) {
+    double score(SeriesItem item) =>
+        item.tmdbRating ?? double.tryParse(item.rating ?? '') ?? 0;
+    series.sort((a, b) {
+      final scoreOrder = score(b).compareTo(score(a));
+      if (scoreOrder != 0) return scoreOrder;
+      final enrichedOrder = (b.isEnriched ? 1 : 0).compareTo(a.isEnriched ? 1 : 0);
+      if (enrichedOrder != 0) return enrichedOrder;
+      final idOrder = b.id.compareTo(a.id);
+      if (idOrder != 0) return idOrder;
+      return a.name.compareTo(b.name);
+    });
   }
 
   /// Enriches a single series with metadata (called on-demand).
@@ -583,54 +602,59 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
   /// Loads series detail with seasons from metadata.
   Future<void> _loadSeriesDetail() async {
     try {
-      // Find the series in the list state first
-      final seriesState = _ref.read(seriesScreenProvider);
       SeriesItem? series;
-      for (final s in seriesState.allSeries) {
-        if (s.id == _seriesId) {
-          series = s;
-          break;
+      final db = _ref.read(databaseProvider);
+
+      // The detail route can be opened before the list provider finishes.
+      // Resolve the canonical item by ID first so the screen never depends on
+      // another provider's timing.
+      final dbSeries = await db.seriesDao.getSeriesById(_seriesId);
+      if (dbSeries != null) {
+        series = SeriesItem(
+          id: dbSeries.id,
+          playlistId: dbSeries.playlistId,
+          name: dbSeries.name,
+          coverUrl: dbSeries.coverUrl,
+          categoryName: dbSeries.categoryName,
+          sourceId: dbSeries.sourceId,
+          plot: dbSeries.plot,
+          cast: dbSeries.cast,
+          director: dbSeries.director,
+          genre: dbSeries.genre,
+          rating: dbSeries.rating?.toString(),
+        );
+      } else {
+        final rows = await db.customSelect(
+          'SELECT * FROM channels WHERE id = ? AND is_active = 1',
+          variables: [Variable.withInt(_seriesId)],
+        ).get();
+        if (rows.isNotEmpty) {
+          final row = rows.first;
+          series = SeriesItem(
+            id: row.read<int>('id'),
+            playlistId: row.read<int>('playlist_id'),
+            name: row.read<String>('name'),
+            coverUrl: row.readNullable<String>('logo_url'),
+            categoryName: row.readNullable<String>('group_name'),
+            sourceId: row.readNullable<String>('source_id'),
+          );
         }
       }
 
-      // If not found in state, load from database directly
-      if (series == null || series.name.isEmpty) {
-        final db = _ref.read(databaseProvider);
-        final dbSeries = await db.seriesDao.getSeriesById(_seriesId);
-        if (dbSeries != null) {
-          series = SeriesItem(
-            id: dbSeries.id,
-            playlistId: dbSeries.playlistId,
-            name: dbSeries.name,
-            coverUrl: dbSeries.coverUrl,
-            categoryName: dbSeries.categoryName,
-            sourceId: dbSeries.sourceId,
-            plot: dbSeries.plot,
-            cast: dbSeries.cast,
-            director: dbSeries.director,
-            genre: dbSeries.genre,
-            rating: dbSeries.rating?.toString(),
-          );
-        } else {
-          final rows = await db.customSelect(
-            'SELECT * FROM channels WHERE id = ? AND is_active = 1',
-            variables: [Variable.withInt(_seriesId)],
-          ).get();
-          if (rows.isNotEmpty) {
-            final row = rows.first;
-            series = SeriesItem(
-              id: row.read<int>('id'),
-              playlistId: row.read<int>('playlist_id'),
-              name: row.read<String>('name'),
-              coverUrl: row.readNullable<String>('logo_url'),
-              categoryName: row.readNullable<String>('group_name'),
-              sourceId: row.readNullable<String>('source_id'),
-            );
-          } else {
-            state = state.copyWith(isLoading: false);
-            return;
+      // A list-only item can still be valid for a M3U-backed source.
+      if (series == null) {
+        final seriesState = _ref.read(seriesScreenProvider);
+        for (final candidate in seriesState.allSeries) {
+          if (candidate.id == _seriesId && candidate.name.isNotEmpty) {
+            series = candidate;
+            break;
           }
         }
+      }
+
+      if (series == null) {
+        state = state.copyWith(isLoading: false);
+        return;
       }
 
       state = state.copyWith(series: series);

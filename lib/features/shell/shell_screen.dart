@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/constants/app_constants.dart';
 import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
 import 'package:nebula_iptv/features/channels/channels_screen.dart';
@@ -12,9 +13,11 @@ import 'package:nebula_iptv/features/settings/settings_screen.dart';
 import 'package:nebula_iptv/features/stats/stats_screen.dart';
 import 'package:nebula_iptv/features/vod/vod_screen.dart';
 import 'package:nebula_iptv/features/series/series_screen.dart';
+import 'package:nebula_iptv/features/library/library_screen.dart';
 import 'package:nebula_iptv/features/shell/widgets/mobile_bottom_nav.dart';
 import 'package:nebula_iptv/features/shell/widgets/sidebar.dart';
 import 'package:nebula_iptv/features/shell/widgets/top_bar.dart';
+import 'package:nebula_iptv/features/shell/providers/shell_navigation_provider.dart';
 import 'package:nebula_iptv/l10n/app_localizations.dart';
 
 /// Main shell that provides the application's navigation structure.
@@ -23,15 +26,15 @@ import 'package:nebula_iptv/l10n/app_localizations.dart';
 /// - Desktop: Full sidebar + top bar + content
 /// - Tablet: Collapsed sidebar (icons only) + top bar + content
 /// - Mobile: Bottom navigation + content
-class ShellScreen extends StatefulWidget {
+class ShellScreen extends ConsumerStatefulWidget {
   const ShellScreen({super.key});
 
   @override
-  State<ShellScreen> createState() => _ShellScreenState();
+  ConsumerState<ShellScreen> createState() => _ShellScreenState();
 }
 
-class _ShellScreenState extends State<ShellScreen> {
-  int _selectedIndex = 0;
+class _ShellScreenState extends ConsumerState<ShellScreen> {
+  int get _selectedIndex => ref.watch(shellNavigationProvider);
 
   /// Maps navigation indices to page titles (localized).
   String _getTitle(AppLocalizations l10n) {
@@ -46,6 +49,7 @@ class _ShellScreenState extends State<ShellScreen> {
       7 => l10n.epg,
       8 => 'Estatísticas',
       9 => l10n.settings,
+      10 => 'Biblioteca',
       _ => l10n.home,
     };
   }
@@ -63,6 +67,7 @@ class _ShellScreenState extends State<ShellScreen> {
       7 => const EpgScreen(),
       8 => const StatsScreen(),
       9 => const SettingsScreen(),
+      10 => const LibraryScreen(),
       _ => const HomeScreen(),
     };
   }
@@ -113,9 +118,8 @@ class _ShellScreenState extends State<ShellScreen> {
               ? MobileBottomNav(
                   selectedIndex: _fullToMobileIndex(_selectedIndex),
                   onDestinationSelected: (index) {
-                    setState(() {
-                      _selectedIndex = _mobileToFullIndex(index);
-                    });
+                    ref.read(shellNavigationProvider.notifier).state =
+                        _mobileToFullIndex(index);
                   },
                 )
               : null,
@@ -134,7 +138,7 @@ class _ShellScreenState extends State<ShellScreen> {
           selectedIndex: _selectedIndex,
           isCollapsed: isCollapsed,
           onDestinationSelected: (index) {
-            setState(() => _selectedIndex = index);
+            ref.read(shellNavigationProvider.notifier).state = index;
           },
         ),
         Expanded(

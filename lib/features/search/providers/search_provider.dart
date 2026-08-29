@@ -125,14 +125,14 @@ class SearchNotifier extends StateNotifier<SearchState> {
       
       // Build WHERE clause: each word must appear in the name
       final conditions = words.map((_) => 'name LIKE ? COLLATE NOCASE').join(' AND ');
-      final variables = words.map((w) => Variable.withString('%\$w%')).toList();
+      final variables = words.map((w) => Variable.withString('%$w%')).toList();
 
       // Search channels (live)
       final channelRows = await db.customSelect(
         '''
         SELECT id, playlist_id, name, logo_url, stream_url, group_name, source_id, source_type
         FROM channels
-        WHERE \$conditions
+        WHERE $conditions
           AND source_type IN ('xtream', 'm3u')
           AND is_active = 1
         ORDER BY
@@ -144,7 +144,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
           name ASC
         LIMIT 50
         ''',
-        variables: [...variables, Variable.withString('\$query%'), Variable.withString('% \$query%')],
+        variables: [...variables, Variable.withString('$query%'), Variable.withString('%$query%')],
       ).get();
 
       // Search VOD
@@ -152,7 +152,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
         '''
         SELECT id, playlist_id, name, logo_url, stream_url, group_name, source_id, source_type
         FROM channels
-        WHERE \$conditions
+        WHERE $conditions
           AND source_type = 'vod'
           AND is_active = 1
         ORDER BY
@@ -164,7 +164,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
           name ASC
         LIMIT 50
         ''',
-        variables: [...variables, Variable.withString('\$query%'), Variable.withString('% \$query%')],
+        variables: [...variables, Variable.withString('$query%'), Variable.withString('%$query%')],
       ).get();
 
       // Search Series
@@ -172,7 +172,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
         '''
         SELECT id, playlist_id, name, logo_url, stream_url, group_name, source_id, source_type
         FROM channels
-        WHERE \$conditions
+        WHERE $conditions
           AND source_type = 'series'
           AND is_active = 1
         ORDER BY
@@ -184,7 +184,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
           name ASC
         LIMIT 50
         ''',
-        variables: [...variables, Variable.withString('\$query%'), Variable.withString('% \$query%')],
+        variables: [...variables, Variable.withString('$query%'), Variable.withString('%$query%')],
       ).get();
 
       if (!mounted) return;
@@ -481,10 +481,18 @@ final batchEnrichmentProvider = Provider<BatchEnrichmentService>((ref) {
 /// Auto-trigger provider: starts batch enrichment 30s after first read.
 /// Watch this from HomeScreen to ensure enrichment runs on app startup.
 final batchEnrichmentTriggerProvider = FutureProvider.autoDispose<void>((ref) async {
-  // Wait 30 seconds after app start to avoid competing with initial load
-  await Future.delayed(const Duration(seconds: 30));
-  final service = ref.read(batchEnrichmentProvider);
-  if (!service.isRunning) {
-    await service.runEnrichment(batchSize: 50);
-  }
+  final completer = Completer<void>();
+  final timer = Timer(const Duration(seconds: 30), () async {
+    try {
+      final service = ref.read(batchEnrichmentProvider);
+      if (!service.isRunning) await service.runEnrichment(batchSize: 50);
+    } finally {
+      if (!completer.isCompleted) completer.complete();
+    }
+  });
+  ref.onDispose(() {
+    timer.cancel();
+    if (!completer.isCompleted) completer.complete();
+  });
+  await completer.future;
 });

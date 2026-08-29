@@ -22,6 +22,9 @@ import 'package:nebula_iptv/l10n/app_localizations.dart';
 import 'package:nebula_iptv/features/shared/providers/rating_provider.dart';
 import 'package:nebula_iptv/features/shared/widgets/shortcut_context_menu.dart';
 import 'package:nebula_iptv/features/sua_tv/sua_tv_player_screen.dart';
+import 'package:nebula_iptv/core/widgets/nebula_brand.dart';
+import 'package:nebula_iptv/features/playlists/playlists_screen.dart';
+import 'package:nebula_iptv/features/shell/providers/shell_navigation_provider.dart';
 
 /// Provider for favorite channels on Home.
 final homeFavoritesProvider = FutureProvider.autoDispose<List<Channel>>((ref) async {
@@ -72,32 +75,41 @@ class HomeScreen extends ConsumerWidget {
         recentlyAdded.valueOrNull?.isNotEmpty == true;
 
     if (!hasContent) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.live_tv_rounded,
-              size: 64,
-              color: AppColors.primary,
+      return ListView(
+        padding: const EdgeInsets.only(top: 16, bottom: 24),
+        children: [
+          NebulaWelcomeBanner(
+            onAction: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PlaylistsScreen()),
             ),
-            const SizedBox(height: 24),
-            Text(l10n.appTitle, style: AppTypography.headline),
-            const SizedBox(height: 8),
-            Text(
-              l10n.homeEmptyMessage,
-              style: AppTypography.body.copyWith(
-                color: AppColors.textSecondary,
-              ),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(24, 4, 24, 12),
+            child: Text(
+              'Comece conectando uma playlist. Em poucos instantes, sua biblioteca ganha vida.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
-          ],
-        ),
+          ),
+        ],
       );
     }
 
     return ListView(
       padding: EdgeInsets.zero,
       children: [
+        Align(
+          alignment: Alignment.centerRight,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+            child: TextButton.icon(
+              onPressed: () =>
+                  ref.read(shellNavigationProvider.notifier).state = 10,
+              icon: const Icon(Icons.library_music_rounded, size: 18),
+              label: const Text('Abrir Biblioteca'),
+            ),
+          ),
+        ),
         // Hero Banner — from continue watching or discovery
         _buildHeroBanner(context, ref, continueWatching, discovery),
 

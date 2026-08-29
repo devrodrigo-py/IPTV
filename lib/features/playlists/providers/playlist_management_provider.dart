@@ -102,6 +102,9 @@ class PlaylistManagementNotifier
         _loadPlaylists();
         // Refresh channels screen
         _ref.read(channelsScreenProvider.notifier).refresh();
+        // Keep M3U imports consistent with Xtream imports. This is deliberately
+        // fire-and-forget so a health/duplicate scan never delays importing.
+        _runDeduplicationInBackground();
       },
       failure: (f) {
         state = state.copyWith(
@@ -136,6 +139,7 @@ class PlaylistManagementNotifier
             );
             _loadPlaylists();
             _ref.read(channelsScreenProvider.notifier).refresh();
+            _runDeduplicationInBackground();
           },
           failure: (f) {
             state = state.copyWith(
@@ -198,6 +202,7 @@ class PlaylistManagementNotifier
         _ref.read(channelsScreenProvider.notifier).refresh();
         _ref.read(seriesScreenProvider.notifier).refresh();
         _ref.read(vodScreenProvider.notifier).refresh();
+        _runDeduplicationInBackground();
       },
       failure: (f) {
         state = state.copyWith(

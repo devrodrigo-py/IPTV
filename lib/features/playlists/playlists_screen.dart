@@ -26,6 +26,14 @@ class PlaylistsScreen extends ConsumerWidget {
           // Header
           Row(
             children: [
+              if (Navigator.of(context).canPop()) ...[
+                IconButton(
+                  tooltip: 'Voltar',
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                ),
+                const SizedBox(width: 4),
+              ],
               Text(l10n.playlists, style: AppTypography.title),
               const Spacer(),
               FocusableWidget(

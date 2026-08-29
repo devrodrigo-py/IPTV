@@ -84,7 +84,15 @@ class ChannelsScreenNotifier extends StateNotifier<ChannelsScreenState> {
       final channels = allChannels
           .where((c) => c.sourceType == ChannelSourceType.xtream || c.sourceType == ChannelSourceType.m3u)
           .toList();
-      final groups = await db.channelsDao.getDistinctGroups();
+      // Groups must come from the live-only collection. Using every row in
+      // `channels` leaked movie and series categories into the Ao Vivo filter.
+      final groups = channels
+          .map((channel) => channel.groupName)
+          .whereType<String>()
+          .where((group) => group.trim().isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
       final favoriteIds = await db.favoritesDao.getFavoriteChannelIds();
 
       // Apply deduplication: keep only primary channel per group

@@ -332,6 +332,10 @@ class VodScreenNotifier extends StateNotifier<VodScreenState> {
         final cat = movie.shortCategory;
         categorizedMovies.putIfAbsent(cat, () => []).add(movie);
       }
+      for (final movies in categorizedMovies.values) {
+        _sortForDiscovery(movies);
+      }
+      _sortForDiscovery(allMoviesList);
 
       // Pick hero items: movies with poster images, prefer enriched ones
       final moviesWithPoster = allMoviesList
@@ -366,6 +370,22 @@ class VodScreenNotifier extends StateNotifier<VodScreenState> {
         ),
       );
     }
+  }
+
+  /// Prefer catalog quality and freshness over the alphabetical import order.
+  void _sortForDiscovery(List<VodItem> movies) {
+    double score(VodItem movie) =>
+        movie.tmdbRating ?? double.tryParse(movie.rating ?? '') ?? 0;
+    movies.sort((a, b) {
+      final scoreOrder = score(b).compareTo(score(a));
+      if (scoreOrder != 0) return scoreOrder;
+      final enrichedOrder = (b.isEnriched ? 1 : 0).compareTo(a.isEnriched ? 1 : 0);
+      if (enrichedOrder != 0) return enrichedOrder;
+      final recentOrder = (b.addedAt?.millisecondsSinceEpoch ?? b.id)
+          .compareTo(a.addedAt?.millisecondsSinceEpoch ?? a.id);
+      if (recentOrder != 0) return recentOrder;
+      return a.name.compareTo(b.name);
+    });
   }
 
   /// Enriches a single movie with metadata (called on-demand).
