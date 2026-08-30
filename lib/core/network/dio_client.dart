@@ -136,7 +136,13 @@ class DioClient {
       DioExceptionType.sendTimeout =>
         'Não foi possível enviar a requisição. Tente novamente.',
       DioExceptionType.connectionError => 'Sem conexão com a internet.',
-      DioExceptionType.badResponse => 'Erro do servidor (código $statusCode).',
+      DioExceptionType.badResponse => switch (statusCode) {
+          404 => 'Endereço não encontrado no servidor (404). '
+              'Confira a URL da fonte com seu provedor.',
+          401 || 403 => 'Acesso negado pelo servidor (código $statusCode). '
+              'Verifique as credenciais ou o limite de conexões do plano.',
+          _ => 'Erro do servidor (código $statusCode).',
+        },
       _ => 'Erro de rede. Tente novamente.',
     };
 

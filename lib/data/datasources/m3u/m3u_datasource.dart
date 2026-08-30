@@ -2,6 +2,7 @@ import 'package:nebula_iptv/core/errors/app_failure.dart';
 import 'package:nebula_iptv/core/network/dio_client.dart';
 import 'package:nebula_iptv/core/result/result.dart';
 import 'package:nebula_iptv/core/utils/isolate_parse.dart';
+import 'package:nebula_iptv/core/utils/url_normalization.dart';
 import 'package:nebula_iptv/data/datasources/m3u/m3u_parser.dart';
 
 /// Data source responsible for fetching and parsing M3U playlists.
@@ -26,9 +27,10 @@ class M3uDataSource {
     String url, {
     bool allowInsecureCertificates = false,
   }) async {
-    if (allowInsecureCertificates) _client.allowInsecureFor(url);
+    final normalizedUrl = url.trim().normalizeServerUrl();
+    if (allowInsecureCertificates) _client.allowInsecureFor(normalizedUrl);
     try {
-      final response = await _client.get<String>(url);
+      final response = await _client.get<String>(normalizedUrl);
 
       return await response.when(
         success: (res) async {
@@ -48,7 +50,7 @@ class M3uDataSource {
         failure: (f) => Failure(f),
       );
     } finally {
-      if (allowInsecureCertificates) _client.disallowInsecureFor(url);
+      if (allowInsecureCertificates) _client.disallowInsecureFor(normalizedUrl);
     }
   }
 

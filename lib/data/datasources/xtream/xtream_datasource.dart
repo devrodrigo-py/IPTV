@@ -5,6 +5,7 @@ import 'package:nebula_iptv/core/errors/app_failure.dart';
 import 'package:nebula_iptv/core/network/dio_client.dart';
 import 'package:nebula_iptv/core/result/result.dart';
 import 'package:nebula_iptv/core/utils/isolate_parse.dart';
+import 'package:nebula_iptv/core/utils/url_normalization.dart';
 import 'package:nebula_iptv/data/datasources/xtream/xtream_models.dart';
 
 /// Data source for Xtream Codes API interactions.
@@ -486,9 +487,7 @@ class XtreamDataSource {
 
   /// Builds the base URL with optional port override.
   String _buildBaseUrl(String serverUrl, int? portOverride) {
-    var url = serverUrl.trim();
-    // Remove trailing slash
-    if (url.endsWith('/')) url = url.substring(0, url.length - 1);
+    var url = serverUrl.trim().normalizeServerUrl();
 
     // Apply port override if provided
     if (portOverride != null) {
