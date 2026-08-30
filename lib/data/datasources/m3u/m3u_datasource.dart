@@ -100,9 +100,13 @@ class M3uDataSource {
     required String errorMessage,
   }) async {
     try {
+      // Capture only the parser — a closure that touches instance state
+      // would implicitly capture `this` (and the DioClient it holds),
+      // which cannot cross an isolate boundary.
+      final parser = _parser;
       final result = await parseInIsolate(
         content,
-        (String c) => _parser.parse(c),
+        (String c) => parser.parse(c),
       );
       if (result.entries.isEmpty) {
         return Failure(PlaylistParseFailure(message: emptyMessage));
