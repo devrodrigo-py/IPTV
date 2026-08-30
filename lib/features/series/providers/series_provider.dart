@@ -974,9 +974,8 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
       // a senha real precisa ser resolvida por ela. Enviar a chave como
       // senha autenticava com lixo e a busca de episódios falhava sempre.
       var password = '';
-      final stored = await _ref
-          .read(credentialStoreProvider)
-          .read(key: credentialKey);
+      final stored =
+          await _ref.read(credentialStoreProvider).read(key: credentialKey);
       stored.when(
         success: (value) => password = value ?? '',
         failure: (f) =>

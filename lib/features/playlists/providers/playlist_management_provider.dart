@@ -11,8 +11,11 @@ import 'package:nebula_iptv/data/repositories/playlist_import_repository.dart';
 import 'package:nebula_iptv/data/repositories/xtream_import_repository.dart';
 import 'package:nebula_iptv/domain/providers/dedup_providers.dart';
 import 'package:nebula_iptv/domain/providers/epg_providers.dart';
+import 'package:nebula_iptv/domain/providers/health_check_providers.dart';
 import 'package:nebula_iptv/domain/services/channel_dedup_service.dart';
+import 'package:nebula_iptv/domain/services/video_player_service.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
+import 'package:nebula_iptv/features/player/providers/player_provider.dart';
 import 'package:nebula_iptv/features/playlists/widgets/playlist_file_picker.dart';
 import 'package:nebula_iptv/features/search/providers/search_provider.dart';
 import 'package:nebula_iptv/features/series/providers/series_provider.dart';
@@ -92,6 +95,17 @@ class PlaylistManagementNotifier
     state = state.copyWith(playlists: playlists);
   }
 
+  /// Reativa o health check pós-import, exceto se houver playback ativo
+  /// (o player é quem controla a pausa nesse caso).
+  void _resumeHealthCheckUnlessPlaying() {
+    final status = _ref.read(playerProvider).playbackState.status;
+    final playing =
+        status == PlaybackStatus.playing || status == PlaybackStatus.buffering;
+    if (!playing) {
+      _ref.read(healthCheckServiceProvider).resume();
+    }
+  }
+
   /// Imports a playlist from URL.
   Future<void> importFromUrl({
     required String name,
@@ -100,6 +114,8 @@ class PlaylistManagementNotifier
     bool allowInsecureTls = false,
   }) async {
     state = state.copyWith(isLoading: true, clearStatus: true);
+    // Importo disputa conexões com o painel: health check pausado durante.
+    _ref.read(healthCheckServiceProvider).pause();
 
     final result = await _importRepo.importFromUrl(
       name: name,
@@ -107,6 +123,7 @@ class PlaylistManagementNotifier
       epgUrl: epgUrl,
       allowInsecureTls: allowInsecureTls,
     );
+    _resumeHealthCheckUnlessPlaying();
 
     result.when(
       success: (data) {
@@ -145,6 +162,7 @@ class PlaylistManagementNotifier
           name: file.fileName.replaceAll(RegExp(r'\.\w+$'), ''),
           content: file.content,
         );
+        _resumeHealthCheckUnlessPlaying();
 
         result.when(
           success: (data) {
@@ -192,10 +210,12 @@ class PlaylistManagementNotifier
       );
       return;
     }
+    _ref.read(healthCheckServiceProvider).pause();
 
     final result = playlist.type == PlaylistType.xtream
         ? await _xtreamRepo.refreshXtream(playlistId)
         : await _importRepo.refreshPlaylist(playlistId);
+    _resumeHealthCheckUnlessPlaying();
 
     result.when(
       success: (data) {
@@ -265,6 +285,7 @@ class PlaylistManagementNotifier
     bool allowInsecureTls = false,
   }) async {
     state = state.copyWith(isLoading: true, clearStatus: true);
+    _ref.read(healthCheckServiceProvider).pause();
 
     final result = await _xtreamRepo.importXtream(
       name: name,
@@ -274,6 +295,7 @@ class PlaylistManagementNotifier
       epgUrl: epgUrl,
       allowInsecureTls: allowInsecureTls,
     );
+    _resumeHealthCheckUnlessPlaying();
 
     result.when(
       success: (data) {

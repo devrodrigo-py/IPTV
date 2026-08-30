@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
@@ -19,6 +20,13 @@ import 'package:nebula_iptv/features/player/providers/player_provider.dart';
 /// Bootstraps the application.
 Future<ProviderContainer> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Edge-to-edge no Android: a barra de status (relógio/bateria/notificações)
+  // não pode sobrepor o conteúdo. Immersive sticky esconde barras de status
+  // e navegação; voltam só com swipe. No-op nas demais plataformas.
+  if (!kIsWeb) {
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  }
 
   appLogger.i('Nebula IPTV starting...');
 

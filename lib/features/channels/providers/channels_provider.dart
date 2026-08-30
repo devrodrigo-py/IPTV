@@ -150,8 +150,8 @@ class ChannelsScreenNotifier extends StateNotifier<ChannelsScreenState> {
         final memberId = row.read<int>('channel_id');
         if (!activeIds.contains(memberId)) continue;
         membersByGroup.putIfAbsent(gid, () => []).add(
-              (memberId, row.readNullable<int>('priority') ?? 0),
-            );
+          (memberId, row.readNullable<int>('priority') ?? 0),
+        );
         final primaryId = row.readNullable<int>('primary_channel_id');
         if (primaryId != null) primaryByGroup[gid] = primaryId;
       }

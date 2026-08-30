@@ -180,17 +180,19 @@ void main() {
           sourceType: ChannelSourceType.m3u,
         ),
       ]);
-      final rows = await db.customSelect(
-        "SELECT id, name FROM channels WHERE name LIKE 'Globo%'",
-      ).get();
-      final hdId =
-          rows.map((r) => (r.read<int>('id'), r.read<String>('name')))
-              .firstWhere((r) => r.$2 == 'Globo HD')
-              .$1;
-      final sdId =
-          rows.map((r) => (r.read<int>('id'), r.read<String>('name')))
-              .firstWhere((r) => r.$2 == 'Globo SD')
-              .$1;
+      final rows = await db
+          .customSelect(
+            "SELECT id, name FROM channels WHERE name LIKE 'Globo%'",
+          )
+          .get();
+      final hdId = rows
+          .map((r) => (r.read<int>('id'), r.read<String>('name')))
+          .firstWhere((r) => r.$2 == 'Globo HD')
+          .$1;
+      final sdId = rows
+          .map((r) => (r.read<int>('id'), r.read<String>('name')))
+          .firstWhere((r) => r.$2 == 'Globo SD')
+          .$1;
 
       final groupId = await db.channelGroupDao.createGroup(
         displayName: 'Globo',

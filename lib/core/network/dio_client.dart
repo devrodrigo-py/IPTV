@@ -140,6 +140,18 @@ class DioClient {
       _ => 'Erro de rede. Tente novamente.',
     };
 
+    // Diagnóstico sem credenciais: host + caminho, status e início do corpo.
+    if (exception.type == DioExceptionType.badResponse) {
+      final uri = exception.response?.requestOptions.uri;
+      final sanitized =
+          uri == null ? '<sem uri>' : '${uri.host}:${uri.port}${uri.path}';
+      final body = exception.response?.data?.toString() ?? '';
+      appLogger.w(
+        'HTTP ${statusCode ?? '?'} ← $sanitized '
+        '${body.length > 200 ? body.substring(0, 200) : body}',
+      );
+    }
+
     return NetworkFailure(
       message: message,
       statusCode: statusCode,
