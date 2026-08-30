@@ -20,6 +20,11 @@ class FocusableWidget extends StatefulWidget {
   final bool canRequestFocus;
   final BorderRadius borderRadius;
 
+  /// Forces the gradient ring regardless of focus — used by persistent
+  /// states like the selected item of a navigation menu. The glow halo
+  /// remains focus-only.
+  final bool showRing;
+
   const FocusableWidget({
     super.key,
     required this.builder,
@@ -29,6 +34,7 @@ class FocusableWidget extends StatefulWidget {
     this.autofocus = false,
     this.canRequestFocus = true,
     this.borderRadius = const BorderRadius.all(Radius.circular(8)),
+    this.showRing = false,
   });
 
   @override
@@ -80,7 +86,8 @@ class _FocusableWidgetState extends State<FocusableWidget> {
         onTap: widget.onPressed,
         onLongPress: widget.onLongPress,
         child: NebulaFocusRing(
-          focused: _isFocused,
+          focused: _isFocused || widget.showRing,
+          withGlow: _isFocused,
           radius: widget.borderRadius.topLeft.x,
           // Borda transparente de 3px mantém o layout estável entre os
           // estados focado/não focado; o anel em gradiente é pintado por cima.
