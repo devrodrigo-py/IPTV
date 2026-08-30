@@ -1,43 +1,93 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/data/database/daos/app_settings_dao.dart';
+import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 
 class ParentalControlState {
   final bool isEnabled;
-  final String pin;
+  final bool hasPin;
+
+  /// Hash do PIN (sha256 com salt do app). O PIN em claro NUNCA é guardado.
+  final String pinHash;
   final bool isUnlockedForSession;
 
   const ParentalControlState({
     this.isEnabled = false,
-    this.pin = '0000',
+    this.hasPin = false,
+    this.pinHash = '',
     this.isUnlockedForSession = false,
   });
 
   ParentalControlState copyWith({
     bool? isEnabled,
-    String? pin,
+    bool? hasPin,
+    String? pinHash,
     bool? isUnlockedForSession,
   }) {
     return ParentalControlState(
       isEnabled: isEnabled ?? this.isEnabled,
-      pin: pin ?? this.pin,
+      hasPin: hasPin ?? this.hasPin,
+      pinHash: pinHash ?? this.pinHash,
       isUnlockedForSession: isUnlockedForSession ?? this.isUnlockedForSession,
     );
   }
 }
 
 class ParentalControlNotifier extends StateNotifier<ParentalControlState> {
-  ParentalControlNotifier() : super(const ParentalControlState());
+  final Ref _ref;
 
-  void toggleEnabled(bool enabled) {
-    state = state.copyWith(isEnabled: enabled);
+  ParentalControlNotifier(this._ref) : super(const ParentalControlState()) {
+    // Restaura a escolha persistida (o estado anterior vivia só em RAM —
+    // o controle parental "sumia" a cada abertura do app).
+    Future(() async {
+      try {
+        final dao = _ref.read(databaseProvider).appSettingsDao;
+        final enabled = await dao.getBool(
+          kSettingParentalEnabled,
+          defaultValue: false,
+        );
+        final hash = await dao.getString(kSettingParentalPinHash) ?? '';
+        state = state.copyWith(
+          isEnabled: enabled && hash.isNotEmpty,
+          hasPin: hash.isNotEmpty,
+          pinHash: hash,
+        );
+      } catch (e) {
+        appLogger.w('[Parental] Falha ao restaurar estado: $e');
+      }
+    });
   }
 
-  void setPin(String newPin) {
-    if (newPin.length == 4) {
-      state = state.copyWith(pin: newPin);
+  Future<void> toggleEnabled(bool enabled) async {
+    state = state.copyWith(isEnabled: enabled);
+    try {
+      await _ref
+          .read(databaseProvider)
+          .appSettingsDao
+          .setBool(kSettingParentalEnabled, value: enabled);
+    } catch (e) {
+      appLogger.w('[Parental] Falha ao persistir toggle: $e');
+    }
+  }
+
+  Future<void> setPin(String newPin) async {
+    if (newPin.length != 4) return;
+    final hash = _hashPin(newPin);
+    state = state.copyWith(pinHash: hash, hasPin: true);
+    try {
+      await _ref
+          .read(databaseProvider)
+          .appSettingsDao
+          .setString(kSettingParentalPinHash, hash);
+    } catch (e) {
+      appLogger.w('[Parental] Falha ao persistir PIN: $e');
     }
   }
 
@@ -66,11 +116,16 @@ class ParentalControlNotifier extends StateNotifier<ParentalControlState> {
     if (!state.isEnabled || state.isUnlockedForSession) {
       return true;
     }
+    if (!state.hasPin) {
+      // Sem PIN cadastrado não há o que verificar — bloqueio seria
+      // inescapável.
+      return true;
+    }
 
     final success = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => _PinEntryDialog(correctPin: state.pin),
+      builder: (ctx) => _PinEntryDialog(correctPinHash: state.pinHash),
     );
 
     if (success == true) {
@@ -81,14 +136,23 @@ class ParentalControlNotifier extends StateNotifier<ParentalControlState> {
   }
 }
 
+/// sha256 com salt fixo do app. PIN de 4 dígitos tem 10⁴ combinações — o
+/// hash existe para o PIN não ficar legível no banco, não para resistir a
+/// brute force local.
+String _hashPin(String pin) {
+  return sha256.convert(utf8.encode('$_kParentalSalt$pin')).toString();
+}
+
+const _kParentalSalt = 'nebula-parental-v1';
+
 final parentalControlProvider =
     StateNotifierProvider<ParentalControlNotifier, ParentalControlState>((ref) {
-  return ParentalControlNotifier();
+  return ParentalControlNotifier(ref);
 });
 
 class _PinEntryDialog extends StatefulWidget {
-  final String correctPin;
-  const _PinEntryDialog({required this.correctPin});
+  final String correctPinHash;
+  const _PinEntryDialog({required this.correctPinHash});
 
   @override
   State<_PinEntryDialog> createState() => _PinEntryDialogState();
@@ -99,7 +163,7 @@ class _PinEntryDialogState extends State<_PinEntryDialog> {
   String _errorText = '';
 
   void _verify() {
-    if (_pinController.text == widget.correctPin) {
+    if (_hashPin(_pinController.text) == widget.correctPinHash) {
       Navigator.of(context).pop(true);
     } else {
       setState(() {

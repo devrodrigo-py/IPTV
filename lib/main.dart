@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/app/app.dart';
 import 'package:nebula_iptv/app/bootstrap/bootstrap.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
+import 'package:nebula_iptv/core/logging/crash_log_service.dart';
 
 void main() async {
   debugPaintBaselinesEnabled = false;
@@ -22,6 +23,8 @@ void main() async {
       error: details.exception,
       stackTrace: details.stack,
     );
+    crashLog.write('Flutter error: ${details.exception}',
+        error: details.exception, stackTrace: details.stack);
   };
 
   PlatformDispatcher.instance.onError = (error, stackTrace) {
@@ -30,6 +33,8 @@ void main() async {
       error: error,
       stackTrace: stackTrace,
     );
+    crashLog.write('Uncaught platform error: $error',
+        error: error, stackTrace: stackTrace);
     return true;
   };
 
@@ -48,5 +53,7 @@ void main() async {
       error: error,
       stackTrace: stackTrace,
     );
+    crashLog.write('Uncaught zone error: $error',
+        error: error, stackTrace: stackTrace);
   });
 }

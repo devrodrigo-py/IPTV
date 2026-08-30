@@ -1,7 +1,7 @@
 name: nebula_iptv
 description: A modern multiplatform IPTV player and manager.
 publish_to: 'none'
-version: 0.1.0+1
+version: 0.2.0+2
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -45,11 +45,12 @@ dependencies:
   path: ^1.9.0
 
   # Crypto (for image cache URL hashing)
-  crypto: ^3.0.3
+  crypto: ^3.0.7
   google_fonts: ^8.2.1
   flutter_secure_storage: ^10.3.1
 
   intl: any
+  package_info_plus: ^9.0.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -97,6 +97,28 @@ class DioClient {
     }
   }
 
+  /// Downloads to [savePath] (streaming — o corpo nunca vive inteiro na RAM).
+  /// Usado pelo EPG: guias XMLTV chegam a dezenas de MB.
+  Future<Result<void>> download(
+    String url,
+    String savePath, {
+    Options? options,
+  }) async {
+    try {
+      await _dio.download(url, savePath, options: options);
+      return const Success(null);
+    } on DioException catch (e) {
+      return Failure(_mapDioException(e));
+    } on Exception catch (e) {
+      return Failure(
+        UnknownFailure(
+          message: 'Erro de conexão inesperado.',
+          originalError: e,
+        ),
+      );
+    }
+  }
+
   /// Executes a POST request and wraps the result in [Result].
   Future<Result<Response<T>>> post<T>(
     String path, {

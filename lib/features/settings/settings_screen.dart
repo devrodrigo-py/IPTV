@@ -7,6 +7,7 @@ import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
 import 'package:nebula_iptv/data/database/daos/app_settings_dao.dart';
 import 'package:nebula_iptv/data/database/tables/playlists_table.dart';
+import 'package:nebula_iptv/domain/providers/app_info_provider.dart';
 import 'package:nebula_iptv/domain/providers/epg_providers.dart';
 import 'package:nebula_iptv/domain/providers/health_check_providers.dart';
 import 'package:nebula_iptv/domain/services/subtitle_search_service.dart';
@@ -33,6 +34,7 @@ class SettingsScreen extends ConsumerWidget {
     final activeId = ref.watch(activeProfileProvider);
     final playlistState = ref.watch(playlistManagementProvider);
     final parentalState = ref.watch(parentalControlProvider);
+    final appVersion = ref.watch(appVersionProvider);
 
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -309,7 +311,7 @@ class SettingsScreen extends ConsumerWidget {
               _SettingsTile(
                 icon: Icons.info_outline_rounded,
                 title: l10n.appTitle,
-                subtitle: 'v1.0.0 (Android TV & Fire TV Edition)',
+                subtitle: appVersion.valueOrNull ?? 'Nebula IPTV',
                 onTap: () {},
               ),
             ],
