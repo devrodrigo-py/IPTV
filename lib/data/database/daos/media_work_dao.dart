@@ -436,6 +436,58 @@ class MediaWorkDao extends DatabaseAccessor<AppDatabase> {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // Normalization repair (old normalizer stripped trailing numbers)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Returns every stored alias with its original text for re-normalization.
+  Future<List<({int id, String aliasText, String normalizedText})>>
+      getAllAliasRowsForRepair() async {
+    final rows = await customSelect(
+      'SELECT id, alias_text, normalized_text FROM content_aliases',
+    ).get();
+    return rows
+        .map(
+          (r) => (
+            id: r.read<int>('id'),
+            aliasText: r.read<String>('alias_text'),
+            normalizedText: r.read<String>('normalized_text'),
+          ),
+        )
+        .toList();
+  }
+
+  /// Deletes an alias row (used when its normalized form was produced by
+  /// the old normalizer — the mapping itself may point at the wrong work).
+  Future<void> deleteAliasRow(int id) async {
+    await customStatement('DELETE FROM content_aliases WHERE id = ?', [id]);
+  }
+
+  /// Returns every work's canonical vs stored normalized title.
+  Future<List<({int id, String canonicalTitle, String normalizedTitle})>>
+      getWorkTitleRowsForRepair() async {
+    final rows = await customSelect(
+      'SELECT id, canonical_title, normalized_title FROM media_works',
+    ).get();
+    return rows
+        .map(
+          (r) => (
+            id: r.read<int>('id'),
+            canonicalTitle: r.read<String>('canonical_title'),
+            normalizedTitle: r.read<String>('normalized_title'),
+          ),
+        )
+        .toList();
+  }
+
+  /// Fixes a work's stored normalized title.
+  Future<void> updateNormalizedTitle(int id, String normalizedTitle) async {
+    await customStatement(
+      'UPDATE media_works SET normalized_title = ? WHERE id = ?',
+      [normalizedTitle, id],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // Pending matches
   // ═══════════════════════════════════════════════════════════════════════════
 

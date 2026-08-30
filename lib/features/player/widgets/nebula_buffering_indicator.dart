@@ -59,15 +59,33 @@ class _NebulaBufferingIndicatorState extends State<NebulaBufferingIndicator>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedOpacity(
-      duration: const Duration(milliseconds: 250),
-      opacity: _visible ? 1 : 0,
-      child: AnimatedBuilder(
-        animation: _pulse,
-        builder: (context, _) => CustomPaint(
-          painter: _PlayTrianglePainter(glow: _pulse.value),
-          size: Size.square(widget.size),
-        ),
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, _) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Logotipo da marca: aparece imediatamente ao abrir o player
+          // (identidade no carregamento), com respiração sutil de opacidade.
+          Opacity(
+            opacity: 0.55 + 0.45 * _pulse.value,
+            child: Image.asset(
+              'assets/branding/nebula_logo_transparent.png',
+              height: widget.size * 0.62,
+              fit: BoxFit.contain,
+            ),
+          ),
+          SizedBox(height: widget.size * 0.26),
+          // Indicador de pulso só depois do grace period — não pisca em
+          // streams que conectam rápido.
+          AnimatedOpacity(
+            duration: const Duration(milliseconds: 250),
+            opacity: _visible ? 1 : 0,
+            child: CustomPaint(
+              painter: _PlayTrianglePainter(glow: _pulse.value),
+              size: Size.square(widget.size * 0.72),
+            ),
+          ),
+        ],
       ),
     );
   }

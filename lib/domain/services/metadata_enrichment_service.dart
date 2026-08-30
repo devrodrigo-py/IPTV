@@ -1,5 +1,6 @@
 import 'package:nebula_iptv/core/constants/tmdb_constants.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
+import 'package:nebula_iptv/core/utils/string_similarity.dart';
 import 'package:nebula_iptv/data/database/daos/media_work_dao.dart';
 import 'package:nebula_iptv/data/datasources/tmdb/tmdb_datasource.dart';
 import 'package:nebula_iptv/data/datasources/tmdb/tmdb_models.dart';
@@ -183,9 +184,7 @@ class MetadataEnrichmentService {
     final searchResult = await _tmdbDataSource.searchMovie(normalizedName);
     return await searchResult.when(
       success: (results) async {
-        if (results.isEmpty) return null;
-
-        final best = _pickBestSearchResult(results);
+        final best = _pickBestSearchResult(results, normalizedName);
         if (best == null) return null;
 
         await _respectTmdbRateLimit();
@@ -220,9 +219,7 @@ class MetadataEnrichmentService {
     final searchResult = await _tmdbDataSource.searchTv(normalizedName);
     return await searchResult.when(
       success: (results) async {
-        if (results.isEmpty) return null;
-
-        final best = _pickBestSearchResult(results);
+        final best = _pickBestSearchResult(results, normalizedName);
         if (best == null) return null;
 
         await _respectTmdbRateLimit();
@@ -248,17 +245,46 @@ class MetadataEnrichmentService {
     );
   }
 
-  /// Picks the best search result from a TMDB search.
-  TmdbSearchResult? _pickBestSearchResult(List<TmdbSearchResult> results) {
+  /// Minimum title similarity to accept a TMDB search result. Below this,
+  /// the search engine only returned loosely-related content — enriching
+  /// with it would attach another show's seasons/episodes to this title.
+  static const _minSearchSimilarity = 0.55;
+
+  /// Picks the TMDB search result whose title best matches [query].
+  ///
+  /// Search engines rank by popularity — for weak queries the first hit can
+  /// be a completely different show. Similarity comes first; votes only
+  /// break ties between equally-similar titles.
+  TmdbSearchResult? _pickBestSearchResult(
+    List<TmdbSearchResult> results,
+    String query,
+  ) {
     if (results.isEmpty) return null;
 
-    // If first result has no votes but others do, prefer those
-    if (results.first.voteAverage == 0 && results.length > 1) {
-      for (final r in results) {
-        if (r.voteAverage > 0) return r;
+    final normalizedQuery = _matchingService.normalize(query);
+
+    TmdbSearchResult? best;
+    var bestScore = 0.0;
+    for (final r in results) {
+      final titleScore = StringSimilarity.jaroWinkler(
+        normalizedQuery,
+        _matchingService.normalize(r.title),
+      );
+      final score = titleScore + (r.voteAverage > 0 ? 0.001 : 0.0);
+      if (score > bestScore) {
+        bestScore = score;
+        best = r;
       }
     }
-    return results.first;
+
+    if (best == null || bestScore < _minSearchSimilarity) {
+      appLogger.d(
+        '[Enrichment] Nenhum resultado TMDB similar o bastante para '
+        '"$query" (melhor: ${best?.title}, score ${bestScore.toStringAsFixed(2)})',
+      );
+      return null;
+    }
+    return best;
   }
 
   // ---------------------------------------------------------------------------

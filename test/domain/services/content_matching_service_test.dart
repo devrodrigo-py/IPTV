@@ -94,9 +94,14 @@ void main() {
       expect(service.normalize('MTV'), 'mtv');
     });
 
-    test('strips trailing channel numbers', () {
-      expect(service.normalize('ESPN 100'), 'espn');
-      expect(service.normalize('HBO 2'), 'hbo');
+    test('keeps trailing numbers — they are part of real titles', () {
+      // Regressão: o normalizer antigo tratava números finais como numeração
+      // de canal e colapsava "The 100" em "the", fazendo o TMDB enriquecer
+      // a série com temporadas de outro show (The Simpsons).
+      expect(service.normalize('The 100'), 'the 100');
+      expect(service.normalize('Room 104'), 'room 104');
+      expect(service.normalize('ESPN 100'), 'espn 100');
+      expect(service.normalize('HBO 2'), 'hbo 2');
     });
 
     test('removes punctuation and collapses whitespace', () {

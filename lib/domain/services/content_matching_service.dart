@@ -108,10 +108,13 @@ class ContentMatchingService {
   /// 4. Remove year in parentheses
   /// 5. Convert separators (underscores, pipes, dashes) to spaces
   /// 6. Remove "TV" suffix (but preserve it when part of a name)
-  /// 7. Remove trailing channel numbers
-  /// 8. Lowercase and remove diacritics
-  /// 9. Remove remaining punctuation
-  /// 10. Collapse whitespace and trim
+  /// 7. Lowercase and remove diacritics
+  /// 8. Remove remaining punctuation
+  /// 9. Collapse whitespace and trim
+  ///
+  /// Deliberately does NOT strip trailing numbers: "The 100", "Room 104" and
+  /// "SporTV 2" are real titles — stripping them collapsed everything into
+  /// the leading word and made unrelated shows exact-alias-match each other.
   String normalize(String name) {
     var s = name;
 
@@ -172,11 +175,7 @@ class ContentMatchingService {
     //    like "TV Globo" or "MTV".
     s = s.replaceAll(RegExp(r'\bTV\s*$', caseSensitive: false), '');
 
-    // 7. Remove trailing numbers that look like channel numbering
-    //    (1-4 digit numbers at the end, preceded by space).
-    s = s.replaceAll(RegExp(r'\s+\d{1,4}$'), '');
-
-    // 8. Lowercase.
+    // 7. Lowercase.
     s = s.toLowerCase();
 
     // 9. Remove diacritics.

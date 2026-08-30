@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +11,8 @@ import 'package:nebula_iptv/data/datasources/player/media_kit_player_service.dar
 import 'package:nebula_iptv/data/datasources/player/web/web_player_service.dart';
 import 'package:nebula_iptv/domain/providers/epg_providers.dart';
 import 'package:nebula_iptv/domain/providers/health_check_providers.dart';
+import 'package:nebula_iptv/domain/services/alias_repair_service.dart';
+import 'package:nebula_iptv/domain/services/content_matching_service.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/features/player/providers/player_provider.dart';
 
@@ -58,6 +62,15 @@ Future<ProviderContainer> bootstrap() async {
     defaultValue: kDefaultEpgSyncIntervalHours,
   );
   container.read(epgSyncSchedulerProvider).start();
+
+  // One-shot data repair for aliases written by the old name normalizer
+  // (trailing-number stripping mixed unrelated series metadata).
+  unawaited(
+    AliasRepairService(
+      db: db,
+      matching: ContentMatchingService(db.mediaWorkDao),
+    ).repair(),
+  );
 
   appLogger.i('Bootstrap complete.');
   return container;

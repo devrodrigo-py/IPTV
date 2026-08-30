@@ -367,6 +367,8 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
                           controller: _xtreamNameController,
                           focusNode: _xtreamNameFocus,
                           autofocus: true,
+                          spellCheckConfiguration:
+                              const SpellCheckConfiguration.disabled(),
                           textInputAction: TextInputAction.next,
                           onSubmitted: (_) => _serverUrlFocus.requestFocus(),
                           decoration: const InputDecoration(
@@ -378,6 +380,8 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
                         TextField(
                           controller: _serverUrlController,
                           focusNode: _serverUrlFocus,
+                          spellCheckConfiguration:
+                              const SpellCheckConfiguration.disabled(),
                           textInputAction: TextInputAction.next,
                           keyboardType: TextInputType.url,
                           onSubmitted: (_) => _usernameFocus.requestFocus(),
@@ -390,6 +394,8 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
                         TextField(
                           controller: _usernameController,
                           focusNode: _usernameFocus,
+                          spellCheckConfiguration:
+                              const SpellCheckConfiguration.disabled(),
                           textInputAction: TextInputAction.next,
                           onSubmitted: (_) => _passwordFocus.requestFocus(),
                           decoration: const InputDecoration(
@@ -401,6 +407,8 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
                           controller: _passwordController,
                           focusNode: _passwordFocus,
                           obscureText: true,
+                          spellCheckConfiguration:
+                              const SpellCheckConfiguration.disabled(),
                           textInputAction: TextInputAction.done,
                           onSubmitted: (_) => _submit(),
                           decoration: const InputDecoration(
@@ -424,6 +432,8 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
                         TextField(
                           controller: _nameController,
                           focusNode: _m3uNameFocus,
+                          spellCheckConfiguration:
+                              const SpellCheckConfiguration.disabled(),
                           textInputAction: TextInputAction.next,
                           onSubmitted: (_) => _urlFocus.requestFocus(),
                           decoration: const InputDecoration(
@@ -435,6 +445,8 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
                         TextField(
                           controller: _urlController,
                           focusNode: _urlFocus,
+                          spellCheckConfiguration:
+                              const SpellCheckConfiguration.disabled(),
                           textInputAction: TextInputAction.done,
                           keyboardType: TextInputType.url,
                           onSubmitted: (_) => _submit(),
