@@ -382,7 +382,7 @@ class XtreamDataSource {
   // ───────────────────────────────────────────────────────────────────────────
 
   /// GET that optionally opts the request host into invalid-certificate
-  /// acceptance (per-source opt-in, ADR-002). The opt-in is scoped to the
+  /// acceptance (per-source opt-in, ADR-005). The opt-in is scoped to the
   /// request and removed afterwards.
   Future<Result<Response<T>>> _get<T>(
     String url, {
@@ -425,10 +425,7 @@ class XtreamDataSource {
             if (decoded is! List) {
               throw const FormatException('Resposta não é uma lista.');
             }
-            return decoded
-                .cast<Map<String, dynamic>>()
-                .map(parseItem)
-                .toList();
+            return decoded.cast<Map<String, dynamic>>().map(parseItem).toList();
           });
           return Success(items);
         } catch (e) {

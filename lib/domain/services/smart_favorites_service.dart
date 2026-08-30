@@ -71,16 +71,18 @@ class SmartFavoritesService {
       final channelId = row['channel_id'] as int;
       if (favoriteIds.contains(channelId)) continue;
 
-      suggestions.add(FavoriteSuggestion(
-        channelId: channelId,
-        name: row['name'] as String? ?? 'Canal $channelId',
-        logoUrl: row['logo_url'] as String?,
-        streamUrl: row['stream_url'] as String?,
-        sourceType: row['source_type'] as String?,
-        groupName: row['group_name'] as String?,
-        sessions: row['sessions'] as int? ?? 0,
-        totalWatchMs: row['total_ms'] as int? ?? 0,
-      ));
+      suggestions.add(
+        FavoriteSuggestion(
+          channelId: channelId,
+          name: row['name'] as String? ?? 'Canal $channelId',
+          logoUrl: row['logo_url'] as String?,
+          streamUrl: row['stream_url'] as String?,
+          sourceType: row['source_type'] as String?,
+          groupName: row['group_name'] as String?,
+          sessions: row['sessions'] as int? ?? 0,
+          totalWatchMs: row['total_ms'] as int? ?? 0,
+        ),
+      );
 
       if (suggestions.length >= limit) break;
     }

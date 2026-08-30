@@ -17,7 +17,8 @@ class VodItems extends Table {
   RealColumn get rating => real().nullable()();
   IntColumn get duration => integer().nullable()();
   TextColumn get year => text().nullable()();
-  TextColumn get containerExtension => text().withDefault(const Constant('mp4'))();
+  TextColumn get containerExtension =>
+      text().withDefault(const Constant('mp4'))();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   DateTimeColumn get addedAt => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();

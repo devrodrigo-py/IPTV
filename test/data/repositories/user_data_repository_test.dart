@@ -112,47 +112,53 @@ void main() {
       });
 
       test('should return Failure for unsupported version', () async {
-        final result = await repo.importData(jsonEncode({
-          'version': 99,
-          'playlists': [],
-        }));
+        final result = await repo.importData(
+          jsonEncode({
+            'version': 99,
+            'playlists': [],
+          }),
+        );
         expect(result.isFailure, isTrue);
       });
 
       test('should import valid data', () async {
-        final result = await repo.importData(jsonEncode({
-          'version': 1,
-          'playlists': [
-            {
-              'name': 'Imported',
-              'type': 'm3u',
-              'url': 'http://example.com/imported.m3u',
-              'requiresAuthentication': false,
-            },
-          ],
-          'favoriteChannelIds': [],
-        }));
+        final result = await repo.importData(
+          jsonEncode({
+            'version': 1,
+            'playlists': [
+              {
+                'name': 'Imported',
+                'type': 'm3u',
+                'url': 'http://example.com/imported.m3u',
+                'requiresAuthentication': false,
+              },
+            ],
+            'favoriteChannelIds': [],
+          }),
+        );
         expect(result.isSuccess, isTrue);
       });
 
       test('should skip Xtream playlists requiring auth', () async {
-        final result = await repo.importData(jsonEncode({
-          'version': 1,
-          'playlists': [
-            {
-              'name': 'Xtream',
-              'type': 'xtream',
-              'url': 'http://server:8080',
-              'requiresAuthentication': true,
-            },
-            {
-              'name': 'M3U',
-              'type': 'm3u',
-              'url': 'http://example.com/list.m3u',
-              'requiresAuthentication': false,
-            },
-          ],
-        }));
+        final result = await repo.importData(
+          jsonEncode({
+            'version': 1,
+            'playlists': [
+              {
+                'name': 'Xtream',
+                'type': 'xtream',
+                'url': 'http://server:8080',
+                'requiresAuthentication': true,
+              },
+              {
+                'name': 'M3U',
+                'type': 'm3u',
+                'url': 'http://example.com/list.m3u',
+                'requiresAuthentication': false,
+              },
+            ],
+          }),
+        );
         result.when(
           success: (count) => expect(count, 1),
           failure: (_) => fail('Should succeed'),

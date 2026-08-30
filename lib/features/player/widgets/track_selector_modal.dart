@@ -74,7 +74,8 @@ class _TrackSelectorModalState extends ConsumerState<TrackSelectorModal>
           _onlineResults = results;
           _isSearchingOnline = false;
           if (results.isEmpty) {
-            _onlineSearchError = 'Nenhuma legenda encontrada online para este título.';
+            _onlineSearchError =
+                'Nenhuma legenda encontrada online para este título.';
           }
         });
       }
@@ -104,9 +105,11 @@ class _TrackSelectorModalState extends ConsumerState<TrackSelectorModal>
             // Title & Close Button
             Row(
               children: [
-                const Icon(Icons.tune_rounded, color: AppColors.primary, size: 24),
+                const Icon(Icons.tune_rounded,
+                    color: AppColors.primary, size: 24),
                 const SizedBox(width: 10),
-                Text('Áudio & Legendas', style: AppTypography.title.copyWith(fontSize: 18)),
+                Text('Áudio & Legendas',
+                    style: AppTypography.title.copyWith(fontSize: 18)),
                 const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.close_rounded, color: Colors.white70),
@@ -129,8 +132,12 @@ class _TrackSelectorModalState extends ConsumerState<TrackSelectorModal>
                 labelColor: Colors.white,
                 unselectedLabelColor: Colors.white60,
                 tabs: const [
-                  Tab(icon: Icon(Icons.closed_caption_rounded, size: 20), text: 'Legendas'),
-                  Tab(icon: Icon(Icons.audiotrack_rounded, size: 20), text: 'Áudio'),
+                  Tab(
+                      icon: Icon(Icons.closed_caption_rounded, size: 20),
+                      text: 'Legendas'),
+                  Tab(
+                      icon: Icon(Icons.audiotrack_rounded, size: 20),
+                      text: 'Áudio'),
                 ],
               ),
             ),
@@ -184,13 +191,19 @@ class _TrackSelectorModalState extends ConsumerState<TrackSelectorModal>
                 padding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                 child: Text(
                   'Legendas Embutidas',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
               ...tracks.map((track) {
                 final isSelected = widget.selectedSubtitleTrackId == track.id;
-                final title = track.title ?? track.language ?? 'Faixa #${track.id}';
-                final lang = track.language != null ? ' (${track.language!.toUpperCase()})' : '';
+                final title =
+                    track.title ?? track.language ?? 'Faixa #${track.id}';
+                final lang = track.language != null
+                    ? ' (${track.language!.toUpperCase()})'
+                    : '';
 
                 return _buildTrackTile(
                   title: '$title$lang',
@@ -209,11 +222,18 @@ class _TrackSelectorModalState extends ConsumerState<TrackSelectorModal>
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: ListTile(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
                 tileColor: AppColors.surfaceElevated,
-                leading: const Icon(Icons.cloud_download_rounded, color: AppColors.primary),
-                title: const Text('Buscar Legenda Online (PT-BR)', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-                subtitle: const Text('OpenSubtitles API', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                leading: const Icon(Icons.cloud_download_rounded,
+                    color: AppColors.primary),
+                title: const Text('Buscar Legenda Online (PT-BR)',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold)),
+                subtitle: const Text('OpenSubtitles API',
+                    style: TextStyle(color: Colors.white54, fontSize: 11)),
                 onTap: _performOnlineSearch,
               ),
             ),
@@ -227,14 +247,20 @@ class _TrackSelectorModalState extends ConsumerState<TrackSelectorModal>
             if (_onlineSearchError != null)
               Padding(
                 padding: const EdgeInsets.all(8),
-                child: Text(_onlineSearchError!, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                child: Text(_onlineSearchError!,
+                    style: const TextStyle(
+                        color: AppColors.textSecondary, fontSize: 12)),
               ),
 
             // Online Search Results
             if (_onlineResults.isNotEmpty) ...[
               const Padding(
                 padding: EdgeInsets.fromLTRB(8, 12, 8, 4),
-                child: Text('Resultados Online:', style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold)),
+                child: Text('Resultados Online:',
+                    style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold)),
               ),
               ..._onlineResults.map((sub) {
                 return _buildTrackTile(
@@ -259,25 +285,31 @@ class _TrackSelectorModalState extends ConsumerState<TrackSelectorModal>
                     style: const TextStyle(color: Colors.white, fontSize: 12),
                     decoration: InputDecoration(
                       hintText: 'Colar link .srt ou .vtt...',
-                      hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+                      hintStyle:
+                          const TextStyle(color: Colors.white38, fontSize: 12),
                       filled: true,
                       fillColor: AppColors.surfaceElevated,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 8),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide.none),
                       isDense: true,
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary),
                   onPressed: () {
                     if (_urlController.text.isNotEmpty) {
                       widget.onAddExternalSubtitle(_urlController.text.trim());
                       Navigator.of(context).pop();
                     }
                   },
-                  child: const Text('Adicionar', style: TextStyle(color: Colors.white, fontSize: 12)),
+                  child: const Text('Adicionar',
+                      style: TextStyle(color: Colors.white, fontSize: 12)),
                 ),
               ],
             ),
@@ -309,7 +341,9 @@ class _TrackSelectorModalState extends ConsumerState<TrackSelectorModal>
             final isSelected = widget.selectedAudioTrackId == track.id ||
                 (widget.selectedAudioTrackId == null && index == 0);
             final title = track.title ?? track.language ?? 'Áudio #${track.id}';
-            final lang = track.language != null ? ' (${track.language!.toUpperCase()})' : '';
+            final lang = track.language != null
+                ? ' (${track.language!.toUpperCase()})'
+                : '';
 
             final isPortuguese = title.toLowerCase().contains('port') ||
                 title.toLowerCase().contains('dub') ||
@@ -317,7 +351,9 @@ class _TrackSelectorModalState extends ConsumerState<TrackSelectorModal>
 
             return _buildTrackTile(
               title: '$title$lang',
-              subtitle: isPortuguese ? 'Dublado em Português' : 'Áudio da transmissão',
+              subtitle: isPortuguese
+                  ? 'Dublado em Português'
+                  : 'Áudio da transmissão',
               isSelected: isSelected,
               onTap: () {
                 widget.onSelectAudio(track.id);
@@ -339,7 +375,9 @@ class _TrackSelectorModalState extends ConsumerState<TrackSelectorModal>
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 2),
       decoration: BoxDecoration(
-        color: isSelected ? AppColors.primary.withValues(alpha: 0.2) : Colors.transparent,
+        color: isSelected
+            ? AppColors.primary.withValues(alpha: 0.2)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isSelected ? AppColors.primary : Colors.transparent,
@@ -362,7 +400,8 @@ class _TrackSelectorModalState extends ConsumerState<TrackSelectorModal>
           style: const TextStyle(color: Colors.white54, fontSize: 11),
         ),
         trailing: isSelected
-            ? const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20)
+            ? const Icon(Icons.check_circle_rounded,
+                color: AppColors.primary, size: 20)
             : null,
         onTap: onTap,
       ),

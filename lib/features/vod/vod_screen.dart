@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nebula_iptv/features/shared/widgets/shortcut_context_menu.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/empty_view.dart';
@@ -8,8 +7,9 @@ import 'package:nebula_iptv/core/widgets/error_view.dart';
 import 'package:nebula_iptv/core/widgets/loading_view.dart';
 import 'package:nebula_iptv/features/shared/widgets/content_row.dart';
 import 'package:nebula_iptv/features/shared/widgets/hero_banner.dart';
-import 'package:nebula_iptv/features/vod/providers/vod_provider.dart';
+import 'package:nebula_iptv/features/shared/widgets/shortcut_context_menu.dart';
 import 'package:nebula_iptv/features/shell/providers/shell_navigation_provider.dart';
+import 'package:nebula_iptv/features/vod/providers/vod_provider.dart';
 import 'package:nebula_iptv/features/vod/vod_detail_screen.dart';
 import 'package:nebula_iptv/features/vod/widgets/vod_card.dart';
 import 'package:nebula_iptv/features/vod/widgets/vod_category_chips.dart';
@@ -52,7 +52,9 @@ class _VodScreenState extends ConsumerState<VodScreen> {
     }
 
     // Show grid when searching, filtering by category, or "Ver todos"
-    if (_showGrid || state.searchQuery.isNotEmpty || state.selectedCategory != null) {
+    if (_showGrid ||
+        state.searchQuery.isNotEmpty ||
+        state.selectedCategory != null) {
       return _buildGridView(context, state);
     }
 
@@ -70,7 +72,8 @@ class _VodScreenState extends ConsumerState<VodScreen> {
       ..sort((a, b) => b.value.length.compareTo(a.value.length));
     final topCategories = sortedCategories.take(15).toList();
 
-    final totalItems = 2 + topCategories.length + 1; // Hero + Search + Categories + Spacing
+    final totalItems =
+        2 + topCategories.length + 1; // Hero + Search + Categories + Spacing
 
     return ListView.builder(
       padding: EdgeInsets.zero,
@@ -158,8 +161,8 @@ class _VodScreenState extends ConsumerState<VodScreen> {
                 _gridCategory = movies.first.categoryName;
               });
               ref.read(vodScreenProvider.notifier).filterByCategory(
-                movies.first.categoryName,
-              );
+                    movies.first.categoryName,
+                  );
             },
             onItemTap: (itemIdx) {
               _openDetail(context, displayMovies[itemIdx]);
@@ -167,7 +170,8 @@ class _VodScreenState extends ConsumerState<VodScreen> {
             onItemSecondaryTap: (itemIdx, position) {
               final movie = displayMovies[itemIdx];
               showShortcutContextMenu(
-                context, ref,
+                context,
+                ref,
                 position: position,
                 channelId: movie.id,
                 channelName: movie.name,
@@ -189,8 +193,10 @@ class _VodScreenState extends ConsumerState<VodScreen> {
             children: [
               if (_showGrid)
                 IconButton(
-                  icon: const Icon(Icons.arrow_back_rounded,
-                      color: AppColors.textPrimary),
+                  icon: const Icon(
+                    Icons.arrow_back_rounded,
+                    color: AppColors.textPrimary,
+                  ),
                   onPressed: () {
                     setState(() {
                       _showGrid = false;
@@ -274,8 +280,7 @@ class _VodScreenState extends ConsumerState<VodScreen> {
                         _getCrossAxisCount(constraints.maxWidth);
                     return GridView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      gridDelegate:
-                          SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: crossAxisCount,
                         childAspectRatio: 0.6,
                         crossAxisSpacing: 12,

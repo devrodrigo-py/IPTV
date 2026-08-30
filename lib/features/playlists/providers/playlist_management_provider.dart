@@ -4,16 +4,19 @@ import 'package:nebula_iptv/core/network/dio_client.dart';
 import 'package:nebula_iptv/data/database/app_database.dart';
 import 'package:nebula_iptv/data/database/database_provider.dart';
 import 'package:nebula_iptv/data/database/tables/playlists_table.dart';
+import 'package:nebula_iptv/data/datasources/epg/epg_datasource.dart';
 import 'package:nebula_iptv/data/datasources/m3u/m3u_datasource.dart';
 import 'package:nebula_iptv/data/datasources/xtream/xtream_datasource.dart';
+import 'package:nebula_iptv/data/repositories/epg_repository.dart';
 import 'package:nebula_iptv/data/repositories/playlist_import_repository.dart';
 import 'package:nebula_iptv/data/repositories/xtream_import_repository.dart';
+import 'package:nebula_iptv/domain/providers/dedup_providers.dart';
 import 'package:nebula_iptv/domain/services/channel_dedup_service.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
+import 'package:nebula_iptv/features/playlists/widgets/playlist_file_picker.dart';
+import 'package:nebula_iptv/features/search/providers/search_provider.dart';
 import 'package:nebula_iptv/features/series/providers/series_provider.dart';
 import 'package:nebula_iptv/features/vod/providers/vod_provider.dart';
-import 'package:nebula_iptv/features/search/providers/search_provider.dart';
-import 'package:nebula_iptv/features/playlists/widgets/playlist_file_picker.dart';
 
 /// State for playlist management screen.
 class PlaylistManagementState {
@@ -46,8 +49,8 @@ class PlaylistManagementState {
 }
 
 /// Provider for playlist management.
-final playlistManagementProvider = StateNotifierProvider<
-    PlaylistManagementNotifier, PlaylistManagementState>(
+final playlistManagementProvider =
+    StateNotifierProvider<PlaylistManagementNotifier, PlaylistManagementState>(
   (ref) => PlaylistManagementNotifier(ref),
 );
 
@@ -61,6 +64,7 @@ class PlaylistManagementNotifier
   final Ref _ref;
   late final PlaylistImportRepository _importRepo;
   late final XtreamImportRepository _xtreamRepo;
+  late final EpgRepository _epgRepo;
   late final PlaylistFilePicker _filePicker;
 
   PlaylistManagementNotifier(this._ref)
@@ -76,6 +80,10 @@ class PlaylistManagementNotifier
       db: db,
       xtreamDataSource: xtreamDataSource,
       credentialStore: _ref.read(credentialStoreProvider),
+    );
+    _epgRepo = EpgRepository(
+      db: db,
+      epgDataSource: EpgDataSource(client: client),
     );
     _filePicker = PlaylistFilePicker();
     _loadPlaylists();
@@ -107,8 +115,7 @@ class PlaylistManagementNotifier
       success: (data) {
         state = state.copyWith(
           isLoading: false,
-          statusMessage:
-              '✓ Importado: ${data.channelsAdded} canais de "$name"',
+          statusMessage: '✓ Importado: ${data.channelsAdded} canais de "$name"',
           isError: false,
         );
         _loadPlaylists();
@@ -116,6 +123,7 @@ class PlaylistManagementNotifier
         _ref.read(channelsScreenProvider.notifier).refresh();
         // Keep M3U imports consistent with Xtream imports. This is deliberately
         // fire-and-forget so a health/duplicate scan never delays importing.
+        _syncEpgInBackground(data.playlistId);
         _runDeduplicationInBackground();
       },
       failure: (f) {
@@ -196,8 +204,7 @@ class PlaylistManagementNotifier
       success: (data) {
         state = state.copyWith(
           isLoading: false,
-          statusMessage:
-              '✓ Atualizado: +${data.channelsAdded} novos, '
+          statusMessage: '✓ Atualizado: +${data.channelsAdded} novos, '
               '${data.channelsDeactivated} removidos',
           isError: false,
         );
@@ -205,6 +212,7 @@ class PlaylistManagementNotifier
         _ref.read(channelsScreenProvider.notifier).refresh();
         _ref.read(seriesScreenProvider.notifier).refresh();
         _ref.read(vodScreenProvider.notifier).refresh();
+        _syncEpgInBackground(playlistId);
         _runDeduplicationInBackground();
       },
       failure: (f) {
@@ -274,8 +282,7 @@ class PlaylistManagementNotifier
       success: (data) {
         state = state.copyWith(
           isLoading: false,
-          statusMessage:
-              '✓ Importado: ${data.channelsAdded} itens '
+          statusMessage: '✓ Importado: ${data.channelsAdded} itens '
               '(${data.vodItemsImported} filmes, ${data.seriesImported} séries)',
           isError: false,
         );
@@ -285,7 +292,9 @@ class PlaylistManagementNotifier
         _ref.read(vodScreenProvider.notifier).refresh();
 
         // Run channel deduplication in background (non-blocking)
+        _syncEpgInBackground(data.playlistId);
         _runDeduplicationInBackground();
+        _runContentDedupInBackground(data.playlistId);
         _runEnrichmentInBackground();
       },
       failure: (f) {
@@ -296,6 +305,31 @@ class PlaylistManagementNotifier
         );
       },
     );
+  }
+
+  /// Downloads and parses the XMLTV EPG for a playlist in the background
+  /// (parse runs in an isolate). Failures are logged — never block the
+  /// import result.
+  Future<void> _syncEpgInBackground(int playlistId) async {
+    try {
+      final db = _ref.read(databaseProvider);
+      final playlist = await db.playlistsDao.getPlaylistById(playlistId);
+      final epgUrl = playlist?.epgUrl;
+      if (epgUrl == null || epgUrl.isEmpty) return;
+
+      final result = await _epgRepo.syncEpg(epgUrl);
+      result.when(
+        success: (r) => appLogger.i(
+          '[EPG] Synced playlist $playlistId: ${r.programsImported} programs, '
+          '${r.channelsMatched} channels matched',
+        ),
+        failure: (f) =>
+            appLogger.w('[EPG] Sync failed for playlist $playlistId: '
+                '${f.message}'),
+      );
+    } catch (e) {
+      appLogger.w('[EPG] Sync crashed for playlist $playlistId: $e');
+    }
   }
 
   /// Runs channel deduplication in background after import.
@@ -317,6 +351,29 @@ class PlaylistManagementNotifier
       _ref.read(channelsScreenProvider.notifier).refresh();
     } catch (e) {
       appLogger.w('[Dedup] Channel deduplication failed: $e');
+    }
+  }
+
+  /// Runs the VOD/series duplicate scan in the background after an Xtream
+  /// import. Results are logged (read-only scan — no data is merged).
+  Future<void> _runContentDedupInBackground(int playlistId) async {
+    try {
+      final service = _ref.read(contentDeduplicationServiceProvider);
+      for (final sourceType in ['vod', 'series']) {
+        final (result, groups) = await service.fullScan(
+          playlistId: playlistId,
+          sourceType: sourceType,
+        );
+        appLogger.i(
+          '[ContentDedup] $sourceType: ${result.duplicateGroups} duplicate '
+          'groups, ${result.totalItems} items scanned',
+        );
+        for (final group in groups.take(10)) {
+          appLogger.d('[ContentDedup] candidate: $group');
+        }
+      }
+    } catch (e) {
+      appLogger.w('[ContentDedup] Scan failed: $e');
     }
   }
 

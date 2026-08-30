@@ -53,11 +53,14 @@ class SubtitleSearchService {
   static Future<String> getApiKey() async {
     try {
       final file = await _keyFile();
-      if (await file.exists()) {
+      if (file.existsSync()) {
         final custom = (await file.readAsString()).trim();
         if (custom.isNotEmpty) return custom;
       }
-    } catch (_) {}
+    } catch (e) {
+      // Leitura best-effort: cai para a chave padrão, mas registra a causa.
+      appLogger.d('[Subtitle] Falha ao ler chave de API customizada: $e');
+    }
     return _defaultApiKey;
   }
 
@@ -70,7 +73,7 @@ class SubtitleSearchService {
   /// Removes the custom API key (reverts to default).
   static Future<void> clearApiKey() async {
     final file = await _keyFile();
-    if (await file.exists()) {
+    if (file.existsSync()) {
       await file.delete();
     }
   }
@@ -79,11 +82,15 @@ class SubtitleSearchService {
   static Future<String?> getSavedApiKey() async {
     try {
       final file = await _keyFile();
-      if (await file.exists()) {
+      if (file.existsSync()) {
         final custom = (await file.readAsString()).trim();
         if (custom.isNotEmpty) return custom;
       }
-    } catch (_) {}
+    } catch (e) {
+      // Leitura best-effort: sem chave salva é um estado válido, mas a
+      // causa da falha deve ficar registrada.
+      appLogger.d('[Subtitle] Falha ao ler chave de API salva: $e');
+    }
     return null;
   }
 
@@ -102,10 +109,12 @@ class SubtitleSearchService {
       // Clean query string (remove extra file extensions or tags)
       String cleanQuery = query
           .replaceAll(
-              RegExp(
-                  r'\b(1080p|720p|4k|2160p|bluray|web-dl|x264|x265|hevc|aac|dual)\b',
-                  caseSensitive: false),
-              '')
+            RegExp(
+              r'\b(1080p|720p|4k|2160p|bluray|web-dl|x264|x265|hevc|aac|dual)\b',
+              caseSensitive: false,
+            ),
+            '',
+          )
           .replaceAll(RegExp(r'[._-]'), ' ')
           .trim();
 
@@ -116,7 +125,8 @@ class SubtitleSearchService {
       }
 
       appLogger.d(
-          '[Subtitle] Searching online subtitles for: "$cleanQuery" ($language)');
+        '[Subtitle] Searching online subtitles for: "$cleanQuery" ($language)',
+      );
 
       // Query OpenSubtitles public API v1
       final response = await _dio.get(

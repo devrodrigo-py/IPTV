@@ -1,9 +1,13 @@
 import 'package:nebula_iptv/core/errors/app_failure.dart';
 import 'package:nebula_iptv/core/network/dio_client.dart';
 import 'package:nebula_iptv/core/result/result.dart';
+import 'package:nebula_iptv/core/utils/isolate_parse.dart';
 import 'package:nebula_iptv/data/datasources/epg/xmltv_parser.dart';
 
 /// Data source for fetching and parsing EPG/XMLTV data.
+///
+/// Parsing runs outside the main thread — XMLTV files routinely reach
+/// tens of megabytes (spec §31).
 class EpgDataSource {
   final DioClient _client;
   final XmltvParser _parser;
@@ -18,8 +22,8 @@ class EpgDataSource {
   Future<Result<XmltvParseResult>> fetchEpg(String url) async {
     final response = await _client.get<String>(url);
 
-    return response.when(
-      success: (res) {
+    return await response.when(
+      success: (res) async {
         final content = res.data;
         if (content == null || content.isEmpty) {
           return const Failure(
@@ -28,7 +32,14 @@ class EpgDataSource {
         }
 
         try {
-          final result = _parser.parse(content);
+          // Capture only the parser — touching instance state would
+          // implicitly capture `this` (and the DioClient), which cannot
+          // cross an isolate boundary.
+          final parser = _parser;
+          final result = await parseInIsolate(
+            content,
+            (String c) => parser.parse(c),
+          );
           if (result.programs.isEmpty) {
             return const Failure(
               EpgParseFailure(

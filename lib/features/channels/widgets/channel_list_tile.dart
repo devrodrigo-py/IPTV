@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
+import 'package:nebula_iptv/core/widgets/nebula_cached_image.dart';
 import 'package:nebula_iptv/data/database/app_database.dart';
 
 /// A single channel tile in the channel list.
@@ -49,10 +50,12 @@ class ChannelListTile extends StatelessWidget {
                   child: channel.logoUrl != null
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            channel.logoUrl!,
+                          child: NebulaCachedImage(
+                            imageUrl: channel.logoUrl,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
+                            cacheWidth: 96,
+                            cacheHeight: 96,
+                            placeholder: const Icon(
                               Icons.live_tv_rounded,
                               size: 20,
                               color: AppColors.textSecondary,

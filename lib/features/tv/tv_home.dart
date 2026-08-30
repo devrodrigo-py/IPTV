@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/constants/tv_constants.dart';
+import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/cached_logo.dart';
+import 'package:nebula_iptv/core/widgets/nebula_cached_image.dart';
 import 'package:nebula_iptv/core/widgets/tv_focusable_card.dart';
 import 'package:nebula_iptv/data/database/app_database.dart' hide SeriesItem;
-import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/domain/providers/watch_providers.dart';
 import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
+import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/features/home/home_screen.dart';
 import 'package:nebula_iptv/features/player/player_screen.dart';
-import 'package:nebula_iptv/features/series/providers/series_provider.dart' show SeriesItem;
+import 'package:nebula_iptv/features/series/providers/series_provider.dart'
+    show SeriesItem;
 import 'package:nebula_iptv/features/series/series_detail_screen.dart';
 import 'package:nebula_iptv/l10n/app_localizations.dart';
 
@@ -22,19 +25,24 @@ import 'package:nebula_iptv/l10n/app_localizations.dart';
 class TvHome extends ConsumerWidget {
   const TvHome({super.key});
 
-  void _playFromHistory(BuildContext context, WidgetRef ref, Map<String, dynamic> entry) async {
+  void _playFromHistory(
+      BuildContext context, WidgetRef ref, Map<String, dynamic> entry) async {
     final streamUrl = entry['stream_url'] as String?;
     final name = entry['content_name'] as String? ??
-        entry['channel_name'] as String? ?? 'Canal';
+        entry['channel_name'] as String? ??
+        'Canal';
     final contentType = entry['content_type'] as String? ?? 'live';
     final channelId = entry['channel_id'] as int? ?? 0;
-    final thumbnailUrl = entry['thumbnail_url'] as String? ?? entry['logo_url'] as String?;
+    final thumbnailUrl =
+        entry['thumbnail_url'] as String? ?? entry['logo_url'] as String?;
 
     // Series: navigate to detail screen
     if (contentType == 'series') {
       try {
         final db = ref.read(databaseProvider);
-        final ch = await (db.select(db.channels)..where((c) => c.id.equals(channelId))).getSingleOrNull();
+        final ch = await (db.select(db.channels)
+              ..where((c) => c.id.equals(channelId)))
+            .getSingleOrNull();
         if (ch != null && context.mounted) {
           final seriesItem = SeriesItem(
             id: ch.id,
@@ -44,53 +52,64 @@ class TvHome extends ConsumerWidget {
             categoryName: ch.groupName,
             sourceId: ch.sourceId,
           );
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => SeriesDetailScreen(series: seriesItem),
-          ));
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => SeriesDetailScreen(series: seriesItem),
+            ),
+          );
         }
-      } catch (_) {}
+      } catch (e) {
+        // Navegação é o caminho visível: sem ela o toque "não faz nada",
+        // então a falha precisa ficar registrada para diagnóstico.
+        appLogger.w('[TvHome] Falha ao abrir série do histórico: $e');
+      }
       return;
     }
 
     if (streamUrl == null || streamUrl.isEmpty) return;
 
-    final progressPercent = (entry['progress_percent'] as num?)?.toDouble() ?? 0.0;
+    final progressPercent =
+        (entry['progress_percent'] as num?)?.toDouble() ?? 0.0;
     final totalDurationMs = entry['total_duration_ms'] as int? ?? 0;
     final watchedDurationMs = entry['watched_duration_ms'] as int? ?? 0;
     final seekToMs = (progressPercent > 0 && totalDurationMs > 0)
         ? (progressPercent * totalDurationMs).round()
         : watchedDurationMs;
 
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => PlayerScreen(
-        channelName: name,
-        streamUrl: streamUrl,
-        logoUrl: thumbnailUrl,
-        seekToMs: seekToMs > 0 ? seekToMs : null,
-        contentInfo: WatchContentInfo(
-          channelId: channelId,
-          name: name,
-          contentType: contentType,
-          thumbnailUrl: thumbnailUrl,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PlayerScreen(
+          channelName: name,
+          streamUrl: streamUrl,
+          logoUrl: thumbnailUrl,
+          seekToMs: seekToMs > 0 ? seekToMs : null,
+          contentInfo: WatchContentInfo(
+            channelId: channelId,
+            name: name,
+            contentType: contentType,
+            thumbnailUrl: thumbnailUrl,
+          ),
         ),
       ),
-    ));
+    );
   }
 
   void _playChannel(BuildContext context, Channel channel) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => PlayerScreen(
-        channelName: channel.name,
-        streamUrl: channel.streamUrl,
-        logoUrl: channel.logoUrl,
-        contentInfo: WatchContentInfo(
-          channelId: channel.id,
-          name: channel.name,
-          contentType: channel.sourceType.name,
-          thumbnailUrl: channel.logoUrl,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PlayerScreen(
+          channelName: channel.name,
+          streamUrl: channel.streamUrl,
+          logoUrl: channel.logoUrl,
+          contentInfo: WatchContentInfo(
+            channelId: channel.id,
+            name: channel.name,
+            contentType: channel.sourceType.name,
+            thumbnailUrl: channel.logoUrl,
+          ),
         ),
       ),
-    ));
+    );
   }
 
   @override
@@ -107,7 +126,8 @@ class TvHome extends ConsumerWidget {
           Text(
             l10n.appTitle,
             style: AppTypography.display.copyWith(
-              fontSize: AppTypography.display.fontSize! * TvConstants.fontScaleFactor,
+              fontSize:
+                  AppTypography.display.fontSize! * TvConstants.fontScaleFactor,
             ),
           ),
           const SizedBox(height: 24),
@@ -117,7 +137,8 @@ class TvHome extends ConsumerWidget {
             Text(
               'Continuar assistindo',
               style: AppTypography.title.copyWith(
-                fontSize: AppTypography.title.fontSize! * TvConstants.fontScaleFactor,
+                fontSize:
+                    AppTypography.title.fontSize! * TvConstants.fontScaleFactor,
               ),
             ),
             const SizedBox(height: 16),
@@ -146,7 +167,8 @@ class TvHome extends ConsumerWidget {
             Text(
               l10n.favorites,
               style: AppTypography.title.copyWith(
-                fontSize: AppTypography.title.fontSize! * TvConstants.fontScaleFactor,
+                fontSize:
+                    AppTypography.title.fontSize! * TvConstants.fontScaleFactor,
               ),
             ),
             const SizedBox(height: 16),
@@ -207,8 +229,10 @@ class _TvHistoryCardContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = entry['content_name'] as String? ??
-        entry['channel_name'] as String? ?? 'Canal';
-    final thumbnailUrl = entry['thumbnail_url'] as String? ?? entry['logo_url'] as String?;
+        entry['channel_name'] as String? ??
+        'Canal';
+    final thumbnailUrl =
+        entry['thumbnail_url'] as String? ?? entry['logo_url'] as String?;
     final progress = (entry['progress_percent'] as num?)?.toDouble() ?? 0.0;
 
     return Stack(
@@ -216,12 +240,12 @@ class _TvHistoryCardContent extends StatelessWidget {
         // Thumbnail or placeholder
         if (thumbnailUrl != null && thumbnailUrl.isNotEmpty)
           Positioned.fill(
-            child: Image.network(
-              thumbnailUrl,
+            child: NebulaCachedImage(
+              imageUrl: thumbnailUrl,
               fit: BoxFit.cover,
               cacheWidth: 300,
               cacheHeight: 200,
-              errorBuilder: (_, __, ___) => _buildFallback(),
+              placeholder: _buildFallback(),
             ),
           )
         else
@@ -285,7 +309,8 @@ class _TvHistoryCardContent extends StatelessWidget {
     return Container(
       color: AppColors.surfaceElevated,
       child: const Center(
-        child: Icon(Icons.play_circle_fill_rounded, color: AppColors.primary, size: 40),
+        child: Icon(Icons.play_circle_fill_rounded,
+            color: AppColors.primary, size: 40),
       ),
     );
   }
@@ -310,7 +335,8 @@ class _TvChannelCardContent extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             channel.name,
-            style: AppTypography.body.copyWith(fontSize: 14, fontWeight: FontWeight.w600),
+            style: AppTypography.body
+                .copyWith(fontSize: 14, fontWeight: FontWeight.w600),
             maxLines: 2,
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,

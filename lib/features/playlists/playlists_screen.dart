@@ -93,9 +93,8 @@ class PlaylistsScreen extends ConsumerWidget {
                     child: Text(
                       state.statusMessage!,
                       style: AppTypography.body.copyWith(
-                        color: state.isError
-                            ? AppColors.error
-                            : AppColors.success,
+                        color:
+                            state.isError ? AppColors.error : AppColors.success,
                       ),
                     ),
                   ),
@@ -170,15 +169,14 @@ class PlaylistsScreen extends ConsumerWidget {
       builder: (ctx) => _AddPlaylistDialog(
         onImportUrl: (name, url, allowInsecureTls) {
           Navigator.of(ctx).pop();
-          ref
-              .read(playlistManagementProvider.notifier)
-              .importFromUrl(
+          ref.read(playlistManagementProvider.notifier).importFromUrl(
                 name: name,
                 url: url,
                 allowInsecureTls: allowInsecureTls,
               );
         },
-        onImportXtream: (name, serverUrl, username, password, allowInsecureTls) {
+        onImportXtream:
+            (name, serverUrl, username, password, allowInsecureTls) {
           Navigator.of(ctx).pop();
           ref.read(playlistManagementProvider.notifier).importFromXtream(
                 name: name,
@@ -198,7 +196,8 @@ class PlaylistsScreen extends ConsumerWidget {
 }
 
 class _AddPlaylistDialog extends StatefulWidget {
-  final void Function(String name, String url, bool allowInsecureTls) onImportUrl;
+  final void Function(String name, String url, bool allowInsecureTls)
+      onImportUrl;
   final void Function(
     String name,
     String serverUrl,
@@ -249,8 +248,8 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
 
-    _xtreamNameFocus.onKeyEvent = (node, event) =>
-        _handleFieldKeyEvent(_serverUrlFocus, null, event);
+    _xtreamNameFocus.onKeyEvent =
+        (node, event) => _handleFieldKeyEvent(_serverUrlFocus, null, event);
     _serverUrlFocus.onKeyEvent = (node, event) =>
         _handleFieldKeyEvent(_usernameFocus, _xtreamNameFocus, event);
     _usernameFocus.onKeyEvent = (node, event) =>
@@ -258,15 +257,16 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
     _passwordFocus.onKeyEvent = (node, event) =>
         _handleFieldKeyEvent(_importButtonFocus, _usernameFocus, event);
 
-    _m3uNameFocus.onKeyEvent = (node, event) =>
-        _handleFieldKeyEvent(_urlFocus, null, event);
+    _m3uNameFocus.onKeyEvent =
+        (node, event) => _handleFieldKeyEvent(_urlFocus, null, event);
     _urlFocus.onKeyEvent = (node, event) =>
         _handleFieldKeyEvent(_fileButtonFocus, _m3uNameFocus, event);
     _fileButtonFocus.onKeyEvent = (node, event) =>
         _handleFieldKeyEvent(_importButtonFocus, _urlFocus, event);
   }
 
-  KeyEventResult _handleFieldKeyEvent(FocusNode nextFocus, FocusNode? prevFocus, KeyEvent event) {
+  KeyEventResult _handleFieldKeyEvent(
+      FocusNode nextFocus, FocusNode? prevFocus, KeyEvent event) {
     if (event is KeyDownEvent) {
       if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
         nextFocus.requestFocus();
@@ -310,8 +310,12 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
       final serverUrl = _serverUrlController.text.trim();
       final username = _usernameController.text.trim();
       final password = _passwordController.text.trim();
-      if (name.isEmpty || serverUrl.isEmpty ||
-          username.isEmpty || password.isEmpty) return;
+      if (name.isEmpty ||
+          serverUrl.isEmpty ||
+          username.isEmpty ||
+          password.isEmpty) {
+        return;
+      }
       widget.onImportXtream(
         name,
         serverUrl,
@@ -478,7 +482,7 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
 }
 
 /// Opt-in checkbox to accept invalid/self-signed certificates from a
-/// specific source (ADR-002) with a visible security warning.
+/// specific source (ADR-005) with a visible security warning.
 class _InsecureTlsCheckbox extends StatelessWidget {
   final bool value;
   final ValueChanged<bool> onChanged;

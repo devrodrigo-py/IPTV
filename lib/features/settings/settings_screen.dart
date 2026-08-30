@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
-import 'package:nebula_iptv/data/database/app_database.dart';
 import 'package:nebula_iptv/data/database/tables/playlists_table.dart';
+import 'package:nebula_iptv/domain/providers/health_check_providers.dart';
+import 'package:nebula_iptv/domain/services/subtitle_search_service.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/features/parental_control/parental_control_service.dart';
 import 'package:nebula_iptv/features/playlists/providers/playlist_management_provider.dart';
 import 'package:nebula_iptv/features/profiles/profile_edit_dialog.dart';
 import 'package:nebula_iptv/features/profiles/providers/profile_provider.dart';
-import 'package:nebula_iptv/domain/services/subtitle_search_service.dart';
+import 'package:nebula_iptv/features/search/providers/search_provider.dart'
+    show batchEnrichmentProvider;
 import 'package:nebula_iptv/l10n/app_localizations.dart';
 
 /// Settings screen.
@@ -61,12 +64,15 @@ class SettingsScreen extends ConsumerWidget {
                           icon: const Icon(Icons.edit_rounded, size: 18),
                           color: AppColors.textSecondary,
                           onPressed: () async {
-                            final result = await showDialog<Map<String, String>>(
+                            final result =
+                                await showDialog<Map<String, String>>(
                               context: context,
                               builder: (_) => ProfileEditDialog(
                                 initialName: name,
-                                initialIcon: p['avatar_icon'] as String? ?? 'person',
-                                initialColor: p['avatar_color'] as String? ?? '#7B2FF7',
+                                initialIcon:
+                                    p['avatar_icon'] as String? ?? 'person',
+                                initialColor:
+                                    p['avatar_color'] as String? ?? '#7B2FF7',
                               ),
                             );
                             if (result != null) {
@@ -83,7 +89,8 @@ class SettingsScreen extends ConsumerWidget {
                         ),
                         if (!isActive && (p['is_default'] as int? ?? 0) == 0)
                           IconButton(
-                            icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                            icon: const Icon(Icons.delete_outline_rounded,
+                                size: 18),
                             color: AppColors.error,
                             onPressed: () async {
                               final confirm = await showDialog<bool>(
@@ -91,15 +98,19 @@ class SettingsScreen extends ConsumerWidget {
                                 builder: (_) => AlertDialog(
                                   backgroundColor: AppColors.surface,
                                   title: const Text('Excluir perfil?'),
-                                  content: Text('Isso vai excluir o perfil "$name" e seus atalhos.'),
+                                  content: Text(
+                                      'Isso vai excluir o perfil "$name" e seus atalhos.'),
                                   actions: [
                                     TextButton(
-                                      onPressed: () => Navigator.pop(context, false),
+                                      onPressed: () =>
+                                          Navigator.pop(context, false),
                                       child: const Text('Cancelar'),
                                     ),
                                     TextButton(
-                                      onPressed: () => Navigator.pop(context, true),
-                                      style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                                      onPressed: () =>
+                                          Navigator.pop(context, true),
+                                      style: TextButton.styleFrom(
+                                          foregroundColor: AppColors.error),
                                       child: const Text('Excluir'),
                                     ),
                                   ],
@@ -123,13 +134,13 @@ class SettingsScreen extends ConsumerWidget {
                   const Padding(
                     padding: EdgeInsets.all(16),
                     child: CircularProgressIndicator(),
-                  )
+                  ),
                 ],
                 error: (_, __) => [
                   const Padding(
                     padding: EdgeInsets.all(16),
                     child: Text('Erro ao carregar perfis'),
-                  )
+                  ),
                 ],
               ),
               _SettingsTile(
@@ -175,13 +186,16 @@ class SettingsScreen extends ConsumerWidget {
                       : 'Nunca sincronizado';
 
                   return _SettingsTile(
-                    icon: isXtream ? Icons.dns_rounded : Icons.playlist_play_rounded,
+                    icon: isXtream
+                        ? Icons.dns_rounded
+                        : Icons.playlist_play_rounded,
                     title: playlist.name,
                     subtitle: isXtream
                         ? 'Xtream Codes • Usuário: $user • Atualizado: $lastSync'
                         : 'Lista M3U • Atualizado: $lastSync',
                     trailing: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: playlist.isActive
                             ? AppColors.success.withValues(alpha: 0.15)
@@ -193,7 +207,9 @@ class SettingsScreen extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: playlist.isActive ? AppColors.success : AppColors.textSecondary,
+                          color: playlist.isActive
+                              ? AppColors.success
+                              : AppColors.textSecondary,
                         ),
                       ),
                     ),
@@ -208,14 +224,16 @@ class SettingsScreen extends ConsumerWidget {
             title: 'Controle Parental',
             children: [
               _SettingsTile(
-                icon: parentalState.isEnabled ? Icons.lock_rounded : Icons.lock_open_rounded,
+                icon: parentalState.isEnabled
+                    ? Icons.lock_rounded
+                    : Icons.lock_open_rounded,
                 title: 'Bloqueio de Conteúdo Adulto (+18)',
                 subtitle: parentalState.isEnabled
                     ? 'Ativado • Protegido por PIN de 4 dígitos'
                     : 'Desativado • Categorias adultas visíveis sem senha',
                 trailing: Switch(
                   value: parentalState.isEnabled,
-                  activeColor: AppColors.primary,
+                  activeThumbColor: AppColors.primary,
                   onChanged: (enabled) async {
                     if (enabled) {
                       _showSetPinDialog(context, ref);
@@ -224,7 +242,9 @@ class SettingsScreen extends ConsumerWidget {
                           .read(parentalControlProvider.notifier)
                           .requestPinUnlock(context);
                       if (unlocked) {
-                        ref.read(parentalControlProvider.notifier).toggleEnabled(false);
+                        ref
+                            .read(parentalControlProvider.notifier)
+                            .toggleEnabled(false);
                       }
                     }
                   },
@@ -248,7 +268,8 @@ class SettingsScreen extends ConsumerWidget {
               _SettingsTile(
                 icon: Icons.audiotrack_rounded,
                 title: 'Áudio Padrão',
-                subtitle: 'Português (Brasil) • Dublado por padrão quando disponível',
+                subtitle:
+                    'Português (Brasil) • Dublado por padrão quando disponível',
                 onTap: () {},
               ),
               _SettingsTile(
@@ -291,9 +312,75 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ],
           ),
+
+          // Maintenance — explicit triggers for background jobs
+          _SettingsSection(
+            title: 'Manutenção',
+            children: [
+              _SettingsTile(
+                icon: Icons.auto_awesome_rounded,
+                title: 'Buscar metadados (TMDB)',
+                subtitle: 'Enriquece filmes e séries com pôsteres e sinopses',
+                onTap: () => _runMetadataEnrichment(context, ref),
+              ),
+              SwitchListTile(
+                secondary: const Icon(
+                  Icons.health_and_safety_rounded,
+                  color: AppColors.primary,
+                ),
+                activeThumbColor: AppColors.primary,
+                title: const Text(
+                  'Verificação de saúde dos canais',
+                  style: TextStyle(fontSize: 14),
+                ),
+                subtitle: const Text(
+                  'Testa a disponibilidade dos streams em segundo plano',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                value: ref.watch(healthCheckEnabledProvider),
+                onChanged: (enabled) {
+                  final service = ref.read(healthCheckServiceProvider);
+                  if (enabled) {
+                    service.startBackgroundCheck();
+                  } else {
+                    service.stop();
+                  }
+                  ref.read(healthCheckEnabledProvider.notifier).state = enabled;
+                },
+              ),
+            ],
+          ),
         ],
       ),
     );
+  }
+
+  /// Runs TMDB batch enrichment with explicit user consent (moved out of
+  /// HomeScreen's build — a network job must not be a render side effect).
+  void _runMetadataEnrichment(BuildContext context, WidgetRef ref) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Busca de metadados iniciada...')),
+    );
+    Future(() async {
+      try {
+        final service = ref.read(batchEnrichmentProvider);
+        await service.runEnrichment(batchSize: 50);
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Metadados atualizados!')),
+        );
+      } catch (e) {
+        appLogger.w('[Enrichment] Manual run failed: $e');
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível concluir a busca agora.'),
+          ),
+        );
+      }
+    });
   }
 
   void _showSetPinDialog(BuildContext context, WidgetRef ref) {
@@ -305,9 +392,11 @@ class SettingsScreen extends ConsumerWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            const Icon(Icons.security_rounded, color: AppColors.primary, size: 24),
+            const Icon(Icons.security_rounded,
+                color: AppColors.primary, size: 24),
             const SizedBox(width: 10),
-            Text('Definir PIN de 4 Dígitos', style: AppTypography.title.copyWith(fontSize: 18)),
+            Text('Definir PIN de 4 Dígitos',
+                style: AppTypography.title.copyWith(fontSize: 18)),
           ],
         ),
         content: Column(
@@ -327,7 +416,10 @@ class SettingsScreen extends ConsumerWidget {
                 keyboardType: TextInputType.number,
                 maxLength: 4,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 24, letterSpacing: 12, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                    fontSize: 24,
+                    letterSpacing: 12,
+                    fontWeight: FontWeight.bold),
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: const InputDecoration(
                   counterText: '',
@@ -346,17 +438,21 @@ class SettingsScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancelar', style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text('Cancelar',
+                style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
             onPressed: () {
               if (pinController.text.length == 4) {
-                ref.read(parentalControlProvider.notifier).setPin(pinController.text);
+                ref
+                    .read(parentalControlProvider.notifier)
+                    .setPin(pinController.text);
                 ref.read(parentalControlProvider.notifier).toggleEnabled(true);
                 Navigator.of(ctx).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Controle parental ativado com sucesso!')),
+                  const SnackBar(
+                      content: Text('Controle parental ativado com sucesso!')),
                 );
               }
             },
@@ -385,8 +481,10 @@ class SettingsScreen extends ConsumerWidget {
           children: [
             const Icon(Icons.key_rounded, color: AppColors.primary, size: 24),
             const SizedBox(width: 10),
-            Text('API Key OpenSubtitles',
-                style: AppTypography.title.copyWith(fontSize: 18)),
+            Text(
+              'API Key OpenSubtitles',
+              style: AppTypography.title.copyWith(fontSize: 18),
+            ),
           ],
         ),
         content: Column(
@@ -433,17 +531,22 @@ class SettingsScreen extends ConsumerWidget {
                   );
                 }
               },
-              child: const Text('Remover',
-                  style: TextStyle(color: Colors.redAccent)),
+              child: const Text(
+                'Remover',
+                style: TextStyle(color: Colors.redAccent),
+              ),
             ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancelar',
-                style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary),
+              backgroundColor: AppColors.primary,
+            ),
             onPressed: () async {
               final key = keyController.text.trim();
               if (key.isNotEmpty) {
@@ -452,14 +555,18 @@ class SettingsScreen extends ConsumerWidget {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                        content: Text(
-                            'API Key salva! Busca de legendas ativada.')),
+                      content: Text(
+                        'API Key salva! Busca de legendas ativada.',
+                      ),
+                    ),
                   );
                 }
               }
             },
-            child: const Text('Salvar',
-                style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Salvar',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),

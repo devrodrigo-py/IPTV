@@ -1,39 +1,37 @@
 import 'package:drift/drift.dart';
-import 'package:nebula_iptv/data/database/daos/channels_dao.dart';
 import 'package:nebula_iptv/data/database/daos/category_cache_dao.dart';
+import 'package:nebula_iptv/data/database/daos/channel_group_dao.dart';
+import 'package:nebula_iptv/data/database/daos/channels_dao.dart';
 import 'package:nebula_iptv/data/database/daos/epg_dao.dart';
 import 'package:nebula_iptv/data/database/daos/favorites_dao.dart';
-import 'package:nebula_iptv/data/database/daos/playlists_dao.dart';
-import 'package:nebula_iptv/data/database/daos/series_dao.dart';
 import 'package:nebula_iptv/data/database/daos/health_check_dao.dart';
 import 'package:nebula_iptv/data/database/daos/media_work_dao.dart';
+import 'package:nebula_iptv/data/database/daos/playlists_dao.dart';
 import 'package:nebula_iptv/data/database/daos/profile_dao.dart';
-import 'package:nebula_iptv/data/database/daos/shortcut_dao.dart';
 import 'package:nebula_iptv/data/database/daos/ratings_dao.dart';
-import 'package:nebula_iptv/data/database/daos/channel_group_dao.dart';
+import 'package:nebula_iptv/data/database/daos/search_aliases_dao.dart';
+import 'package:nebula_iptv/data/database/daos/series_dao.dart';
+import 'package:nebula_iptv/data/database/daos/shortcut_dao.dart';
 import 'package:nebula_iptv/data/database/daos/tmdb_cache_dao.dart';
 import 'package:nebula_iptv/data/database/daos/vod_dao.dart';
 import 'package:nebula_iptv/data/database/daos/watch_history_dao.dart';
+import 'package:nebula_iptv/data/database/daos/watch_stats_dao.dart';
+import 'package:nebula_iptv/data/database/tables/channel_group_tables.dart';
 import 'package:nebula_iptv/data/database/tables/channels_table.dart';
 import 'package:nebula_iptv/data/database/tables/epg_programs_table.dart';
 import 'package:nebula_iptv/data/database/tables/episodes_table.dart';
 import 'package:nebula_iptv/data/database/tables/favorites_table.dart';
-import 'package:nebula_iptv/data/database/tables/media_work_tables.dart';
-import 'package:nebula_iptv/data/database/tables/channel_group_tables.dart';
 import 'package:nebula_iptv/data/database/tables/health_check_tables.dart';
+import 'package:nebula_iptv/data/database/tables/media_work_tables.dart';
 import 'package:nebula_iptv/data/database/tables/playlists_table.dart';
-import 'package:nebula_iptv/data/database/tables/seasons_table.dart';
-import 'package:nebula_iptv/data/database/tables/series_table.dart';
 import 'package:nebula_iptv/data/database/tables/profile_tables.dart';
 import 'package:nebula_iptv/data/database/tables/ratings_table.dart';
+import 'package:nebula_iptv/data/database/tables/search_aliases_table.dart';
+import 'package:nebula_iptv/data/database/tables/seasons_table.dart';
+import 'package:nebula_iptv/data/database/tables/series_table.dart';
 import 'package:nebula_iptv/data/database/tables/vod_table.dart';
 import 'package:nebula_iptv/data/database/tables/watch_history_table.dart';
 import 'package:nebula_iptv/data/database/tables/watch_stats_table.dart';
-import 'package:nebula_iptv/data/database/daos/watch_stats_dao.dart';
-
-import 'package:nebula_iptv/data/database/daos/search_aliases_dao.dart';
-import 'package:nebula_iptv/data/database/tables/search_aliases_table.dart';
-
 
 part 'app_database.g.dart';
 
@@ -68,7 +66,7 @@ class AppDatabase extends _$AppDatabase {
       const DriftDatabaseOptions(storeDateTimeAsText: true);
 
   @override
-int get schemaVersion => 11;
+  int get schemaVersion => 11;
 
   // Manual DAO gette
   CategoryCacheDao get categoryCacheDao => CategoryCacheDao(this);
@@ -149,7 +147,7 @@ int get schemaVersion => 11;
           await _createRatingsTables();
         }
         if (from < 11) {
-          // v10 → v11: per-source TLS opt-in column (ADR-002)
+          // v10 → v11: per-source TLS opt-in column (ADR-005)
           await m.addColumn(playlists, playlists.allowInsecureTls);
         }
       },

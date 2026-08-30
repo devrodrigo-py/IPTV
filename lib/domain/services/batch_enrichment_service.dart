@@ -55,7 +55,8 @@ class BatchEnrichmentService {
     try {
       // Get already enriched channel IDs
       final enriched = await _aliasesDao.getEnrichedChannelIds();
-      appLogger.i('[BatchEnrich] Already enriched: ${enriched.length} channels');
+      appLogger
+          .i('[BatchEnrich] Already enriched: ${enriched.length} channels');
 
       // Process series first
       await _processType('series', enriched, batchSize);
@@ -88,7 +89,7 @@ class BatchEnrichmentService {
   ) async {
     // Get total count for this type
     final countRows = await _db.customSelect(
-      "SELECT COUNT(*) as cnt FROM channels WHERE source_type = ? AND is_active = 1",
+      'SELECT COUNT(*) as cnt FROM channels WHERE source_type = ? AND is_active = 1',
       variables: [Variable.withString(sourceType)],
     ).get();
     final totalForType = countRows.first.read<int>('cnt');
@@ -160,11 +161,18 @@ class BatchEnrichmentService {
           ? await _tmdbDs.searchTv(searchName, language: 'pt-BR')
           : await _tmdbDs.searchMovie(searchName, language: 'pt-BR');
 
-      if (!result.isSuccess) return;
-
-      final data = (result as dynamic).data;
-      if (data == null || (data as List).isEmpty) return;
-      final results = data as List;
+      final List results;
+      switch (result) {
+        case Success(:final data) when data.isNotEmpty:
+          results = data;
+        case Success():
+          return; // Genuine empty result — nothing to enrich.
+        case Failure(:final failure):
+          appLogger.w(
+            '[BatchEnrich] TMDB falhou para "$channelName": ${failure.message}',
+          );
+          return;
+      }
 
       // Take the first (best) match
       final best = results.first;
@@ -185,12 +193,14 @@ class BatchEnrichmentService {
       aliases.add(tmdbTitle);
 
       // Add the original/English title
-      if (resultEn.isSuccess) {
-        final enData = (resultEn as dynamic).data;
-        if (enData != null && (enData as List).isNotEmpty) {
-          final enTitle = enData.first.title as String;
-          aliases.add(enTitle);
-        }
+      if (resultEn case Success(data: final enData)
+          when enData.isNotEmpty && enData.first.title.isNotEmpty) {
+        aliases.add(enData.first.title);
+      } else if (resultEn case Failure(:final failure)) {
+        appLogger.d(
+          '[BatchEnrich] TMDB en-US falhou para "$channelName": '
+          '${failure.message}',
+        );
       }
 
       // Add the channel's own name (so it can be found by its current name too)
@@ -209,7 +219,8 @@ class BatchEnrichmentService {
 
       _matched++;
     } catch (e) {
-      // Silently continue on individual failures
+      // One bad item must not abort the batch, but the failure is visible.
+      appLogger.w('[BatchEnrich] Falha ao enriquecer "$channelName": $e');
     }
   }
 
@@ -219,7 +230,10 @@ class BatchEnrichmentService {
     return name
         .replaceAll(RegExp(r'\[.*?\]'), '') // Remove [brackets]
         .replaceAll(RegExp(r'\(.*?\)'), '') // Remove (parens)
-        .replaceAll(RegExp(r'\b(FHD|HD|SD|4K|UHD|H\.?265|HEVC)\b', caseSensitive: false), '')
+        .replaceAll(
+            RegExp(r'\b(FHD|HD|SD|4K|UHD|H\.?265|HEVC)\b',
+                caseSensitive: false),
+            '')
         .replaceAll(RegExp(r'\b(20\d{2}|19\d{2})\b'), '') // Remove years
         .replaceAll(RegExp(r'[._]'), ' ') // Dots/underscores to spaces
         .replaceAll(RegExp(r'\s+'), ' ')

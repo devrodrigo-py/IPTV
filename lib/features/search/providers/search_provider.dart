@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/result/result.dart';
-import 'package:nebula_iptv/data/datasources/tmdb/tmdb_datasource.dart';
 import 'package:nebula_iptv/data/datasources/tmdb/tmdb_models.dart';
 import 'package:nebula_iptv/domain/providers/content_providers.dart';
 import 'package:nebula_iptv/domain/services/batch_enrichment_service.dart';
@@ -122,9 +121,10 @@ class SearchNotifier extends StateNotifier<SearchState> {
       // Smart search: prioritize word-boundary matches over substring matches
       // Use multiple terms for multi-word queries (AND logic)
       final words = query.toLowerCase().split(RegExp(r'\s+'));
-      
+
       // Build WHERE clause: each word must appear in the name
-      final conditions = words.map((_) => 'name LIKE ? COLLATE NOCASE').join(' AND ');
+      final conditions =
+          words.map((_) => 'name LIKE ? COLLATE NOCASE').join(' AND ');
       final variables = words.map((w) => Variable.withString('%$w%')).toList();
 
       // Search channels (live)
@@ -144,7 +144,11 @@ class SearchNotifier extends StateNotifier<SearchState> {
           name ASC
         LIMIT 50
         ''',
-        variables: [...variables, Variable.withString('$query%'), Variable.withString('%$query%')],
+        variables: [
+          ...variables,
+          Variable.withString('$query%'),
+          Variable.withString('%$query%')
+        ],
       ).get();
 
       // Search VOD
@@ -164,7 +168,11 @@ class SearchNotifier extends StateNotifier<SearchState> {
           name ASC
         LIMIT 50
         ''',
-        variables: [...variables, Variable.withString('$query%'), Variable.withString('%$query%')],
+        variables: [
+          ...variables,
+          Variable.withString('$query%'),
+          Variable.withString('%$query%')
+        ],
       ).get();
 
       // Search Series
@@ -184,44 +192,60 @@ class SearchNotifier extends StateNotifier<SearchState> {
           name ASC
         LIMIT 50
         ''',
-        variables: [...variables, Variable.withString('$query%'), Variable.withString('%$query%')],
+        variables: [
+          ...variables,
+          Variable.withString('$query%'),
+          Variable.withString('%$query%')
+        ],
       ).get();
 
       if (!mounted) return;
 
-      var channels = channelRows.map(_rowToResult).toList();
-      var vod = vodRows.map(_rowToResult).toList();
-      var series = seriesRows.map(_rowToResult).toList();
+      final channels = channelRows.map(_rowToResult).toList();
+      final vod = vodRows.map(_rowToResult).toList();
+      final series = seriesRows.map(_rowToResult).toList();
 
       // Search via aliases (covers alternative titles from TMDB enrichment)
       final aliasesDao = db.searchAliasesDao;
-      final aliasVodIds = await aliasesDao.searchByAlias(term: query, sourceType: 'vod');
-      final aliasSeriesIds = await aliasesDao.searchByAlias(term: query, sourceType: 'series');
+      final aliasVodIds =
+          await aliasesDao.searchByAlias(term: query, sourceType: 'vod');
+      final aliasSeriesIds =
+          await aliasesDao.searchByAlias(term: query, sourceType: 'series');
 
       if (aliasVodIds.isNotEmpty) {
         final existingIds = vod.map((r) => r.id).toSet();
-        final newIds = aliasVodIds.where((id) => !existingIds.contains(id)).take(20).toList();
+        final newIds = aliasVodIds
+            .where((id) => !existingIds.contains(id))
+            .take(20)
+            .toList();
         if (newIds.isNotEmpty) {
           final placeholders = newIds.map((_) => '?').join(',');
-          final aliasRows = await db.customSelect(
-            'SELECT id, playlist_id, name, logo_url, stream_url, group_name, source_id, source_type '
-            'FROM channels WHERE id IN ($placeholders) AND is_active = 1',
-            variables: newIds.map((id) => Variable.withInt(id)).toList(),
-          ).get();
+          final aliasRows = await db
+              .customSelect(
+                'SELECT id, playlist_id, name, logo_url, stream_url, group_name, source_id, source_type '
+                'FROM channels WHERE id IN ($placeholders) AND is_active = 1',
+                variables: newIds.map((id) => Variable.withInt(id)).toList(),
+              )
+              .get();
           vod.addAll(aliasRows.map(_rowToResult));
         }
       }
 
       if (aliasSeriesIds.isNotEmpty) {
         final existingIds = series.map((r) => r.id).toSet();
-        final newIds = aliasSeriesIds.where((id) => !existingIds.contains(id)).take(20).toList();
+        final newIds = aliasSeriesIds
+            .where((id) => !existingIds.contains(id))
+            .take(20)
+            .toList();
         if (newIds.isNotEmpty) {
           final placeholders = newIds.map((_) => '?').join(',');
-          final aliasRows = await db.customSelect(
-            'SELECT id, playlist_id, name, logo_url, stream_url, group_name, source_id, source_type '
-            'FROM channels WHERE id IN ($placeholders) AND is_active = 1',
-            variables: newIds.map((id) => Variable.withInt(id)).toList(),
-          ).get();
+          final aliasRows = await db
+              .customSelect(
+                'SELECT id, playlist_id, name, logo_url, stream_url, group_name, source_id, source_type '
+                'FROM channels WHERE id IN ($placeholders) AND is_active = 1',
+                variables: newIds.map((id) => Variable.withInt(id)).toList(),
+              )
+              .get();
           series.addAll(aliasRows.map(_rowToResult));
         }
       }
@@ -270,13 +294,12 @@ class SearchNotifier extends StateNotifier<SearchState> {
     );
   }
 
-
   /// Searches TMDB for the query, then cross-references results with local catalog.
   /// Handles cases where local names differ from search terms (e.g., "parks" → "Confusões de Leslie").
   Future<SearchResults?> _searchViaTmdb(dynamic db, String query) async {
     try {
       final tmdbDs = _ref.read(tmdbDataSourceProvider);
-      
+
       // Search TMDB in pt-BR and en-US to get both localized and original titles
       final movieResult = await tmdbDs.searchMovie(query, language: 'pt-BR');
       final tvResult = await tmdbDs.searchTv(query, language: 'pt-BR');
@@ -290,24 +313,29 @@ class SearchNotifier extends StateNotifier<SearchState> {
       // Collect all title variants from both languages
       final movieTitles = <String>{};
       if (movieResult.isSuccess) {
-        for (final m in (movieResult as Success<List<TmdbSearchResult>>).data.take(5)) {
+        for (final m
+            in (movieResult as Success<List<TmdbSearchResult>>).data.take(5)) {
           movieTitles.add(m.title);
         }
       }
       if (movieResultEn.isSuccess) {
-        for (final m in (movieResultEn as Success<List<TmdbSearchResult>>).data.take(5)) {
+        for (final m in (movieResultEn as Success<List<TmdbSearchResult>>)
+            .data
+            .take(5)) {
           movieTitles.add(m.title);
         }
       }
 
       final seriesTitles = <String>{};
       if (tvResult.isSuccess) {
-        for (final s in (tvResult as Success<List<TmdbSearchResult>>).data.take(5)) {
+        for (final s
+            in (tvResult as Success<List<TmdbSearchResult>>).data.take(5)) {
           seriesTitles.add(s.title);
         }
       }
       if (tvResultEn.isSuccess) {
-        for (final s in (tvResultEn as Success<List<TmdbSearchResult>>).data.take(5)) {
+        for (final s
+            in (tvResultEn as Success<List<TmdbSearchResult>>).data.take(5)) {
           seriesTitles.add(s.title);
         }
       }
@@ -466,7 +494,6 @@ final discoveryProvider =
   }).toList();
 });
 
-
 /// Provider for the BatchEnrichmentService.
 final batchEnrichmentProvider = Provider<BatchEnrichmentService>((ref) {
   final db = ref.read(databaseProvider);
@@ -478,21 +505,5 @@ final batchEnrichmentProvider = Provider<BatchEnrichmentService>((ref) {
   );
 });
 
-/// Auto-trigger provider: starts batch enrichment 30s after first read.
-/// Watch this from HomeScreen to ensure enrichment runs on app startup.
-final batchEnrichmentTriggerProvider = FutureProvider.autoDispose<void>((ref) async {
-  final completer = Completer<void>();
-  final timer = Timer(const Duration(seconds: 30), () async {
-    try {
-      final service = ref.read(batchEnrichmentProvider);
-      if (!service.isRunning) await service.runEnrichment(batchSize: 50);
-    } finally {
-      if (!completer.isCompleted) completer.complete();
-    }
-  });
-  ref.onDispose(() {
-    timer.cancel();
-    if (!completer.isCompleted) completer.complete();
-  });
-  await completer.future;
-});
+/// Enrichment is triggered explicitly: after Xtream imports
+/// (playlist_management_provider) or from Configurações > Manutenção.

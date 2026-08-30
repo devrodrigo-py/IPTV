@@ -1,11 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nebula_iptv/core/logging/app_logger.dart';
+import 'package:nebula_iptv/domain/providers/health_check_providers.dart';
 import 'package:nebula_iptv/domain/providers/watch_providers.dart';
 import 'package:nebula_iptv/domain/services/stream_reconnection_service.dart';
 import 'package:nebula_iptv/domain/services/video_player_service.dart';
 import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
-import 'package:nebula_iptv/core/logging/app_logger.dart';
 
 /// State for the player screen.
 class PlayerState {
@@ -81,9 +82,9 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
               playback.status == PlaybackStatus.playing &&
               playback.position > Duration.zero) {
             _ref.read(watchTrackingServiceProvider).updateProgress(
-              position: playback.position,
-              duration: playback.duration,
-            );
+                  position: playback.position,
+                  duration: playback.duration,
+                );
           }
 
           // Trigger reconnection on error
@@ -106,6 +107,9 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     if (_contentInfo != null) {
       _ref.read(watchTrackingServiceProvider).startTracking(_contentInfo!);
     }
+
+    // Background health checks pause during playback
+    _ref.read(healthCheckServiceProvider).pause();
 
     await player.play(url);
 
@@ -148,6 +152,8 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     // Stop watch tracking
     await _ref.read(watchTrackingServiceProvider).stopTracking();
     await _ref.read(videoPlayerServiceProvider).stop();
+    // Health checks may resume when nothing is playing
+    _ref.read(healthCheckServiceProvider).resume();
   }
 
   /// Sets volume (0.0 - 1.0).
@@ -176,12 +182,13 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
   }
 
   /// Injects an external subtitle (.srt, .vtt).
-  Future<void> addExternalSubtitle(String uri, {String? title, String? language}) async {
+  Future<void> addExternalSubtitle(String uri,
+      {String? title, String? language}) async {
     await _ref.read(videoPlayerServiceProvider).addExternalSubtitle(
-      uri,
-      title: title,
-      language: language,
-    );
+          uri,
+          title: title,
+          language: language,
+        );
   }
 
   /// Manual retry after reconnection exhausted.
@@ -223,12 +230,15 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     // Stop watch tracking (fire-and-forget in dispose)
     try {
       _ref.read(watchTrackingServiceProvider).stopTracking();
-    } catch (_) {}
+    } catch (e) {
+      appLogger.d('[Player] Falha ao parar tracking no dispose: $e');
+    }
     // Stop playback when leaving the player screen (safe to call even if already stopped)
     try {
       _ref.read(videoPlayerServiceProvider).stop();
-    } catch (_) {
-      // Player may already be disposed — ignore
+    } catch (e) {
+      // Player may already be disposed — ignore, but keep it observable
+      appLogger.d('[Player] Falha ao parar playback no dispose: $e');
     }
     for (final sub in _subscriptions) {
       sub.cancel();

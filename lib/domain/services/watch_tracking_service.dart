@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:nebula_iptv/core/logging/app_logger.dart';
-import 'package:nebula_iptv/data/database/app_database.dart';
 import 'package:nebula_iptv/data/database/daos/watch_stats_dao.dart';
 
 /// Metadata for the content being tracked.
@@ -32,7 +31,6 @@ class WatchContentInfo {
 /// Uses a periodic timer (every 30s) to save progress incrementally.
 /// On stop, saves final progress to both watch_history and watch_stats_daily.
 class WatchTrackingService {
-  final AppDatabase _db;
   final WatchStatsDao _statsDao;
 
   Timer? _periodicTimer;
@@ -44,11 +42,8 @@ class WatchTrackingService {
 
   static const _saveInterval = Duration(seconds: 30);
 
-  WatchTrackingService({
-    required AppDatabase db,
-    required WatchStatsDao statsDao,
-  })  : _db = db,
-        _statsDao = statsDao;
+  WatchTrackingService({required WatchStatsDao statsDao})
+      : _statsDao = statsDao;
 
   /// Starts tracking a viewing session.
   void startTracking(WatchContentInfo content) {
@@ -61,7 +56,8 @@ class WatchTrackingService {
     _lastProgress = 0.0;
     _lastTotalDurationMs = 0;
 
-    appLogger.d('[WatchTrack] Started tracking: ${content.name} (${content.contentType})');
+    appLogger.d(
+        '[WatchTrack] Started tracking: ${content.name} (${content.contentType})');
 
     // Start periodic save
     _periodicTimer = Timer.periodic(_saveInterval, (_) => _periodicSave());
@@ -80,8 +76,8 @@ class WatchTrackingService {
     _lastTotalDurationMs = duration.inMilliseconds;
 
     if (duration.inMilliseconds > 0) {
-      _lastProgress = (position.inMilliseconds / duration.inMilliseconds)
-          .clamp(0.0, 1.0);
+      _lastProgress =
+          (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0);
     } else if (position.inMilliseconds > 0) {
       // Duration unknown — store position as "progress" for resume purposes
       // We'll use total_duration_ms = 0 as signal that we only have position
@@ -149,7 +145,8 @@ class WatchTrackingService {
 
       await _statsDao.upsertWatchEntry(
         channelId: content.channelId,
-        watchedDurationMs: _lastPositionMs > 0 ? _lastPositionMs : _accumulatedMs,
+        watchedDurationMs:
+            _lastPositionMs > 0 ? _lastPositionMs : _accumulatedMs,
         progressPercent: effectiveProgress,
         totalDurationMs: effectiveTotalDuration,
         contentType: content.contentType,
@@ -170,7 +167,8 @@ class WatchTrackingService {
         watchMs: _accumulatedMs,
       );
 
-      appLogger.d('[WatchTrack] Saved: ${content.name} (${_accumulatedMs ~/ 1000}s)');
+      appLogger.d(
+          '[WatchTrack] Saved: ${content.name} (${_accumulatedMs ~/ 1000}s)');
     } catch (e) {
       appLogger.w('[WatchTrack] Save failed: $e');
     }

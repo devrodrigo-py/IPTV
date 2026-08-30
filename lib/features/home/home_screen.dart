@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
@@ -6,6 +5,7 @@ import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/nebula_brand.dart';
 import 'package:nebula_iptv/data/database/app_database.dart' hide SeriesItem;
+import 'package:nebula_iptv/data/database/tables/channels_table.dart';
 import 'package:nebula_iptv/domain/providers/watch_providers.dart';
 import 'package:nebula_iptv/domain/services/smart_favorites_service.dart';
 import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
@@ -37,19 +37,21 @@ final homeFavoritesProvider =
 final recentlyAddedProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final db = ref.read(databaseProvider);
-  final rows = await db.customSelect(
-    '''
-    SELECT id, playlist_id, name, logo_url, stream_url, group_name, source_id, source_type
-    FROM channels
-    WHERE source_type IN ('vod', 'series')
-      AND is_active = 1
-      AND logo_url IS NOT NULL
-      AND logo_url != ''
-    ORDER BY id DESC
-    LIMIT 20
-    ''',
-  ).get();
-  return rows.map((r) => r.data).toList();
+  final channels = await db.channelsDao.getRecentlyAdded(20);
+  return channels
+      .map(
+        (c) => <String, dynamic>{
+          'id': c.id,
+          'playlist_id': c.playlistId,
+          'name': c.name,
+          'logo_url': c.logoUrl,
+          'stream_url': c.streamUrl,
+          'group_name': c.groupName,
+          'source_id': c.sourceId,
+          'source_type': c.sourceType.name,
+        },
+      )
+      .toList();
 });
 
 /// Home screen — Netflix-style with hero banner and carousels.
@@ -67,8 +69,9 @@ class HomeScreen extends ConsumerWidget {
     final shortcuts = ref.watch(shortcutsProvider);
     final topRated = ref.watch(topRatedProvider);
 
-    // Trigger background enrichment (runs 30s after app start)
-    ref.watch(batchEnrichmentTriggerProvider);
+    // Background enrichment is an explicit trigger now: it runs after
+    // Xtream imports (playlist_management_provider) and on demand from
+    // Configurações > Manutenção — never as a render side effect.
 
     final hasContent = continueWatching.valueOrNull?.isNotEmpty == true ||
         mostWatched.valueOrNull?.isNotEmpty == true ||
@@ -599,32 +602,23 @@ class HomeScreen extends ConsumerWidget {
         onPick: (contentType) async {
           Navigator.of(ctx).pop();
           final db = ref.read(databaseProvider);
-          final String whereClause;
-          if (contentType == 'vod') {
-            whereClause = "source_type = 'vod'";
-          } else if (contentType == 'series') {
-            whereClause = "source_type = 'series'";
-          } else {
-            whereClause = "source_type IN ('xtream', 'm3u')";
-          }
-          final rows = await db
-              .customSelect(
-                'SELECT id, playlist_id, name, logo_url, stream_url, group_name, source_id, source_type '
-                'FROM channels WHERE $whereClause AND is_active = 1 '
-                'ORDER BY RANDOM() LIMIT 1',
-              )
-              .get();
-          if (rows.isEmpty || !context.mounted) return;
-          final row = rows.first;
+          final sourceTypes = switch (contentType) {
+            'vod' => [ChannelSourceType.vod],
+            'series' => [ChannelSourceType.series],
+            _ => [ChannelSourceType.xtream, ChannelSourceType.m3u],
+          };
+          final channel =
+              await db.channelsDao.getRandomBySourceTypes(sourceTypes);
+          if (channel == null || !context.mounted) return;
           final item = SearchResultItem(
-            id: row.read<int>('id'),
-            playlistId: row.read<int>('playlist_id'),
-            name: row.read<String>('name'),
-            logoUrl: row.readNullable<String>('logo_url'),
-            streamUrl: row.readNullable<String>('stream_url'),
-            groupName: row.readNullable<String>('group_name'),
-            sourceId: row.readNullable<String>('source_id'),
-            sourceType: row.read<String>('source_type'),
+            id: channel.id,
+            playlistId: channel.playlistId,
+            name: channel.name,
+            logoUrl: channel.logoUrl,
+            streamUrl: channel.streamUrl,
+            groupName: channel.groupName,
+            sourceId: channel.sourceId,
+            sourceType: channel.sourceType.name,
           );
           if (context.mounted) _openSearchResult(context, ref, item);
         },
@@ -649,19 +643,15 @@ class HomeScreen extends ConsumerWidget {
     if (contentType == 'series') {
       try {
         final db = ref.read(databaseProvider);
-        final chRows = await db.customSelect(
-          'SELECT * FROM channels WHERE id = ?',
-          variables: [Variable.withInt(channelId)],
-        ).get();
-        if (chRows.isNotEmpty && context.mounted) {
-          final ch = chRows.first;
+        final ch = await db.channelsDao.getChannelById(channelId);
+        if (ch != null && context.mounted) {
           final seriesItem = SeriesItem(
-            id: ch.read<int>('id'),
-            playlistId: ch.read<int>('playlist_id'),
-            name: ch.read<String>('name'),
-            coverUrl: ch.readNullable<String>('logo_url'),
-            categoryName: ch.readNullable<String>('group_name'),
-            sourceId: ch.readNullable<String>('source_id'),
+            id: ch.id,
+            playlistId: ch.playlistId,
+            name: ch.name,
+            coverUrl: ch.logoUrl,
+            categoryName: ch.groupName,
+            sourceId: ch.sourceId,
           );
           Navigator.of(context).push(
             MaterialPageRoute(

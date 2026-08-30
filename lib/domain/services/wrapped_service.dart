@@ -1,7 +1,8 @@
 import 'package:drift/drift.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/data/database/app_database.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/features/profiles/providers/profile_provider.dart';
 
 /// Data model for Nebula Wrapped stats.
@@ -134,14 +135,23 @@ class WrappedService {
       try {
         final dt = DateTime.parse(ts.toString());
         final hour = dt.hour;
-        if (hour >= 6 && hour < 12) morning++;
-        else if (hour >= 12 && hour < 18) afternoon++;
-        else if (hour >= 18 && hour < 24) evening++;
-        else night++;
-      } catch (_) {}
+        if (hour >= 6 && hour < 12) {
+          morning++;
+        } else if (hour >= 12 && hour < 18) {
+          afternoon++;
+        } else if (hour >= 18 && hour < 24) {
+          evening++;
+        } else {
+          night++;
+        }
+      } catch (e) {
+        // Linha individual com timestamp inválido: ignora, mas registra.
+        appLogger.d('[Wrapped] Timestamp inválido no histórico: $e');
+      }
     }
 
-    final max = [morning, afternoon, evening, night].reduce((a, b) => a > b ? a : b);
+    final max =
+        [morning, afternoon, evening, night].reduce((a, b) => a > b ? a : b);
     if (max == morning) return 'Manhã ☀️';
     if (max == afternoon) return 'Tarde 🌤️';
     if (max == evening) return 'Noite 🌙';
@@ -157,7 +167,10 @@ class WrappedService {
          GROUP BY w.channel_id
          ORDER BY total DESC
          LIMIT 1''',
-      variables: [Variable.withInt(_profileId), Variable.withString(contentType)],
+      variables: [
+        Variable.withInt(_profileId),
+        Variable.withString(contentType)
+      ],
     ).get();
     if (rows.isEmpty) return null;
     return rows.first.data['name'] as String?;

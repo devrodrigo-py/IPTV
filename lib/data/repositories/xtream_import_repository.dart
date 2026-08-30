@@ -8,9 +8,9 @@ import 'package:nebula_iptv/data/database/tables/channels_table.dart';
 import 'package:nebula_iptv/data/database/tables/playlists_table.dart';
 import 'package:nebula_iptv/data/datasources/xtream/xtream_datasource.dart';
 import 'package:nebula_iptv/data/datasources/xtream/xtream_models.dart';
+import 'package:nebula_iptv/data/repositories/playlist_import_repository.dart';
 import 'package:nebula_iptv/data/repositories/series_import_repository.dart';
 import 'package:nebula_iptv/data/repositories/vod_import_repository.dart';
-import 'package:nebula_iptv/data/repositories/playlist_import_repository.dart';
 
 /// Repository for importing and syncing Xtream Codes playlists.
 ///
@@ -146,8 +146,8 @@ class XtreamImportRepository {
       if (liveResult case Failure(:final failure)) {
         return Failure(failure);
       }
-      final liveStreams =
-          liveResult.when(success: (s) => s, failure: (_) => <XtreamLiveStream>[]);
+      final liveStreams = liveResult.when(
+          success: (s) => s, failure: (_) => <XtreamLiveStream>[]);
 
       final vodStreams = await _fetchStreamsOrEmpty(
         fetch: () => _xtreamDataSource.getVodStreams(
@@ -290,7 +290,13 @@ class XtreamImportRepository {
     );
     final userPass = credResult.when(
       success: (val) => val,
-      failure: (_) => null,
+      failure: (f) {
+        appLogger.w(
+          'Xtream import (playlist $playlistId): falha ao ler credenciais: '
+          '${f.message}',
+        );
+        return null;
+      },
     );
 
     if (userPass == null || userPass.isEmpty) {
@@ -390,8 +396,7 @@ class XtreamImportRepository {
 
       // Only live rows take part in the live reconciliation — VOD/series
       // rows have their own sourceId space and are reconciled separately.
-      final existing =
-          await _db.channelsDao.getAllChannelsByPlaylistAndType(
+      final existing = await _db.channelsDao.getAllChannelsByPlaylistAndType(
         playlistId,
         ChannelSourceType.xtream,
       );
@@ -709,20 +714,22 @@ class XtreamImportRepository {
   /// Failures are logged but don't affect the main refresh result.
   void _refreshVodAndSeriesInBackground(int playlistId) {
     _vodImportRepository.refreshVod(playlistId).then(
-      (result) => result.when(
-        success: (r) => appLogger.i('VOD refresh: +${r.moviesAdded} movies'),
-        failure: (f) => appLogger.w('VOD refresh failed: ${f.message}'),
-      ),
-      onError: (e) => appLogger.w('VOD refresh crashed: $e'),
-    );
+          (result) => result.when(
+            success: (r) =>
+                appLogger.i('VOD refresh: +${r.moviesAdded} movies'),
+            failure: (f) => appLogger.w('VOD refresh failed: ${f.message}'),
+          ),
+          onError: (e) => appLogger.w('VOD refresh crashed: $e'),
+        );
 
     _seriesImportRepository.refreshSeries(playlistId).then(
-      (result) => result.when(
-        success: (r) => appLogger.i('Series refresh: +${r.seriesAdded} series'),
-        failure: (f) => appLogger.w('Series refresh failed: ${f.message}'),
-      ),
-      onError: (e) => appLogger.w('Series refresh crashed: $e'),
-    );
+          (result) => result.when(
+            success: (r) =>
+                appLogger.i('Series refresh: +${r.seriesAdded} series'),
+            failure: (f) => appLogger.w('Series refresh failed: ${f.message}'),
+          ),
+          onError: (e) => appLogger.w('Series refresh crashed: $e'),
+        );
   }
 
   /// Fetches content-type streams; failures are logged and return an empty
@@ -733,7 +740,7 @@ class XtreamImportRepository {
   }) async {
     try {
       final result = await fetch();
-      return result.when(
+      return await result.when(
         success: (items) => items,
         failure: (f) {
           appLogger.w('Xtream import: $context fetch failed: ${f.message}');

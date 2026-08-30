@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
-import 'package:nebula_iptv/domain/services/sua_tv_service.dart';
 import 'package:nebula_iptv/domain/services/video_player_service.dart';
 import 'package:nebula_iptv/features/player/providers/player_provider.dart';
 import 'package:nebula_iptv/features/sua_tv/providers/sua_tv_provider.dart';
@@ -29,8 +28,6 @@ class _SuaTvPlayerScreenState extends ConsumerState<SuaTvPlayerScreen> {
   StreamSubscription<VideoPlaybackState>? _playbackSub;
   StreamSubscription<void>? _completedSub;
   Timer? _liveTimer;
-  Duration _position = Duration.zero;
-  Duration _duration = Duration.zero;
 
   VideoPlayerService get _player => ref.read(videoPlayerServiceProvider);
 
@@ -55,8 +52,6 @@ class _SuaTvPlayerScreenState extends ConsumerState<SuaTvPlayerScreen> {
       if (!mounted) return;
       setState(() {
         _isPlaying = playback.status == PlaybackStatus.playing;
-        _position = playback.position;
-        _duration = playback.duration;
       });
     });
     _completedSub = _player.completed.listen((_) {
@@ -167,7 +162,9 @@ class _SuaTvPlayerScreenState extends ConsumerState<SuaTvPlayerScreen> {
                   right: 0,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 16),
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
@@ -179,27 +176,35 @@ class _SuaTvPlayerScreenState extends ConsumerState<SuaTvPlayerScreen> {
                       child: Row(
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.arrow_back_rounded,
-                                color: Colors.white),
+                            icon: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: Colors.white,
+                            ),
                             onPressed: _goBack,
                           ),
                           const SizedBox(width: 12),
                           // Sua TV badge
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
-                                colors: [AppColors.primary, AppColors.solarCoral],
+                                colors: [
+                                  AppColors.primary,
+                                  AppColors.solarCoral
+                                ],
                               ),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Text(
                               '▶ Sua TV',
                               style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold),
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -231,7 +236,9 @@ class _SuaTvPlayerScreenState extends ConsumerState<SuaTvPlayerScreen> {
                   right: 0,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 16),
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.bottomCenter,
@@ -263,7 +270,9 @@ class _SuaTvPlayerScreenState extends ConsumerState<SuaTvPlayerScreen> {
                                     Text(
                                       'A seguir',
                                       style: AppTypography.caption.copyWith(
-                                          color: Colors.white54, fontSize: 10),
+                                        color: Colors.white54,
+                                        fontSize: 10,
+                                      ),
                                     ),
                                     Text(
                                       nextItem.name,
@@ -282,8 +291,11 @@ class _SuaTvPlayerScreenState extends ConsumerState<SuaTvPlayerScreen> {
                         ),
                         // Skip button
                         IconButton(
-                          icon: const Icon(Icons.skip_next_rounded,
-                              color: Colors.white, size: 32),
+                          icon: const Icon(
+                            Icons.skip_next_rounded,
+                            color: Colors.white,
+                            size: 32,
+                          ),
                           onPressed: _skipToNext,
                           tooltip: 'Próximo',
                         ),

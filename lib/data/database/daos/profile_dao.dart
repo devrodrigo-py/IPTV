@@ -48,7 +48,7 @@ class ProfileDao extends DatabaseAccessor<AppDatabase> {
     String avatarIcon = 'person',
     String avatarColor = '#7B2FF7',
   }) async {
-    return await customInsert(
+    return customInsert(
       'INSERT INTO profiles (name, avatar_icon, avatar_color, is_default) VALUES (?, ?, ?, 0)',
       variables: [
         Variable.withString(name),

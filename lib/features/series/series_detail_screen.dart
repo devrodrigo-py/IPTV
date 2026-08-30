@@ -1,23 +1,25 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
-import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nebula_iptv/core/constants/tmdb_constants.dart';
+import 'package:nebula_iptv/core/logging/app_logger.dart';
+import 'package:nebula_iptv/core/result/result.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
-import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
 import 'package:nebula_iptv/core/widgets/loading_view.dart';
-import 'package:nebula_iptv/features/player/player_screen.dart';
+import 'package:nebula_iptv/core/widgets/nebula_cached_image.dart';
+import 'package:nebula_iptv/data/datasources/tmdb/tmdb_datasource.dart'
+    show TmdbDataSource;
 import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
+import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
+import 'package:nebula_iptv/features/player/player_screen.dart';
+import 'package:nebula_iptv/features/profiles/providers/profile_provider.dart';
 import 'package:nebula_iptv/features/series/providers/series_provider.dart';
 import 'package:nebula_iptv/features/series/widgets/episode_tile.dart';
 import 'package:nebula_iptv/features/series/widgets/season_selector.dart';
-import 'package:nebula_iptv/data/datasources/tmdb/tmdb_datasource.dart' show TmdbDataSource;
-import 'package:nebula_iptv/core/constants/tmdb_constants.dart';
-import 'package:nebula_iptv/core/result/result.dart';
-import 'package:nebula_iptv/features/shared/widgets/star_rating.dart';
 import 'package:nebula_iptv/features/shared/providers/rating_provider.dart';
-import 'package:nebula_iptv/features/profiles/providers/profile_provider.dart';
-import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
+import 'package:nebula_iptv/features/shared/widgets/star_rating.dart';
 
 /// Series detail screen with seasons and episodes.
 /// Fetches TMDB details on-demand.
@@ -100,8 +102,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
 
   String? get _backdropUrl =>
       _tmdbBackdropUrl ?? series.tmdbBackdropUrl ?? series.coverUrl;
-  String? get _synopsis =>
-      _tmdbOverview ?? series.tmdbOverview ?? series.plot;
+  String? get _synopsis => _tmdbOverview ?? series.tmdbOverview ?? series.plot;
   String? get _genres => _tmdbGenres ?? series.tmdbGenres ?? series.genre;
   String? get _cast => _tmdbCast ?? series.tmdbCast ?? series.cast;
   String? get _rating => _tmdbRating ?? series.rating;
@@ -241,57 +242,63 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
     final items = <Widget>[];
 
     if (_rating != null && _rating!.isNotEmpty && _rating != '0') {
-      items.add(Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.star_rounded, size: 16, color: Colors.amber),
-            const SizedBox(width: 4),
-            Text(
-              _rating!,
-              style: AppTypography.label.copyWith(
-                color: Colors.amber,
-                fontWeight: FontWeight.w600,
+      items.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.star_rounded, size: 16, color: Colors.amber),
+              const SizedBox(width: 4),
+              Text(
+                _rating!,
+                style: AppTypography.label.copyWith(
+                  color: Colors.amber,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ));
+      );
     }
 
     if (_genres != null && _genres!.isNotEmpty) {
       if (items.isNotEmpty) items.add(const SizedBox(width: 12));
-      items.add(Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceElevated,
-          borderRadius: BorderRadius.circular(6),
+      items.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceElevated,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            _genres!.split(',').first.trim(),
+            style: AppTypography.label,
+          ),
         ),
-        child: Text(
-          _genres!.split(',').first.trim(),
-          style: AppTypography.label,
-        ),
-      ));
+      );
     }
 
     if (series.categoryName != null) {
       if (items.isNotEmpty) items.add(const SizedBox(width: 12));
-      items.add(Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceElevated,
-          borderRadius: BorderRadius.circular(6),
+      items.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceElevated,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            series.categoryName!,
+            style: AppTypography.label,
+          ),
         ),
-        child: Text(
-          series.categoryName!,
-          style: AppTypography.label,
-        ),
-      ));
+      );
     }
 
     if (items.isEmpty) return const SizedBox.shrink();
@@ -302,11 +309,13 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
     final url = _backdropUrl!;
     // If we have a TMDB backdrop (wide image), use directly
     if (_tmdbBackdropUrl != null ||
-        (series.tmdbBackdropUrl != null && series.tmdbBackdropUrl!.isNotEmpty)) {
-      return Image.network(
-        url,
+        (series.tmdbBackdropUrl != null &&
+            series.tmdbBackdropUrl!.isNotEmpty)) {
+      return NebulaCachedImage(
+        imageUrl: url,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _buildCoverPlaceholder(),
+        cacheWidth: 400,
+        placeholder: _buildCoverPlaceholder(),
       );
     }
     // Otherwise blur the cover/poster
@@ -315,18 +324,20 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
       children: [
         ImageFiltered(
           imageFilter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Image.network(
-            url,
+          child: NebulaCachedImage(
+            imageUrl: url,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _buildCoverPlaceholder(),
+            cacheWidth: 400,
+            placeholder: _buildCoverPlaceholder(),
           ),
         ),
         Center(
-          child: Image.network(
-            url,
+          child: NebulaCachedImage(
+            imageUrl: url,
             fit: BoxFit.contain,
             height: 220,
-            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            cacheWidth: 400,
+            placeholder: const SizedBox.shrink(),
           ),
         ),
       ],
@@ -384,7 +395,6 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
       children: [
         Text('Temporadas', style: AppTypography.title),
         const SizedBox(height: 12),
-
         SeasonSelector(
           seasons: state.seasons,
           selectedIndex: state.selectedSeasonIndex,
@@ -395,19 +405,18 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
           },
         ),
         const SizedBox(height: 16),
-
         if (currentSeason != null && currentSeason.episodes.isNotEmpty)
           ...currentSeason.episodes.asMap().entries.map(
-            (entry) => EpisodeTile(
-              episode: entry.value,
-              onPlay: () => _playEpisode(
-                context,
-                entry.value,
-                seasonEpisodes: currentSeason.episodes,
-                episodeIndex: entry.key,
-              ),
-            ),
-          )
+                (entry) => EpisodeTile(
+                  episode: entry.value,
+                  onPlay: () => _playEpisode(
+                    context,
+                    entry.value,
+                    seasonEpisodes: currentSeason.episodes,
+                    episodeIndex: entry.key,
+                  ),
+                ),
+              )
         else if (state.isLoadingEpisodes)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 40),
@@ -511,7 +520,8 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen> {
         seekToMs = (episode.watchProgress * episode.totalDurationMs).round();
       }
     }
-    appLogger.d('[Series] Play episode ${episode.episodeNumber}: progress=${episode.watchProgress}, seekToMs=$seekToMs');
+    appLogger.d(
+        '[Series] Play episode ${episode.episodeNumber}: progress=${episode.watchProgress}, seekToMs=$seekToMs');
 
     Navigator.of(context).push(
       MaterialPageRoute(

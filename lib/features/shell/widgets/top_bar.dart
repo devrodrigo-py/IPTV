@@ -41,9 +41,11 @@ class TopBar extends StatelessWidget {
           const Spacer(),
           FocusableWidget(
             onPressed: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => const SearchScreen(),
-              ));
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const SearchScreen(),
+                ),
+              );
             },
             borderRadius: const BorderRadius.all(Radius.circular(20)),
             builder: (context, isFocused) {

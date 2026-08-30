@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
+import 'package:nebula_iptv/core/widgets/nebula_cached_image.dart';
 import 'package:nebula_iptv/features/vod/providers/vod_provider.dart';
 
 /// A card displaying a movie poster and title.
@@ -27,7 +28,7 @@ class VodCard extends StatelessWidget {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           transform: isFocused
-              ? (Matrix4.identity()..scale(1.03))
+              ? (Matrix4.identity()..scaleByDouble(1.03, 1.03, 1.03, 1.0))
               : Matrix4.identity(),
           // O anel de foco (3px, gradiente violeta→teal) é desenhado pelo
           // FocusableWidget que envolve este builder.
@@ -47,13 +48,12 @@ class VodCard extends StatelessWidget {
                       // Background image or placeholder
                       if (movie.displayPosterUrl != null &&
                           movie.displayPosterUrl!.isNotEmpty)
-                        Image.network(
-                          movie.displayPosterUrl!,
+                        NebulaCachedImage(
+                          imageUrl: movie.displayPosterUrl,
                           fit: BoxFit.cover,
                           cacheWidth: 300,
                           cacheHeight: 450,
-                          errorBuilder: (_, __, ___) =>
-                              _buildPlaceholder(),
+                          placeholder: _buildPlaceholder(),
                         )
                       else
                         _buildPlaceholder(),
@@ -79,8 +79,7 @@ class VodCard extends StatelessWidget {
                       ),
 
                       // Rating badge
-                      if ((movie.tmdbRating != null &&
-                              movie.tmdbRating! > 0) ||
+                      if ((movie.tmdbRating != null && movie.tmdbRating! > 0) ||
                           (movie.rating != null &&
                               movie.rating!.isNotEmpty &&
                               movie.rating != '0'))

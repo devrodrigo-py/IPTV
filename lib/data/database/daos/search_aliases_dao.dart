@@ -52,7 +52,10 @@ class SearchAliasesDao extends DatabaseAccessor<AppDatabase> {
         AND c.is_active = 1
       LIMIT 50
       ''',
-      variables: [Variable.withString(normalized), Variable.withString(sourceType)],
+      variables: [
+        Variable.withString(normalized),
+        Variable.withString(sourceType)
+      ],
     ).get();
     return rows.map((r) => r.read<int>('channel_id')).toList();
   }

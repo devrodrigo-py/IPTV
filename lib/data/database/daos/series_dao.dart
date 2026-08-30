@@ -49,8 +49,7 @@ class SeriesDao extends DatabaseAccessor<AppDatabase> {
 
   /// Returns a single series by ID.
   Future<SeriesItem?> getSeriesById(int id) {
-    return (select(attachedDatabase.seriesItems)
-          ..where((s) => s.id.equals(id)))
+    return (select(attachedDatabase.seriesItems)..where((s) => s.id.equals(id)))
         .getSingleOrNull();
   }
 

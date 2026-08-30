@@ -1,6 +1,8 @@
 /// Models for Xtream Codes API responses.
 library;
 
+import 'package:nebula_iptv/core/logging/app_logger.dart';
+
 /// These are raw DTOs — mapping to domain entities happens in the repository.
 /// Authentication response from the Xtream API.
 class XtreamAuthResponse {
@@ -64,7 +66,10 @@ class XtreamUserInfo {
       final expDateTime =
           DateTime.fromMillisecondsSinceEpoch(expTimestamp * 1000);
       return DateTime.now().isAfter(expDateTime);
-    } catch (_) {
+    } catch (e) {
+      // Dado malformado do servidor: tratado como "não expirado", mas
+      // registrável para diagnóstico.
+      appLogger.d('[Xtream] exp_date inválida ("$expDate"): $e');
       return false;
     }
   }
@@ -76,7 +81,13 @@ class XtreamUserInfo {
       final max = int.parse(maxConnections!);
       final active = int.parse(activeCons!);
       return active >= max;
-    } catch (_) {
+    } catch (e) {
+      // Dado malformado do servidor: tratado como "não excedido", mas
+      // registrável para diagnóstico.
+      appLogger.d(
+        '[Xtream] max_connections/active_cons inválidos '
+        '("$maxConnections"/"$activeCons"): $e',
+      );
       return false;
     }
   }
@@ -234,11 +245,9 @@ class XtreamVodInfo {
     final movieData = json['movie_data'] as Map<String, dynamic>?;
 
     return XtreamVodInfo(
-      movieData: info != null
-          ? XtreamVodInfoData.fromJson(info, movieData)
-          : null,
-      containerExtension:
-          movieData?['container_extension']?.toString() ??
+      movieData:
+          info != null ? XtreamVodInfoData.fromJson(info, movieData) : null,
+      containerExtension: movieData?['container_extension']?.toString() ??
           json['container_extension']?.toString(),
     );
   }
@@ -289,8 +298,10 @@ class XtreamVodInfoData {
       director: info['director']?.toString(),
       genre: info['genre']?.toString(),
       rating: _parseDouble(info['rating'] ?? info['rating_5based']),
-      coverBig: info['cover_big']?.toString() ?? info['movie_image']?.toString(),
-      releaseDate: info['releasedate']?.toString() ?? info['release_date']?.toString(),
+      coverBig:
+          info['cover_big']?.toString() ?? info['movie_image']?.toString(),
+      releaseDate:
+          info['releasedate']?.toString() ?? info['release_date']?.toString(),
       year: info['year']?.toString(),
       duration: _parseNullableInt(info['duration']),
       durationSecs: info['duration_secs']?.toString(),
@@ -448,7 +459,8 @@ class XtreamSeriesInfoData {
       director: json['director']?.toString(),
       genre: json['genre']?.toString(),
       rating: _parseDouble(json['rating'] ?? json['rating_5based']),
-      releaseDate: json['releaseDate']?.toString() ?? json['release_date']?.toString(),
+      releaseDate:
+          json['releaseDate']?.toString() ?? json['release_date']?.toString(),
       backdropPath: json['backdrop_path']?.isNotEmpty == true
           ? json['backdrop_path'].toString()
           : null,
@@ -531,7 +543,8 @@ class XtreamEpisode {
       containerExtension: json['container_extension']?.toString(),
       plot: info?.plot ?? json['plot']?.toString(),
       duration: info?.duration ?? json['duration']?.toString(),
-      durationSecs: info?.durationSecs ?? _parseNullableInt(json['duration_secs']),
+      durationSecs:
+          info?.durationSecs ?? _parseNullableInt(json['duration_secs']),
       coverBig: info?.coverBig ?? json['cover_big']?.toString(),
       rating: info?.rating ?? _parseDouble(json['rating']),
       releaseDate: info?.releaseDate ?? json['release_date']?.toString(),
@@ -566,9 +579,11 @@ class XtreamEpisodeInfo {
       plot: json['plot']?.toString(),
       duration: json['duration']?.toString(),
       durationSecs: _parseNullableInt(json['duration_secs']),
-      coverBig: json['cover_big']?.toString() ?? json['movie_image']?.toString(),
+      coverBig:
+          json['cover_big']?.toString() ?? json['movie_image']?.toString(),
       rating: _parseDouble(json['rating']),
-      releaseDate: json['releasedate']?.toString() ?? json['release_date']?.toString(),
+      releaseDate:
+          json['releasedate']?.toString() ?? json['release_date']?.toString(),
       movieImage: json['movie_image']?.toString(),
     );
   }

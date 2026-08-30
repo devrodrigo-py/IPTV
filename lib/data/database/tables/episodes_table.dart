@@ -11,7 +11,8 @@ class Episodes extends Table {
   IntColumn get episodeNumber => integer()();
   TextColumn get title => text().withLength(min: 1, max: 500)();
   TextColumn get streamUrl => text()();
-  TextColumn get containerExtension => text().withDefault(const Constant('mp4'))();
+  TextColumn get containerExtension =>
+      text().withDefault(const Constant('mp4'))();
   TextColumn get plot => text().nullable()();
   IntColumn get duration => integer().nullable()();
   TextColumn get coverUrl => text().nullable()();

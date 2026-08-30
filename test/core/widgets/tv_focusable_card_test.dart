@@ -12,8 +12,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.dark,
-          home: Scaffold(
-            body: const TvFocusableCard(
+          home: const Scaffold(
+            body: TvFocusableCard(
               child: Text('TV Card'),
             ),
           ),
@@ -71,8 +71,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.dark,
-          home: Scaffold(
-            body: const TvFocusableCard(
+          home: const Scaffold(
+            body: TvFocusableCard(
               autofocus: true,
               child: Text('Scale'),
             ),

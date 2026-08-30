@@ -55,8 +55,10 @@ class _WrappedScreenState extends ConsumerState<WrappedScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('Assista mais conteúdo para gerar seu Wrapped!',
-                  style: AppTypography.body.copyWith(color: Colors.white70)),
+              Text(
+                'Assista mais conteúdo para gerar seu Wrapped!',
+                style: AppTypography.body.copyWith(color: Colors.white70),
+              ),
               const SizedBox(height: 16),
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -244,12 +246,31 @@ class _WrappedScreenState extends ConsumerState<WrappedScreen> {
               ),
             ),
             const SizedBox(height: 32),
-            _SummaryRow(icon: Icons.schedule, label: 'Tempo total', value: '${data.totalHoursWatched}h ${data.totalMinutesRemainder}min'),
-            _SummaryRow(icon: Icons.movie, label: 'Filmes', value: '${data.totalMoviesWatched}'),
-            _SummaryRow(icon: Icons.tv, label: 'Episódios', value: '${data.totalSeriesEpisodes}'),
-            _SummaryRow(icon: Icons.calendar_today, label: 'Dias ativos', value: '${data.totalDaysActive}'),
-            _SummaryRow(icon: Icons.timer, label: 'Maior sessão', value: '${data.longestSessionMinutes} min'),
-            _SummaryRow(icon: Icons.category, label: 'Gênero favorito', value: data.favoriteGenre),
+            _SummaryRow(
+                icon: Icons.schedule,
+                label: 'Tempo total',
+                value:
+                    '${data.totalHoursWatched}h ${data.totalMinutesRemainder}min'),
+            _SummaryRow(
+                icon: Icons.movie,
+                label: 'Filmes',
+                value: '${data.totalMoviesWatched}'),
+            _SummaryRow(
+                icon: Icons.tv,
+                label: 'Episódios',
+                value: '${data.totalSeriesEpisodes}'),
+            _SummaryRow(
+                icon: Icons.calendar_today,
+                label: 'Dias ativos',
+                value: '${data.totalDaysActive}'),
+            _SummaryRow(
+                icon: Icons.timer,
+                label: 'Maior sessão',
+                value: '${data.longestSessionMinutes} min'),
+            _SummaryRow(
+                icon: Icons.category,
+                label: 'Gênero favorito',
+                value: data.favoriteGenre),
             const SizedBox(height: 32),
             const Icon(Icons.blur_on_rounded, size: 40, color: Colors.white54),
             const SizedBox(height: 8),

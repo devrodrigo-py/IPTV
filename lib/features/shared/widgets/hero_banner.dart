@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/core/widgets/nebula_cached_image.dart';
 
 /// Data model for a hero banner item.
 class HeroBannerItem {
@@ -142,17 +143,19 @@ class _HeroBannerPage extends StatelessWidget {
               // Blurred fill (handles any aspect ratio gracefully)
               ImageFiltered(
                 imageFilter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                child: Image.network(
-                  item.imageUrl!,
+                child: NebulaCachedImage(
+                  imageUrl: item.imageUrl,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _buildGradientBackground(),
+                  cacheWidth: 800,
+                  placeholder: _buildGradientBackground(),
                 ),
               ),
               // Sharp image centered
-              Image.network(
-                item.imageUrl!,
+              NebulaCachedImage(
+                imageUrl: item.imageUrl,
                 fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                cacheWidth: 800,
+                placeholder: const SizedBox.shrink(),
               ),
             ],
           )

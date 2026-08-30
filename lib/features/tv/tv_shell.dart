@@ -4,13 +4,13 @@ import 'package:nebula_iptv/core/constants/tv_constants.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/nebula_focus_ring.dart';
+import 'package:nebula_iptv/features/favorites/favorites_screen.dart';
+import 'package:nebula_iptv/features/playlists/playlists_screen.dart';
+import 'package:nebula_iptv/features/series/series_screen.dart';
+import 'package:nebula_iptv/features/settings/settings_screen.dart';
 import 'package:nebula_iptv/features/tv/tv_channel_grid.dart';
 import 'package:nebula_iptv/features/tv/tv_home.dart';
 import 'package:nebula_iptv/features/vod/vod_screen.dart';
-import 'package:nebula_iptv/features/series/series_screen.dart';
-import 'package:nebula_iptv/features/favorites/favorites_screen.dart';
-import 'package:nebula_iptv/features/playlists/playlists_screen.dart';
-import 'package:nebula_iptv/features/settings/settings_screen.dart';
 import 'package:nebula_iptv/l10n/app_localizations.dart';
 
 /// TV-optimized shell with sidebar navigation via D-pad.
@@ -197,8 +197,9 @@ class _TvNavButtonState extends State<_TvNavButton> {
               children: [
                 Icon(
                   widget.icon,
-                  color:
-                      isHighlighted ? AppColors.primary : AppColors.textSecondary,
+                  color: isHighlighted
+                      ? AppColors.primary
+                      : AppColors.textSecondary,
                   size: 28,
                 ),
                 const SizedBox(height: 4),

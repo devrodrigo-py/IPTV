@@ -78,14 +78,17 @@ class TmdbCacheDao extends DatabaseAccessor<AppDatabase> {
   Future<TmdbCacheEntry?> getCached(String sourceId, String mediaType) async {
     final results = await customSelect(
       'SELECT * FROM tmdb_cache WHERE source_id = ? AND media_type = ?',
-      variables: [Variable.withString(sourceId), Variable.withString(mediaType)],
+      variables: [
+        Variable.withString(sourceId),
+        Variable.withString(mediaType)
+      ],
     ).get();
 
     if (results.isEmpty) return null;
 
     final row = results.first;
-    final fetchedAt = DateTime.tryParse(row.read<String>('fetched_at')) ??
-        DateTime.now();
+    final fetchedAt =
+        DateTime.tryParse(row.read<String>('fetched_at')) ?? DateTime.now();
 
     // Check if cache is expired
     if (DateTime.now().difference(fetchedAt) > TmdbConstants.cacheDuration) {
@@ -162,12 +165,14 @@ class TmdbCacheDao extends DatabaseAccessor<AppDatabase> {
     // Serialize seasons to JSON
     final seasonsJson = jsonEncode(
       details.seasons
-          .map((s) => {
-                'season_number': s.seasonNumber,
-                'name': s.name,
-                'episode_count': s.episodeCount,
-                'poster_path': s.posterPath,
-              })
+          .map(
+            (s) => {
+              'season_number': s.seasonNumber,
+              'name': s.name,
+              'episode_count': s.episodeCount,
+              'poster_path': s.posterPath,
+            },
+          )
           .toList(),
     );
 
@@ -197,7 +202,8 @@ class TmdbCacheDao extends DatabaseAccessor<AppDatabase> {
 
   /// Gets all cached entries for a media type (for batch loading).
   Future<Map<String, TmdbCacheEntry>> getAllCachedByType(
-      String mediaType) async {
+    String mediaType,
+  ) async {
     final results = await customSelect(
       'SELECT * FROM tmdb_cache WHERE media_type = ?',
       variables: [Variable.withString(mediaType)],
@@ -236,9 +242,8 @@ class TmdbCacheDao extends DatabaseAccessor<AppDatabase> {
 
   /// Clears expired cache entries.
   Future<void> clearExpired() async {
-    final cutoff = DateTime.now()
-        .subtract(TmdbConstants.cacheDuration)
-        .toIso8601String();
+    final cutoff =
+        DateTime.now().subtract(TmdbConstants.cacheDuration).toIso8601String();
     await customUpdate(
       'DELETE FROM tmdb_cache WHERE fetched_at < ?',
       variables: [Variable.withString(cutoff)],

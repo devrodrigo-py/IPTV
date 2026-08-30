@@ -17,6 +17,13 @@ class ImageCacheService {
   final Dio _dio;
   Directory? _cacheDir;
 
+  /// In-memory memo of resolved images, keyed by URL.
+  ///
+  /// Stores the [Future] per URL so repeated `getImage` calls skip the disk
+  /// check after the first success, and concurrent callers share one download.
+  /// Cleared by [clearAll] and [clearExpired].
+  final Map<String, Future<File?>> _resolved = {};
+
   /// Default cache expiration: 7 days.
   final Duration expiration;
 
@@ -37,8 +44,25 @@ class ImageCacheService {
   /// Returns the cached file for [url], downloading if needed.
   ///
   /// Returns `null` on failure — the caller should show a placeholder.
-  Future<File?> getImage(String url) async {
-    if (url.isEmpty) return null;
+  /// Successful results are memoized in memory ([_resolved]): subsequent
+  /// calls for the same URL skip the disk check entirely. Failures are not
+  /// memoized, so a later call may retry (e.g. after a transient network
+  /// outage).
+  Future<File?> getImage(String url) {
+    if (url.isEmpty) return Future.value(null);
+    return _resolved.putIfAbsent(url, () => _loadAndMemo(url));
+  }
+
+  Future<File?> _loadAndMemo(String url) async {
+    final file = await _loadImage(url);
+    if (file == null) {
+      // Não memoriza falha: permite nova tentativa em chamadas futuras.
+      _resolved.remove(url);
+    }
+    return file;
+  }
+
+  Future<File?> _loadImage(String url) async {
     if (_cacheDir == null) await init();
 
     final file = _fileForUrl(url);
@@ -66,7 +90,7 @@ class ImageCacheService {
         return file;
       }
     } catch (e) {
-      appLogger.w('Image cache download failed: $url');
+      appLogger.w('[ImageCache] Download falhou para "$url": $e');
     }
 
     // Return stale cache if available
@@ -76,6 +100,7 @@ class ImageCacheService {
 
   /// Clears all cached images.
   Future<void> clearAll() async {
+    _resolved.clear();
     if (_cacheDir == null) await init();
     if (_cacheDir!.existsSync()) {
       await _cacheDir!.delete(recursive: true);
@@ -85,6 +110,7 @@ class ImageCacheService {
 
   /// Clears expired images only.
   Future<int> clearExpired() async {
+    _resolved.clear();
     if (_cacheDir == null) await init();
     var count = 0;
     final files = _cacheDir!.listSync().whereType<File>();
@@ -114,7 +140,10 @@ class ImageCacheService {
       if (path.endsWith('.jpg') || path.endsWith('.jpeg')) return '.jpg';
       if (path.endsWith('.webp')) return '.webp';
       if (path.endsWith('.gif')) return '.gif';
-    } catch (_) {}
+    } catch (e) {
+      // Fallback determinístico para extensão desconhecida; registra a causa.
+      appLogger.d('[ImageCache] Falha ao inferir extensão da URL: $e');
+    }
     return '.img';
   }
 }

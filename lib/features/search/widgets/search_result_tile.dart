@@ -66,7 +66,9 @@ class SearchResultTile extends StatelessWidget {
           shape: BoxShape.circle,
         ),
         child: Icon(
-          item.isSeries ? Icons.arrow_forward_rounded : Icons.play_arrow_rounded,
+          item.isSeries
+              ? Icons.arrow_forward_rounded
+              : Icons.play_arrow_rounded,
           color: AppColors.primary,
           size: 18,
         ),

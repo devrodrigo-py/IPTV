@@ -81,7 +81,13 @@ class VodImportRepository {
     );
     final userPass = credResult.when(
       success: (val) => val,
-      failure: (_) => null,
+      failure: (f) {
+        appLogger.w(
+          'VOD import (playlist $playlistId): falha ao ler credenciais: '
+          '${f.message}',
+        );
+        return null;
+      },
     );
 
     if (userPass == null || userPass.isEmpty) {
@@ -125,9 +131,16 @@ class VodImportRepository {
               categoryMap[cat.categoryId] = cat.categoryName;
             }
           },
-          failure: (_) {},
+          failure: (f) => appLogger.w(
+            'VOD import (playlist $playlistId): falha ao buscar categorias: '
+            '${f.message}',
+          ),
         );
-      } catch (_) {}
+      } catch (e) {
+        appLogger.w(
+          'VOD import (playlist $playlistId): erro ao buscar categorias: $e',
+        );
+      }
 
       // Get existing VOD items for reconciliation
       final existing = await _db.vodDao.getVodByPlaylist(playlistId);
@@ -196,15 +209,15 @@ class VodImportRepository {
               name: stream.name,
               streamUrl: streamUrl,
               logoUrl: Value(stream.streamIcon),
-              categoryName: Value(categoryMap[stream.categoryId] ?? stream.categoryId),
+              categoryName:
+                  Value(categoryMap[stream.categoryId] ?? stream.categoryId),
               plot: Value(stream.plot),
               cast: Value(stream.cast),
               director: Value(stream.director),
               genre: Value(stream.genre),
               rating: Value(stream.rating),
               year: Value(stream.year),
-              containerExtension:
-                  Value(stream.containerExtension ?? 'mp4'),
+              containerExtension: Value(stream.containerExtension ?? 'mp4'),
             ),
           );
           added++;
@@ -215,8 +228,7 @@ class VodImportRepository {
       var deactivated = 0;
       for (final vod in existing) {
         if (!matchedIds.contains(vod.id)) {
-          await (_db.update(_db.vodItems)
-                ..where((v) => v.id.equals(vod.id)))
+          await (_db.update(_db.vodItems)..where((v) => v.id.equals(vod.id)))
               .write(
             VodItemsCompanion(
               isActive: const Value(false),
@@ -271,8 +283,7 @@ class VodImportRepository {
     required Map<String, String> categoryMap,
     required List<XtreamVodStream> streams,
   }) async {
-    final existingRows =
-        await _db.channelsDao.getAllChannelsByPlaylistAndType(
+    final existingRows = await _db.channelsDao.getAllChannelsByPlaylistAndType(
       playlistId,
       ChannelSourceType.vod,
     );

@@ -73,8 +73,10 @@ class _PlayerControlsState extends State<PlayerControls> {
     final hasDuration = !widget.isLive && duration > Duration.zero;
 
     final currentSeconds = _dragPositionSeconds ??
-        position.inSeconds.toDouble().clamp(0.0, duration.inSeconds.toDouble().clamp(1.0, double.infinity));
-    final maxSeconds = duration.inSeconds.toDouble().clamp(1.0, double.infinity);
+        position.inSeconds.toDouble().clamp(
+            0.0, duration.inSeconds.toDouble().clamp(1.0, double.infinity));
+    final maxSeconds =
+        duration.inSeconds.toDouble().clamp(1.0, double.infinity);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
@@ -109,12 +111,14 @@ class _PlayerControlsState extends State<PlayerControls> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: SliderTheme(
-                      data: SliderThemeData(
+                      data: const SliderThemeData(
                         activeTrackColor: AppColors.primary,
                         inactiveTrackColor: Colors.white24,
                         thumbColor: AppColors.primary,
-                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-                        overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+                        thumbShape:
+                            RoundSliderThumbShape(enabledThumbRadius: 7),
+                        overlayShape:
+                            RoundSliderOverlayShape(overlayRadius: 14),
                         trackHeight: 4,
                       ),
                       child: Slider(
@@ -171,12 +175,18 @@ class _PlayerControlsState extends State<PlayerControls> {
                           1.25,
                           1.5,
                           2.0,
-                        ].map((s) => PopupMenuItem(
-                          value: s,
-                          child: Text('${s}x${s == 1.0 ? ' (Normal)' : ''}'),
-                        )).toList(),
+                        ]
+                            .map(
+                              (s) => PopupMenuItem(
+                                value: s,
+                                child:
+                                    Text('${s}x${s == 1.0 ? ' (Normal)' : ''}'),
+                              ),
+                            )
+                            .toList(),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
                             color: Colors.white12,
                             borderRadius: BorderRadius.circular(8),
@@ -185,7 +195,8 @@ class _PlayerControlsState extends State<PlayerControls> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.speed_rounded, color: Colors.white, size: 16),
+                              const Icon(Icons.speed_rounded,
+                                  color: Colors.white, size: 16),
                               const SizedBox(width: 4),
                               Text(
                                 '${widget.playbackSpeed}x',
@@ -203,7 +214,8 @@ class _PlayerControlsState extends State<PlayerControls> {
                     const SizedBox(width: 16),
 
                     // Volume
-                    const Icon(Icons.volume_up_rounded, color: Colors.white70, size: 20),
+                    const Icon(Icons.volume_up_rounded,
+                        color: Colors.white70, size: 20),
                     const SizedBox(width: 4),
                     SizedBox(
                       width: 90,
@@ -212,7 +224,8 @@ class _PlayerControlsState extends State<PlayerControls> {
                           activeTrackColor: AppColors.primary,
                           inactiveTrackColor: Colors.white24,
                           thumbColor: AppColors.primary,
-                          thumbShape: RoundSliderThumbShape(enabledThumbRadius: 5),
+                          thumbShape:
+                              RoundSliderThumbShape(enabledThumbRadius: 5),
                           trackHeight: 3,
                         ),
                         child: Slider(
@@ -231,7 +244,8 @@ class _PlayerControlsState extends State<PlayerControls> {
                     // Previous Episode (for Series)
                     if (widget.hasPreviousEpisode)
                       IconButton(
-                        icon: const Icon(Icons.skip_previous_rounded, color: Colors.white),
+                        icon: const Icon(Icons.skip_previous_rounded,
+                            color: Colors.white),
                         iconSize: 32,
                         tooltip: 'Episódio Anterior',
                         onPressed: widget.onPreviousEpisode,
@@ -240,7 +254,8 @@ class _PlayerControlsState extends State<PlayerControls> {
                     // Replay 10s (VOD/Series)
                     if (!widget.isLive)
                       IconButton(
-                        icon: const Icon(Icons.replay_10_rounded, color: Colors.white),
+                        icon: const Icon(Icons.replay_10_rounded,
+                            color: Colors.white),
                         iconSize: 32,
                         tooltip: 'Voltar 10s',
                         onPressed: widget.onReplay10,
@@ -259,7 +274,8 @@ class _PlayerControlsState extends State<PlayerControls> {
                         child: Padding(
                           padding: const EdgeInsets.all(12),
                           child: Icon(
-                            widget.playbackState.status == PlaybackStatus.playing
+                            widget.playbackState.status ==
+                                    PlaybackStatus.playing
                                 ? Icons.pause_rounded
                                 : Icons.play_arrow_rounded,
                             color: Colors.white,
@@ -274,7 +290,8 @@ class _PlayerControlsState extends State<PlayerControls> {
                     // Forward 10s (VOD/Series)
                     if (!widget.isLive)
                       IconButton(
-                        icon: const Icon(Icons.forward_10_rounded, color: Colors.white),
+                        icon: const Icon(Icons.forward_10_rounded,
+                            color: Colors.white),
                         iconSize: 32,
                         tooltip: 'Avançar 10s',
                         onPressed: widget.onForward10,
@@ -283,7 +300,8 @@ class _PlayerControlsState extends State<PlayerControls> {
                     // Next Episode (for Series)
                     if (widget.hasNextEpisode)
                       IconButton(
-                        icon: const Icon(Icons.skip_next_rounded, color: Colors.white),
+                        icon: const Icon(Icons.skip_next_rounded,
+                            color: Colors.white),
                         iconSize: 32,
                         tooltip: 'Próximo Episódio',
                         onPressed: widget.onNextEpisode,
@@ -298,7 +316,8 @@ class _PlayerControlsState extends State<PlayerControls> {
                     // Subtitles / CC
                     if (widget.onOpenSubtitles != null)
                       IconButton(
-                        icon: const Icon(Icons.closed_caption_rounded, color: Colors.white),
+                        icon: const Icon(Icons.closed_caption_rounded,
+                            color: Colors.white),
                         iconSize: 26,
                         tooltip: 'Legendas (CC)',
                         onPressed: widget.onOpenSubtitles,
@@ -307,7 +326,8 @@ class _PlayerControlsState extends State<PlayerControls> {
                     // Audio Tracks
                     if (widget.onOpenAudio != null)
                       IconButton(
-                        icon: const Icon(Icons.audiotrack_rounded, color: Colors.white),
+                        icon: const Icon(Icons.audiotrack_rounded,
+                            color: Colors.white),
                         iconSize: 24,
                         tooltip: 'Áudio (Dublado / Original)',
                         onPressed: widget.onOpenAudio,
@@ -315,7 +335,8 @@ class _PlayerControlsState extends State<PlayerControls> {
 
                     // Stop
                     IconButton(
-                      icon: const Icon(Icons.stop_rounded, color: Colors.white70),
+                      icon:
+                          const Icon(Icons.stop_rounded, color: Colors.white70),
                       iconSize: 28,
                       tooltip: 'Parar e Voltar',
                       onPressed: widget.onStop,

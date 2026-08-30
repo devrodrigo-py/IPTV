@@ -98,8 +98,8 @@ class ContentDeduplicationService {
   }
 
   /// Full scan returning both result stats and groups.
-  Future<(ContentDeduplicationResult, List<ContentDuplicateGroup>)>
-      fullScan({int? playlistId, String sourceType = 'vod'}) async {
+  Future<(ContentDeduplicationResult, List<ContentDuplicateGroup>)> fullScan(
+      {int? playlistId, String sourceType = 'vod'}) async {
     final stopwatch = Stopwatch()..start();
 
     final groups = await _detectDuplicates(
@@ -180,11 +180,13 @@ class ContentDeduplicationService {
             items[i],
       ];
 
-      duplicateGroups.add(ContentDuplicateGroup(
-        normalizedName: entry.key,
-        items: updatedItems,
-        confidence: 1.0,
-      ));
+      duplicateGroups.add(
+        ContentDuplicateGroup(
+          normalizedName: entry.key,
+          items: updatedItems,
+          confidence: 1.0,
+        ),
+      );
     }
 
     appLogger.i(
@@ -262,13 +264,14 @@ class ContentDeduplicationService {
       variables.add(Variable.withInt(playlistId));
     }
 
-    final results =
-        await _db.customSelect(query, variables: variables).get();
+    final results = await _db.customSelect(query, variables: variables).get();
     return results
-        .map((row) => _ContentItem(
-              id: row.read<int>('id'),
-              name: row.read<String>('name'),
-            ))
+        .map(
+          (row) => _ContentItem(
+            id: row.read<int>('id'),
+            name: row.read<String>('name'),
+          ),
+        )
         .toList();
   }
 }

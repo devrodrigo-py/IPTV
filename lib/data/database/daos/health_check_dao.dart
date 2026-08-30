@@ -204,7 +204,8 @@ class HealthCheckDao extends DatabaseAccessor<AppDatabase> {
           ? DateTime.tryParse(row.read<String>('next_check_at'))
           : null,
       createdAt: DateTime.tryParse(
-              row.readNullable<String>('created_at') ?? '') ??
+            row.readNullable<String>('created_at') ?? '',
+          ) ??
           DateTime.now(),
     );
   }

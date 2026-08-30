@@ -1,4 +1,5 @@
 /// Models for TMDB API responses.
+library;
 
 /// A genre from TMDB.
 class TmdbGenre {
@@ -71,8 +72,7 @@ class TmdbSearchResult {
       overview: json['overview'] as String?,
       posterPath: json['poster_path'] as String?,
       backdropPath: json['backdrop_path'] as String?,
-      releaseDate:
-          (json['release_date'] ?? json['first_air_date']) as String?,
+      releaseDate: (json['release_date'] ?? json['first_air_date']) as String?,
       voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0.0,
       genreIds: (json['genre_ids'] as List<dynamic>?)
               ?.map((e) => e as int)

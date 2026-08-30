@@ -118,7 +118,8 @@ class _PinEntryDialogState extends State<_PinEntryDialog> {
         children: [
           const Icon(Icons.lock_rounded, color: AppColors.primary, size: 24),
           const SizedBox(width: 10),
-          Text('Controle Parental', style: AppTypography.title.copyWith(fontSize: 18)),
+          Text('Controle Parental',
+              style: AppTypography.title.copyWith(fontSize: 18)),
         ],
       ),
       content: Column(
@@ -138,7 +139,8 @@ class _PinEntryDialogState extends State<_PinEntryDialog> {
               keyboardType: TextInputType.number,
               maxLength: 4,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 24, letterSpacing: 12, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                  fontSize: 24, letterSpacing: 12, fontWeight: FontWeight.bold),
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: const InputDecoration(
                 counterText: '',
@@ -165,15 +167,18 @@ class _PinEntryDialogState extends State<_PinEntryDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancelar', style: TextStyle(color: AppColors.textSecondary)),
+          child: const Text('Cancelar',
+              style: TextStyle(color: AppColors.textSecondary)),
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
           onPressed: _verify,
-          child: const Text('Desbloquear', style: TextStyle(color: Colors.white)),
+          child:
+              const Text('Desbloquear', style: TextStyle(color: Colors.white)),
         ),
       ],
     );

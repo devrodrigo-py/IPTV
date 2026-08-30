@@ -47,11 +47,13 @@ class SuaTvService {
     final topCategories = await _getTopCategories();
 
     // 3. Items from top categories (partially watched or unwatched)
-    final categoryItems = await _getFromCategories(topCategories, (size * 0.3).round());
+    final categoryItems =
+        await _getFromCategories(topCategories, (size * 0.3).round());
     queue.addAll(categoryItems);
 
     // 4. Random items from same categories
-    final randomItems = await _getRandomFromCategories(topCategories, (size * 0.3).round());
+    final randomItems =
+        await _getRandomFromCategories(topCategories, (size * 0.3).round());
     queue.addAll(randomItems);
 
     // Deduplicate by channelId
@@ -79,14 +81,19 @@ class SuaTvService {
          LIMIT 15''',
     ).get();
 
-    return rows.map((r) => SuaTvItem(
-      channelId: r.data['id'] as int,
-      name: r.data['name'] as String? ?? '',
-      streamUrl: r.data['stream_url'] as String? ?? '',
-      thumbnailUrl: r.data['logo_url'] as String?,
-      contentType: r.data['source_type'] as String? ?? 'xtream',
-      categoryName: r.data['group_name'] as String?,
-    )).where((item) => item.streamUrl.isNotEmpty).toList();
+    return rows
+        .map(
+          (r) => SuaTvItem(
+            channelId: r.data['id'] as int,
+            name: r.data['name'] as String? ?? '',
+            streamUrl: r.data['stream_url'] as String? ?? '',
+            thumbnailUrl: r.data['logo_url'] as String?,
+            contentType: r.data['source_type'] as String? ?? 'xtream',
+            categoryName: r.data['group_name'] as String?,
+          ),
+        )
+        .where((item) => item.streamUrl.isNotEmpty)
+        .toList();
   }
 
   Future<List<String>> _getTopCategories() async {
@@ -104,7 +111,8 @@ class SuaTvService {
     return rows.map((r) => r.data['group_name'] as String).toList();
   }
 
-  Future<List<SuaTvItem>> _getFromCategories(List<String> categories, int limit) async {
+  Future<List<SuaTvItem>> _getFromCategories(
+      List<String> categories, int limit) async {
     if (categories.isEmpty) return [];
 
     final placeholders = categories.map((_) => '?').join(',');
@@ -123,17 +131,23 @@ class SuaTvService {
       variables: [...vars, Variable.withInt(limit)],
     ).get();
 
-    return rows.map((r) => SuaTvItem(
-      channelId: r.data['id'] as int,
-      name: r.data['name'] as String? ?? '',
-      streamUrl: r.data['stream_url'] as String? ?? '',
-      thumbnailUrl: r.data['logo_url'] as String?,
-      contentType: r.data['source_type'] as String? ?? 'xtream',
-      categoryName: r.data['group_name'] as String?,
-    )).where((item) => item.streamUrl.isNotEmpty).toList();
+    return rows
+        .map(
+          (r) => SuaTvItem(
+            channelId: r.data['id'] as int,
+            name: r.data['name'] as String? ?? '',
+            streamUrl: r.data['stream_url'] as String? ?? '',
+            thumbnailUrl: r.data['logo_url'] as String?,
+            contentType: r.data['source_type'] as String? ?? 'xtream',
+            categoryName: r.data['group_name'] as String?,
+          ),
+        )
+        .where((item) => item.streamUrl.isNotEmpty)
+        .toList();
   }
 
-  Future<List<SuaTvItem>> _getRandomFromCategories(List<String> categories, int limit) async {
+  Future<List<SuaTvItem>> _getRandomFromCategories(
+      List<String> categories, int limit) async {
     if (categories.isEmpty) {
       // Fallback: random from any active channel with stream
       final rows = await _db.customSelect(
@@ -147,14 +161,19 @@ class SuaTvService {
         variables: [Variable.withInt(limit)],
       ).get();
 
-      return rows.map((r) => SuaTvItem(
-        channelId: r.data['id'] as int,
-        name: r.data['name'] as String? ?? '',
-        streamUrl: r.data['stream_url'] as String? ?? '',
-        thumbnailUrl: r.data['logo_url'] as String?,
-        contentType: r.data['source_type'] as String? ?? 'xtream',
-        categoryName: r.data['group_name'] as String?,
-      )).where((item) => item.streamUrl.isNotEmpty).toList();
+      return rows
+          .map(
+            (r) => SuaTvItem(
+              channelId: r.data['id'] as int,
+              name: r.data['name'] as String? ?? '',
+              streamUrl: r.data['stream_url'] as String? ?? '',
+              thumbnailUrl: r.data['logo_url'] as String?,
+              contentType: r.data['source_type'] as String? ?? 'xtream',
+              categoryName: r.data['group_name'] as String?,
+            ),
+          )
+          .where((item) => item.streamUrl.isNotEmpty)
+          .toList();
     }
 
     return _getFromCategories(categories, limit);

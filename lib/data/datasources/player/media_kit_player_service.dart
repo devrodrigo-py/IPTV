@@ -48,18 +48,20 @@ class MediaKitPlayerService implements VideoPlayerService {
       _setupListeners();
 
       // Configure hardware decoding and network reconnection
-      if (_player?.platform is dynamic) {
-        try {
-          final mpv = _player!.platform as dynamic;
-          await mpv.setProperty('hwdec', 'auto-safe');
-          await mpv.setProperty(
-            'stream-lavf-o',
-            'reconnect=1,reconnect_streamed=1,reconnect_delay_max=5',
-          );
-        } catch (_) {}
+      try {
+        final mpv = _player!.platform as dynamic;
+        await mpv.setProperty('hwdec', 'auto-safe');
+        await mpv.setProperty(
+          'stream-lavf-o',
+          'reconnect=1,reconnect_streamed=1,reconnect_delay_max=5',
+        );
+      } catch (e) {
+        // Propriedades são opcionais (dependem da plataforma/build do mpv).
+        appLogger.d('[Player] mpv config opcional indisponível: $e');
       }
 
-      appLogger.i('MediaKit player initialized with hardware decoding and resilient reconnection');
+      appLogger.i(
+          'MediaKit player initialized with hardware decoding and resilient reconnection');
       return const Success(null);
     } catch (e) {
       return Failure(
@@ -82,12 +84,15 @@ class MediaKitPlayerService implements VideoPlayerService {
       _updateState(_currentState.copyWith(status: PlaybackStatus.buffering));
 
       // Dynamic buffer: 2s for live zapping, 15s for VOD
-      final isLive = url.contains('/live/') || url.contains('.m3u8') || url.endsWith('.ts');
-      if (_player?.platform is dynamic) {
-        try {
-          final mpv = _player!.platform as dynamic;
-          await mpv.setProperty('demuxer-readahead-secs', isLive ? '2' : '15');
-        } catch (_) {}
+      final isLive = url.contains('/live/') ||
+          url.contains('.m3u8') ||
+          url.endsWith('.ts');
+      try {
+        final mpv = _player!.platform as dynamic;
+        await mpv.setProperty('demuxer-readahead-secs', isLive ? '2' : '15');
+      } catch (e) {
+        // Propriedade opcional; falha não deve interromper a reprodução.
+        appLogger.d('[Player] Buffer dinâmico (mpv) indisponível: $e');
       }
 
       // For live streams, use .m3u8 extension (HLS) instead of .ts
@@ -196,10 +201,23 @@ class MediaKitPlayerService implements VideoPlayerService {
   Future<Result<void>> selectAudioTrack(String trackId) async {
     try {
       final tracks = _player?.state.tracks.audio ?? [];
-      final track = tracks.firstWhere(
-        (t) => t.id == trackId,
-        orElse: () => tracks.first,
-      );
+      AudioTrack? track;
+      for (final t in tracks) {
+        if (t.id == trackId) {
+          track = t;
+          break;
+        }
+      }
+      if (track == null) {
+        // Não fabricar fallback silencioso: a faixa pedida não existe.
+        appLogger.w(
+          '[Player] Faixa de áudio "$trackId" não encontrada '
+          '(${tracks.length} faixas disponíveis).',
+        );
+        return const Failure(
+          StreamUnavailableFailure(message: 'Faixa de áudio não encontrada.'),
+        );
+      }
       await _player?.setAudioTrack(track);
       return const Success(null);
     } catch (e) {
@@ -216,10 +234,25 @@ class MediaKitPlayerService implements VideoPlayerService {
         await _player?.setSubtitleTrack(SubtitleTrack.no());
       } else {
         final tracks = _player?.state.tracks.subtitle ?? [];
-        final track = tracks.firstWhere(
-          (t) => t.id == trackId,
-          orElse: () => SubtitleTrack.no(),
-        );
+        SubtitleTrack? track;
+        for (final t in tracks) {
+          if (t.id == trackId) {
+            track = t;
+            break;
+          }
+        }
+        if (track == null) {
+          // Não fabricar fallback silencioso: a faixa pedida não existe.
+          appLogger.w(
+            '[Player] Faixa de legenda "$trackId" não encontrada '
+            '(${tracks.length} faixas disponíveis).',
+          );
+          return const Failure(
+            StreamUnavailableFailure(
+              message: 'Faixa de legenda não encontrada.',
+            ),
+          );
+        }
         await _player?.setSubtitleTrack(track);
       }
       return const Success(null);
@@ -324,7 +357,8 @@ class MediaKitPlayerService implements VideoPlayerService {
           final isPlaying = player.state.playing;
           _updateState(
             _currentState.copyWith(
-              status: isPlaying ? PlaybackStatus.playing : PlaybackStatus.paused,
+              status:
+                  isPlaying ? PlaybackStatus.playing : PlaybackStatus.paused,
             ),
           );
         }
@@ -333,11 +367,14 @@ class MediaKitPlayerService implements VideoPlayerService {
 
     _subscriptions.add(
       player.stream.position.listen((position) {
-        if (_currentState.status == PlaybackStatus.buffering && position > Duration.zero) {
+        if (_currentState.status == PlaybackStatus.buffering &&
+            position > Duration.zero) {
           _updateState(
             _currentState.copyWith(
               position: position,
-              status: player.state.playing ? PlaybackStatus.playing : PlaybackStatus.paused,
+              status: player.state.playing
+                  ? PlaybackStatus.playing
+                  : PlaybackStatus.paused,
             ),
           );
         } else {

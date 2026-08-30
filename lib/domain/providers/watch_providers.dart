@@ -12,9 +12,8 @@ final watchStatsDaoProvider = Provider<WatchStatsDao>((ref) {
 
 /// Provider for the WatchTrackingService (singleton during app lifecycle).
 final watchTrackingServiceProvider = Provider<WatchTrackingService>((ref) {
-  final db = ref.read(databaseProvider);
   final statsDao = ref.read(watchStatsDaoProvider);
-  final service = WatchTrackingService(db: db, statsDao: statsDao);
+  final service = WatchTrackingService(statsDao: statsDao);
   ref.onDispose(() => service.dispose());
   return service;
 });
@@ -34,7 +33,8 @@ final continueWatchingProvider =
 });
 
 /// Provider for recent watch history (filtered by type).
-final watchHistoryProvider = FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String?>(
+final watchHistoryProvider =
+    FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String?>(
   (ref, contentType) async {
     final statsDao = ref.read(watchStatsDaoProvider);
     return statsDao.getRecentByType(contentType: contentType, limit: 50);

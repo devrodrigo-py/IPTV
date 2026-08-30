@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
-import 'package:nebula_iptv/features/shared/widgets/content_card.dart';
+import 'package:nebula_iptv/core/widgets/nebula_cached_image.dart';
 import 'package:nebula_iptv/features/shared/widgets/content_row.dart';
 import 'package:nebula_iptv/features/stats/providers/stats_provider.dart';
 import 'package:nebula_iptv/features/wrapped/wrapped_screen.dart';
@@ -18,8 +18,10 @@ class StatsScreen extends ConsumerWidget {
     return statsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
-        child: Text('Erro ao carregar estatísticas',
-            style: AppTypography.body.copyWith(color: AppColors.textSecondary)),
+        child: Text(
+          'Erro ao carregar estatísticas',
+          style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+        ),
       ),
       data: (stats) => _buildContent(context, stats),
     );
@@ -103,19 +105,24 @@ class StatsScreen extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.auto_awesome_rounded, size: 36, color: Colors.white),
+            const Icon(Icons.auto_awesome_rounded,
+                size: 36, color: Colors.white),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('🎬 Nebula Wrapped', style: AppTypography.title.copyWith(color: Colors.white)),
+                  Text('🎬 Nebula Wrapped',
+                      style: AppTypography.title.copyWith(color: Colors.white)),
                   const SizedBox(height: 4),
-                  Text('Descubra seus hábitos de consumo', style: AppTypography.caption.copyWith(color: Colors.white70)),
+                  Text('Descubra seus hábitos de consumo',
+                      style: AppTypography.caption
+                          .copyWith(color: Colors.white70)),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded, size: 18, color: Colors.white70),
+            const Icon(Icons.arrow_forward_ios_rounded,
+                size: 18, color: Colors.white70),
           ],
         ),
       ),
@@ -180,7 +187,7 @@ class StatsScreen extends ConsumerWidget {
     final maxMs = dailyWatch
         .map((d) => (d['total_ms'] as int?) ?? 0)
         .reduce((a, b) => a > b ? a : b);
-    final maxHeight = 120.0;
+    const maxHeight = 120.0;
 
     final dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -241,7 +248,11 @@ class StatsScreen extends ConsumerWidget {
     final total = stats.contentTypeSplit.values.fold(0, (a, b) => a + b);
     if (total == 0) return const SizedBox.shrink();
 
-    final typeLabels = {'live': 'Canais ao vivo', 'vod': 'Filmes', 'series': 'Séries'};
+    final typeLabels = {
+      'live': 'Canais ao vivo',
+      'vod': 'Filmes',
+      'series': 'Séries'
+    };
     final typeColors = {
       'live': AppColors.primary,
       'vod': Colors.teal,
@@ -368,7 +379,8 @@ class StatsScreen extends ConsumerWidget {
                 child: Text(
                   '${index + 1}',
                   style: AppTypography.title.copyWith(
-                    color: index < 3 ? AppColors.primary : AppColors.textSecondary,
+                    color:
+                        index < 3 ? AppColors.primary : AppColors.textSecondary,
                   ),
                 ),
               ),
@@ -379,8 +391,13 @@ class StatsScreen extends ConsumerWidget {
                   width: 40,
                   height: 40,
                   child: logoUrl != null && logoUrl.isNotEmpty
-                      ? Image.network(logoUrl, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _thumbPlaceholder())
+                      ? NebulaCachedImage(
+                          imageUrl: logoUrl,
+                          fit: BoxFit.cover,
+                          cacheWidth: 96,
+                          cacheHeight: 96,
+                          placeholder: _thumbPlaceholder(),
+                        )
                       : _thumbPlaceholder(),
                 ),
               ),
@@ -434,7 +451,9 @@ class StatsScreen extends ConsumerWidget {
 
   Widget _buildCategoryList(List<Map<String, dynamic>> categories) {
     final total = categories.fold<int>(
-        0, (sum, c) => sum + ((c['total_ms'] as int?) ?? 0));
+      0,
+      (sum, c) => sum + ((c['total_ms'] as int?) ?? 0),
+    );
     if (total == 0) return const SizedBox.shrink();
 
     final colors = [
@@ -464,9 +483,8 @@ class StatsScreen extends ConsumerWidget {
           final ms = (cat['total_ms'] as int?) ?? 0;
           final percent = ms / total;
           // Extract short name (after "Canais | " or "Filmes | " etc)
-          final shortName = name.contains('|')
-              ? name.split('|').last.trim()
-              : name;
+          final shortName =
+              name.contains('|') ? name.split('|').last.trim() : name;
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
@@ -531,7 +549,8 @@ class StatsScreen extends ConsumerWidget {
   Widget _thumbPlaceholder() {
     return Container(
       color: AppColors.surfaceElevated,
-      child: const Icon(Icons.tv_rounded, size: 20, color: AppColors.textSecondary),
+      child: const Icon(Icons.tv_rounded,
+          size: 20, color: AppColors.textSecondary),
     );
   }
 

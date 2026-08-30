@@ -264,7 +264,7 @@ class Playlist extends DataClass implements Insertable<Playlist> {
   final bool isActive;
 
   /// Per-source opt-in to accept invalid/self-signed TLS certificates
-  /// from this playlist's host (ADR-002). Never enabled globally.
+  /// from this playlist's host (ADR-005). Never enabled globally.
   final bool allowInsecureTls;
   const Playlist(
       {required this.id,

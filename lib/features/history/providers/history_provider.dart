@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/errors/app_failure.dart';
+import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/data/database/app_database.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 
@@ -85,8 +86,10 @@ class HistoryScreenNotifier extends StateNotifier<HistoryScreenState> {
         watchedDurationMs: durationMs,
       );
       await loadHistory();
-    } catch (_) {
-      // Don't break playback for history errors
+    } catch (e) {
+      // Don't break playback for history errors, but keep the failure
+      // observable in the logs.
+      appLogger.w('[History] Falha ao registrar reprodução: $e');
     }
   }
 
@@ -96,7 +99,16 @@ class HistoryScreenNotifier extends StateNotifier<HistoryScreenState> {
       final db = _ref.read(databaseProvider);
       await db.watchHistoryDao.deleteEntry(id);
       await loadHistory();
-    } catch (_) {}
+    } catch (e) {
+      appLogger.w('[History] Falha ao excluir item do histórico: $e');
+      state = state.copyWith(
+        isLoading: false,
+        failure: DatabaseFailure(
+          message: 'Erro ao excluir item do histórico.',
+          originalError: e,
+        ),
+      );
+    }
   }
 
   /// Clears all history.
@@ -104,8 +116,17 @@ class HistoryScreenNotifier extends StateNotifier<HistoryScreenState> {
     try {
       final db = _ref.read(databaseProvider);
       await db.watchHistoryDao.clearAll();
-      state = state.copyWith(entries: []);
-    } catch (_) {}
+      state = state.copyWith(entries: [], clearFailure: true);
+    } catch (e) {
+      appLogger.w('[History] Falha ao limpar histórico: $e');
+      state = state.copyWith(
+        isLoading: false,
+        failure: DatabaseFailure(
+          message: 'Erro ao limpar o histórico.',
+          originalError: e,
+        ),
+      );
+    }
   }
 
   /// Trims history to configured limit.
@@ -114,7 +135,16 @@ class HistoryScreenNotifier extends StateNotifier<HistoryScreenState> {
       final db = _ref.read(databaseProvider);
       await db.watchHistoryDao.trimHistory(state.limit);
       await loadHistory();
-    } catch (_) {}
+    } catch (e) {
+      appLogger.w('[History] Falha ao limitar histórico: $e');
+      state = state.copyWith(
+        isLoading: false,
+        failure: DatabaseFailure(
+          message: 'Erro ao limitar o histórico.',
+          originalError: e,
+        ),
+      );
+    }
   }
 
   /// Updates the history limit.

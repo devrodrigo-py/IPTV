@@ -81,7 +81,13 @@ class SeriesImportRepository {
     );
     final userPass = credResult.when(
       success: (val) => val,
-      failure: (_) => null,
+      failure: (f) {
+        appLogger.w(
+          'Series import (playlist $playlistId): falha ao ler credenciais: '
+          '${f.message}',
+        );
+        return null;
+      },
     );
 
     if (userPass == null || userPass.isEmpty) {
@@ -149,7 +155,13 @@ class SeriesImportRepository {
     );
     final userPass = credResult.when(
       success: (val) => val,
-      failure: (_) => null,
+      failure: (f) {
+        appLogger.w(
+          'Series details (playlist $playlistId): falha ao ler credenciais: '
+          '${f.message}',
+        );
+        return null;
+      },
     );
 
     if (userPass == null || userPass.isEmpty) {
@@ -194,9 +206,16 @@ class SeriesImportRepository {
               categoryMap[cat.categoryId] = cat.categoryName;
             }
           },
-          failure: (_) {},
+          failure: (f) => appLogger.w(
+            'Series import (playlist $playlistId): falha ao buscar categorias: '
+            '${f.message}',
+          ),
         );
-      } catch (_) {}
+      } catch (e) {
+        appLogger.w(
+          'Series import (playlist $playlistId): erro ao buscar categorias: $e',
+        );
+      }
 
       final existing = await _db.seriesDao.getSeriesByPlaylist(playlistId);
       final existingBySourceId = <String, SeriesItem>{};
@@ -254,7 +273,8 @@ class SeriesImportRepository {
               sourceId: sourceId,
               name: series.name,
               coverUrl: Value(series.cover),
-              categoryName: Value(categoryMap[series.categoryId] ?? series.categoryId),
+              categoryName:
+                  Value(categoryMap[series.categoryId] ?? series.categoryId),
               plot: Value(series.plot),
               cast: Value(series.cast),
               director: Value(series.director),
@@ -272,8 +292,7 @@ class SeriesImportRepository {
       var deactivated = 0;
       for (final s in existing) {
         if (!matchedIds.contains(s.id)) {
-          await (_db.update(_db.seriesItems)
-                ..where((si) => si.id.equals(s.id)))
+          await (_db.update(_db.seriesItems)..where((si) => si.id.equals(s.id)))
               .write(
             SeriesItemsCompanion(
               isActive: const Value(false),
@@ -320,8 +339,7 @@ class SeriesImportRepository {
     required Map<String, String> categoryMap,
     required List<XtreamSeries> seriesList,
   }) async {
-    final existingRows =
-        await _db.channelsDao.getAllChannelsByPlaylistAndType(
+    final existingRows = await _db.channelsDao.getAllChannelsByPlaylistAndType(
       playlistId,
       ChannelSourceType.series,
     );
@@ -494,8 +512,7 @@ class SeriesImportRepository {
               episodeNumber: episode.episodeNum,
               title: episode.title,
               streamUrl: streamUrl,
-              containerExtension:
-                  Value(episode.containerExtension ?? 'mp4'),
+              containerExtension: Value(episode.containerExtension ?? 'mp4'),
               plot: Value(episode.plot),
               duration: Value(episode.durationSecs),
               coverUrl: Value(episode.coverBig),
@@ -506,8 +523,8 @@ class SeriesImportRepository {
         }
       }
 
-      final totalEpisodes = info.episodes.values
-          .fold<int>(0, (sum, list) => sum + list.length);
+      final totalEpisodes =
+          info.episodes.values.fold<int>(0, (sum, list) => sum + list.length);
 
       appLogger.i(
         'Series details for $seriesDbId: '

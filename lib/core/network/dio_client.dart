@@ -11,7 +11,7 @@ import 'package:nebula_iptv/core/result/result.dart';
 /// Provides consistent timeout, error handling, and secure logging
 /// across all network requests in the application.
 ///
-/// TLS policy (ADR-002): invalid certificates are **rejected** by default.
+/// TLS policy (ADR-005): invalid certificates are **rejected** by default.
 /// A specific host may be opted in — per playlist/source, never globally —
 /// via [allowInsecureFor] while a request from that source is in flight.
 class DioClient {
@@ -38,7 +38,7 @@ class DioClient {
         adapter.createHttpClient = () {
           final client = HttpClient();
           // Reject invalid certificates unless the host was explicitly
-          // opted in by the source being imported (ADR-002).
+          // opted in by the source being imported (ADR-005).
           client.badCertificateCallback =
               (X509Certificate cert, String host, int port) =>
                   _insecureHosts.contains(host);

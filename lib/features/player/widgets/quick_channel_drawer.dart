@@ -53,7 +53,8 @@ class _QuickChannelDrawerState extends ConsumerState<QuickChannelDrawer> {
     }
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
-      filtered = filtered.where((c) => c.name.toLowerCase().contains(q)).toList();
+      filtered =
+          filtered.where((c) => c.name.toLowerCase().contains(q)).toList();
     }
 
     return FocusScope(
@@ -82,7 +83,8 @@ class _QuickChannelDrawerState extends ConsumerState<QuickChannelDrawer> {
                 padding: const EdgeInsets.fromLTRB(16, 16, 12, 8),
                 child: Row(
                   children: [
-                    const Icon(Icons.live_tv_rounded, color: AppColors.primary, size: 22),
+                    const Icon(Icons.live_tv_rounded,
+                        color: AppColors.primary, size: 22),
                     const SizedBox(width: 10),
                     Text(
                       'Guia Rápido',
@@ -90,7 +92,8 @@ class _QuickChannelDrawerState extends ConsumerState<QuickChannelDrawer> {
                     ),
                     const Spacer(),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                      icon: const Icon(Icons.close_rounded,
+                          color: Colors.white70),
                       onPressed: widget.onClose,
                       tooltip: 'Fechar',
                     ),
@@ -108,11 +111,14 @@ class _QuickChannelDrawerState extends ConsumerState<QuickChannelDrawer> {
                 style: const TextStyle(color: Colors.white, fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Buscar canal...',
-                  hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
-                  prefixIcon: const Icon(Icons.search_rounded, color: Colors.white54, size: 18),
+                  hintStyle:
+                      const TextStyle(color: Colors.white38, fontSize: 13),
+                  prefixIcon: const Icon(Icons.search_rounded,
+                      color: Colors.white54, size: 18),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.clear_rounded, size: 16, color: Colors.white54),
+                          icon: const Icon(Icons.clear_rounded,
+                              size: 16, color: Colors.white54),
                           onPressed: () {
                             _searchController.clear();
                             setState(() => _searchQuery = '');
@@ -121,7 +127,8 @@ class _QuickChannelDrawerState extends ConsumerState<QuickChannelDrawer> {
                       : null,
                   filled: true,
                   fillColor: AppColors.surfaceElevated,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide.none,
@@ -153,7 +160,9 @@ class _QuickChannelDrawerState extends ConsumerState<QuickChannelDrawer> {
                           catName,
                           style: TextStyle(
                             fontSize: 11,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
                             color: isSelected ? Colors.white : Colors.white70,
                           ),
                         ),
@@ -283,8 +292,11 @@ class _ChannelDrawerTileState extends ConsumerState<_ChannelDrawerTile> {
                     Text(
                       widget.channel.name,
                       style: TextStyle(
-                        color: widget.isPlaying ? AppColors.primary : Colors.white,
-                        fontWeight: widget.isPlaying ? FontWeight.bold : FontWeight.w500,
+                        color:
+                            widget.isPlaying ? AppColors.primary : Colors.white,
+                        fontWeight: widget.isPlaying
+                            ? FontWeight.bold
+                            : FontWeight.w500,
                         fontSize: 13,
                       ),
                       maxLines: 1,
@@ -292,7 +304,9 @@ class _ChannelDrawerTileState extends ConsumerState<_ChannelDrawerTile> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      currentProgram?.title ?? widget.channel.groupName ?? 'Ao Vivo',
+                      currentProgram?.title ??
+                          widget.channel.groupName ??
+                          'Ao Vivo',
                       style: TextStyle(
                         color: widget.isPlaying
                             ? Colors.white70

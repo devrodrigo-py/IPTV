@@ -17,11 +17,9 @@ class WebPlayerService implements VideoPlayerService {
 
   final _playbackStateController =
       StreamController<VideoPlaybackState>.broadcast();
-  final _bufferStateController =
-      StreamController<VideoBufferState>.broadcast();
+  final _bufferStateController = StreamController<VideoBufferState>.broadcast();
   final _errorController = StreamController<VideoPlayerError>.broadcast();
-  final _audioTracksController =
-      StreamController<List<VideoTrack>>.broadcast();
+  final _audioTracksController = StreamController<List<VideoTrack>>.broadcast();
   final _subtitleTracksController =
       StreamController<List<VideoTrack>>.broadcast();
   final _completedController = StreamController<void>.broadcast();
@@ -48,11 +46,13 @@ class WebPlayerService implements VideoPlayerService {
       appLogger.i('Web player: playing $url');
       return const Success(null);
     } catch (e) {
-      _errorController.add(VideoPlayerError(
-        code: 'WEB_PLAY_ERROR',
-        message: 'Não foi possível reproduzir o stream no navegador.',
-        originalError: e,
-      ));
+      _errorController.add(
+        VideoPlayerError(
+          code: 'WEB_PLAY_ERROR',
+          message: 'Não foi possível reproduzir o stream no navegador.',
+          originalError: e,
+        ),
+      );
       _updateState(_currentState.copyWith(status: PlaybackStatus.error));
       return Failure(
         StreamUnavailableFailure(
@@ -181,10 +181,12 @@ class WebPlayerService implements VideoPlayerService {
     PlaybackStatus status;
     if (value.hasError) {
       status = PlaybackStatus.error;
-      _errorController.add(VideoPlayerError(
-        code: 'PLAYBACK_ERROR',
-        message: value.errorDescription ?? 'Erro de reprodução',
-      ));
+      _errorController.add(
+        VideoPlayerError(
+          code: 'PLAYBACK_ERROR',
+          message: value.errorDescription ?? 'Erro de reprodução',
+        ),
+      );
     } else if (value.isBuffering) {
       status = PlaybackStatus.buffering;
     } else if (value.isPlaying) {
@@ -193,16 +195,20 @@ class WebPlayerService implements VideoPlayerService {
       status = PlaybackStatus.paused;
     }
 
-    _updateState(VideoPlaybackState(
-      status: status,
-      position: value.position,
-      duration: value.duration,
-      volume: value.volume,
-    ));
+    _updateState(
+      VideoPlaybackState(
+        status: status,
+        position: value.position,
+        duration: value.duration,
+        volume: value.volume,
+      ),
+    );
 
-    _bufferStateController.add(VideoBufferState(
-      isBuffering: value.isBuffering,
-    ));
+    _bufferStateController.add(
+      VideoBufferState(
+        isBuffering: value.isBuffering,
+      ),
+    );
 
     if (value.duration > Duration.zero &&
         value.position >= value.duration &&

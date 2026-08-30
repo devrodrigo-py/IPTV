@@ -2,6 +2,7 @@
 ///
 /// TVMaze is used as a fallback datasource when TMDB does not return results,
 /// particularly useful for lesser-known series. TVMaze does not require an API key.
+library;
 
 class TvMazeShow {
   final int id;

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/core/widgets/nebula_brand.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/features/profiles/profile_edit_dialog.dart';
 import 'package:nebula_iptv/features/profiles/providers/profile_provider.dart';
-import 'package:nebula_iptv/core/widgets/nebula_brand.dart';
 
 /// Netflix-style profile selection screen shown at app startup.
 class ProfileSelectionScreen extends ConsumerStatefulWidget {

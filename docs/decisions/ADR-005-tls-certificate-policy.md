@@ -1,4 +1,4 @@
-# ADR-002: TLS Certificate Validation Policy
+# ADR-005: TLS Certificate Validation Policy
 
 **Date**: 2026-08-29
 **Status**: Accepted
