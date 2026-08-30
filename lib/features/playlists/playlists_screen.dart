@@ -168,19 +168,24 @@ class PlaylistsScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => _AddPlaylistDialog(
-        onImportUrl: (name, url) {
+        onImportUrl: (name, url, allowInsecureTls) {
           Navigator.of(ctx).pop();
           ref
               .read(playlistManagementProvider.notifier)
-              .importFromUrl(name: name, url: url);
+              .importFromUrl(
+                name: name,
+                url: url,
+                allowInsecureTls: allowInsecureTls,
+              );
         },
-        onImportXtream: (name, serverUrl, username, password) {
+        onImportXtream: (name, serverUrl, username, password, allowInsecureTls) {
           Navigator.of(ctx).pop();
           ref.read(playlistManagementProvider.notifier).importFromXtream(
                 name: name,
                 serverUrl: serverUrl,
                 username: username,
                 password: password,
+                allowInsecureTls: allowInsecureTls,
               );
         },
         onImportFile: () {
@@ -193,8 +198,14 @@ class PlaylistsScreen extends ConsumerWidget {
 }
 
 class _AddPlaylistDialog extends StatefulWidget {
-  final void Function(String name, String url) onImportUrl;
-  final void Function(String name, String serverUrl, String username, String password) onImportXtream;
+  final void Function(String name, String url, bool allowInsecureTls) onImportUrl;
+  final void Function(
+    String name,
+    String serverUrl,
+    String username,
+    String password,
+    bool allowInsecureTls,
+  ) onImportXtream;
   final VoidCallback onImportFile;
 
   const _AddPlaylistDialog({
@@ -229,6 +240,9 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
 
   final _cancelButtonFocus = FocusNode(debugLabel: 'cancelButton');
   final _importButtonFocus = FocusNode(debugLabel: 'importButton');
+
+  bool _allowInsecureXtream = false;
+  bool _allowInsecureM3u = false;
 
   @override
   void initState() {
@@ -298,13 +312,19 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
       final password = _passwordController.text.trim();
       if (name.isEmpty || serverUrl.isEmpty ||
           username.isEmpty || password.isEmpty) return;
-      widget.onImportXtream(name, serverUrl, username, password);
+      widget.onImportXtream(
+        name,
+        serverUrl,
+        username,
+        password,
+        _allowInsecureXtream,
+      );
     } else {
       // M3U
       final name = _nameController.text.trim();
       final url = _urlController.text.trim();
       if (name.isEmpty || url.isEmpty) return;
-      widget.onImportUrl(name, url);
+      widget.onImportUrl(name, url, _allowInsecureM3u);
     }
   }
 
@@ -383,6 +403,12 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
                             labelText: 'Senha',
                           ),
                         ),
+                        const SizedBox(height: 8),
+                        _InsecureTlsCheckbox(
+                          value: _allowInsecureXtream,
+                          onChanged: (v) =>
+                              setState(() => _allowInsecureXtream = v),
+                        ),
                       ],
                     ),
                   ),
@@ -420,6 +446,12 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
                           icon: const Icon(Icons.file_open_rounded),
                           label: const Text('Importar de arquivo'),
                         ),
+                        const SizedBox(height: 8),
+                        _InsecureTlsCheckbox(
+                          value: _allowInsecureM3u,
+                          onChanged: (v) =>
+                              setState(() => _allowInsecureM3u = v),
+                        ),
                       ],
                     ),
                   ),
@@ -441,6 +473,39 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
           child: const Text('Importar'),
         ),
       ],
+    );
+  }
+}
+
+/// Opt-in checkbox to accept invalid/self-signed certificates from a
+/// specific source (ADR-002) with a visible security warning.
+class _InsecureTlsCheckbox extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _InsecureTlsCheckbox({
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CheckboxListTile(
+      value: value,
+      onChanged: (v) => onChanged(v ?? false),
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      controlAffinity: ListTileControlAffinity.leading,
+      activeColor: AppColors.error,
+      title: const Text(
+        'Aceitar certificado inválido (self-signed)',
+        style: TextStyle(fontSize: 13),
+      ),
+      subtitle: const Text(
+        '⚠️ Inseguro: apenas se você confia neste servidor. '
+        'Seus dados podem ser interceptados.',
+        style: TextStyle(fontSize: 11, color: AppColors.error),
+      ),
     );
   }
 }

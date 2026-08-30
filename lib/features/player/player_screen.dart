@@ -1,14 +1,11 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:media_kit_video/media_kit_video.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/live_indicator.dart';
 import 'package:nebula_iptv/data/database/app_database.dart' hide Channel;
-import 'package:nebula_iptv/data/datasources/player/media_kit_player_service.dart';
 import 'package:nebula_iptv/domain/services/video_player_service.dart';
 import 'package:nebula_iptv/features/player/providers/player_provider.dart';
 import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
@@ -53,7 +50,7 @@ class PlayerScreen extends ConsumerStatefulWidget {
 class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   bool _showControls = true;
   bool _showQuickDrawer = false;
-  VideoController? _videoController;
+  bool _surfaceReady = false;
   List<QualityVariant> _qualityVariants = [];
   String _currentQuality = 'Auto';
   double _currentSpeed = 1.0;
@@ -84,23 +81,14 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     _currentEpisodeIndex = widget.currentEpisodeIndex;
     _episodePlaylist = widget.episodePlaylist;
 
-    // Create VideoController for media_kit on native platforms
-    if (!kIsWeb) {
-      final playerService = ref.read(videoPlayerServiceProvider);
-      if (playerService is MediaKitPlayerService) {
-        if (playerService.player != null) {
-          _videoController = VideoController(playerService.player!);
-        } else {
-          playerService.initialize().then((_) {
-            if (mounted && playerService.player != null) {
-              setState(() {
-                _videoController = VideoController(playerService.player!);
-              });
-            }
-          });
-        }
+    // Ensure the player is initialized so the render surface is available.
+    // The surface widget itself comes from the VideoPlayerService abstraction.
+    final playerService = ref.read(videoPlayerServiceProvider);
+    playerService.initialize().then((_) {
+      if (mounted) {
+        setState(() => _surfaceReady = true);
       }
-    }
+    });
 
     // Start playback
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -238,7 +226,6 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   void dispose() {
     _zapDebounceTimer?.cancel();
     _hideControlsTimer?.cancel();
-    _videoController = null;
     super.dispose();
   }
 
@@ -269,9 +256,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     if (_isExiting) return;
     _isExiting = true;
 
-    // 1. Remove video widget from tree by nulling controller
+    // 1. Remove video widget from tree
     setState(() {
-      _videoController = null;
+      _surfaceReady = false;
     });
 
     // 2. Give the native surface time to release
@@ -299,15 +286,20 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           onTap: () => setState(() => _showControls = !_showControls),
           child: Stack(
             children: [
-              // Video surface
-              if (_videoController != null)
-                Center(
-                  child: Video(
-                    controller: _videoController!,
-                  ),
-                )
-              else
-                const SizedBox.expand(child: ColoredBox(color: Colors.black)),
+              // Video surface — provided by the VideoPlayerService abstraction
+              Builder(
+                builder: (context) {
+                  final surface = _surfaceReady
+                      ? ref.watch(videoPlayerServiceProvider).buildVideoSurface()
+                      : null;
+                  if (surface != null) {
+                    return Center(child: surface);
+                  }
+                  return const SizedBox.expand(
+                    child: ColoredBox(color: Colors.black),
+                  );
+                },
+              ),
 
               // Buffering — indicador da marca (triângulo de play pulsante)
               // com grace period de 2s: não pisca em streams que conectam
@@ -626,20 +618,16 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           setState(() => _showQuickDrawer = !_showQuickDrawer);
         } else {
           // Seek -10s on VOD
-          final service = ref.read(videoPlayerServiceProvider);
-          if (service is MediaKitPlayerService && service.player != null) {
-            final pos = service.player!.state.position;
-            final target = pos - const Duration(seconds: 10);
-            service.player!.seek(target < Duration.zero ? Duration.zero : target);
-          }
+          final pos = ref.read(playerProvider).playbackState.position;
+          final target = pos - const Duration(seconds: 10);
+          ref.read(playerProvider.notifier).seek(
+                target < Duration.zero ? Duration.zero : target,
+              );
         }
       case LogicalKeyboardKey.arrowRight:
         // Seek +10s on VOD
-        final service = ref.read(videoPlayerServiceProvider);
-        if (service is MediaKitPlayerService && service.player != null) {
-          final pos = service.player!.state.position;
-          service.player!.seek(pos + const Duration(seconds: 10));
-        }
+        final pos = ref.read(playerProvider).playbackState.position;
+        ref.read(playerProvider.notifier).seek(pos + const Duration(seconds: 10));
       case LogicalKeyboardKey.keyM:
         // Mute toggle
         final currentVol = ref.read(playerProvider).playbackState.volume;

@@ -2,15 +2,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:media_kit/media_kit.dart';
-import 'package:media_kit_video/media_kit_video.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/domain/services/sua_tv_service.dart';
+import 'package:nebula_iptv/domain/services/video_player_service.dart';
+import 'package:nebula_iptv/features/player/providers/player_provider.dart';
 import 'package:nebula_iptv/features/sua_tv/providers/sua_tv_provider.dart';
 
 /// Sua TV player — autoplay personal mix.
 /// Plays items from the personalized queue sequentially.
+///
+/// Playback goes through the [VideoPlayerService] abstraction — the screen
+/// never touches the concrete player package.
 class SuaTvPlayerScreen extends ConsumerStatefulWidget {
   const SuaTvPlayerScreen({super.key});
 
@@ -19,15 +22,17 @@ class SuaTvPlayerScreen extends ConsumerStatefulWidget {
 }
 
 class _SuaTvPlayerScreenState extends ConsumerState<SuaTvPlayerScreen> {
-  Player? _player;
-  VideoController? _videoController;
   bool _showControls = true;
   bool _isExiting = false;
-  StreamSubscription<Duration>? _positionSub;
-  StreamSubscription<Duration>? _durationSub;
+  bool _isPlaying = false;
+  bool _surfaceReady = false;
+  StreamSubscription<VideoPlaybackState>? _playbackSub;
+  StreamSubscription<void>? _completedSub;
   Timer? _liveTimer;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
+
+  VideoPlayerService get _player => ref.read(videoPlayerServiceProvider);
 
   @override
   void initState() {
@@ -40,17 +45,25 @@ class _SuaTvPlayerScreenState extends ConsumerState<SuaTvPlayerScreen> {
   }
 
   Future<void> _initPlayer() async {
-    _player = Player();
-    setState(() {
-      _videoController = VideoController(_player!);
+    final initResult = await _player.initialize();
+    if (initResult.isFailure) {
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
+
+    _playbackSub = _player.playbackState.listen((playback) {
+      if (!mounted) return;
+      setState(() {
+        _isPlaying = playback.status == PlaybackStatus.playing;
+        _position = playback.position;
+        _duration = playback.duration;
+      });
+    });
+    _completedSub = _player.completed.listen((_) {
+      if (mounted) _skipToNext();
     });
 
-    _positionSub = _player!.stream.position.listen((pos) {
-      if (mounted) setState(() => _position = pos);
-    });
-    _durationSub = _player!.stream.duration.listen((dur) {
-      if (mounted) setState(() => _duration = dur);
-    });
+    if (mounted) setState(() => _surfaceReady = true);
 
     // Start playing the first item
     _playCurrentItem();
@@ -66,7 +79,7 @@ class _SuaTvPlayerScreenState extends ConsumerState<SuaTvPlayerScreen> {
       url = '${url.substring(0, url.length - 3)}.m3u8';
     }
 
-    _player?.open(Media(url));
+    _player.play(url);
 
     // For live channels, advance after 5 minutes
     _liveTimer?.cancel();
@@ -75,13 +88,6 @@ class _SuaTvPlayerScreenState extends ConsumerState<SuaTvPlayerScreen> {
         if (mounted) _skipToNext();
       });
     }
-
-    // For VOD, listen for completion
-    _player?.stream.completed.listen((completed) {
-      if (completed && mounted) {
-        _skipToNext();
-      }
-    });
   }
 
   void _skipToNext() {
@@ -101,24 +107,30 @@ class _SuaTvPlayerScreenState extends ConsumerState<SuaTvPlayerScreen> {
     if (_isExiting) return;
     _isExiting = true;
 
-    setState(() => _videoController = null);
-    await Future.delayed(const Duration(milliseconds: 100));
+    setState(() => _surfaceReady = false);
 
     _liveTimer?.cancel();
-    _positionSub?.cancel();
-    _durationSub?.cancel();
-    await _player?.stop();
-    await _player?.dispose();
+    _playbackSub?.cancel();
+    _completedSub?.cancel();
+    // The player service is app-scoped — stop it, never dispose it here.
+    await ref.read(playerProvider.notifier).stop();
 
     if (mounted) Navigator.of(context).pop();
+  }
+
+  void _togglePlayPause() {
+    if (_isPlaying) {
+      _player.pause();
+    } else {
+      _player.resume();
+    }
   }
 
   @override
   void dispose() {
     _liveTimer?.cancel();
-    _positionSub?.cancel();
-    _durationSub?.cancel();
-    _player?.dispose();
+    _playbackSub?.cancel();
+    _completedSub?.cancel();
     super.dispose();
   }
 
@@ -128,6 +140,8 @@ class _SuaTvPlayerScreenState extends ConsumerState<SuaTvPlayerScreen> {
     final nextItem = ref.watch(suaTvNextItemProvider);
     final currentIndex = ref.watch(suaTvCurrentIndexProvider);
     final queue = ref.watch(suaTvQueueProvider).valueOrNull;
+
+    final surface = _surfaceReady ? _player.buildVideoSurface() : null;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -139,8 +153,8 @@ class _SuaTvPlayerScreenState extends ConsumerState<SuaTvPlayerScreen> {
           child: Stack(
             children: [
               // Video surface
-              if (_videoController != null)
-                Center(child: Video(controller: _videoController!))
+              if (surface != null)
+                Center(child: surface)
               else
                 const SizedBox.expand(child: ColoredBox(color: Colors.black)),
 
@@ -230,19 +244,13 @@ class _SuaTvPlayerScreenState extends ConsumerState<SuaTvPlayerScreen> {
                         // Play/Pause
                         IconButton(
                           icon: Icon(
-                            _player?.state.playing == true
+                            _isPlaying
                                 ? Icons.pause_rounded
                                 : Icons.play_arrow_rounded,
                             color: Colors.white,
                             size: 32,
                           ),
-                          onPressed: () {
-                            if (_player?.state.playing == true) {
-                              _player?.pause();
-                            } else {
-                              _player?.play();
-                            }
-                          },
+                          onPressed: _togglePlayPause,
                         ),
                         const SizedBox(width: 16),
                         // Next info
@@ -295,11 +303,7 @@ class _SuaTvPlayerScreenState extends ConsumerState<SuaTvPlayerScreen> {
     if (event is! KeyDownEvent) return;
     switch (event.logicalKey) {
       case LogicalKeyboardKey.space:
-        if (_player?.state.playing == true) {
-          _player?.pause();
-        } else {
-          _player?.play();
-        }
+        _togglePlayPause();
       case LogicalKeyboardKey.escape:
         _goBack();
       case LogicalKeyboardKey.arrowRight:

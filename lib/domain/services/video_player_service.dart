@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:nebula_iptv/core/result/result.dart';
 
 /// Playback state of the video player.
@@ -139,6 +140,22 @@ abstract interface class VideoPlayerService {
 
   /// Stream of available subtitle tracks.
   Stream<List<VideoTrack>> get subtitleTracks;
+
+  /// Emits when playback of the current media reaches its end.
+  Stream<void> get completed;
+
+  /// Builds the widget that renders the current video, or `null` while the
+  /// implementation has no surface available (e.g. before initialize/play).
+  ///
+  /// This keeps the platform player surface behind the abstraction: the
+  /// presentation layer embeds the returned widget and never touches the
+  /// concrete player package (spec §4.1).
+  Widget? buildVideoSurface();
+
+  /// Creates an independent player instance with its own render surface
+  /// (used by features like multiview that need several simultaneous
+  /// players). The caller is responsible for disposing the returned instance.
+  VideoPlayerService createIndependentPlayer();
 
   /// Releases all player resources.
   Future<void> dispose();

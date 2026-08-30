@@ -1,12 +1,19 @@
+import 'dart:convert';
+
+import 'package:dio/dio.dart';
 import 'package:nebula_iptv/core/errors/app_failure.dart';
 import 'package:nebula_iptv/core/network/dio_client.dart';
 import 'package:nebula_iptv/core/result/result.dart';
+import 'package:nebula_iptv/core/utils/isolate_parse.dart';
 import 'package:nebula_iptv/data/datasources/xtream/xtream_models.dart';
 
 /// Data source for Xtream Codes API interactions.
 ///
 /// Handles authentication, fetching categories, live streams,
 /// VOD (movies), and series via the player_api.php endpoint (spec §12).
+///
+/// List payloads (live/VOD/series) are decoded and mapped outside the
+/// main thread — they routinely reach tens of thousands of entries.
 class XtreamDataSource {
   final DioClient _client;
 
@@ -27,12 +34,16 @@ class XtreamDataSource {
     required String username,
     required String password,
     int? portOverride,
+    bool allowInsecureCertificates = false,
   }) async {
     final baseUrl = _buildBaseUrl(serverUrl, portOverride);
     final url = '$baseUrl/player_api.php'
         '?username=$username&password=$password';
 
-    final response = await _client.get<Map<String, dynamic>>(url);
+    final response = await _get<Map<String, dynamic>>(
+      url,
+      allowInsecureCertificates: allowInsecureCertificates,
+    );
 
     return response.when(
       success: (res) {
@@ -101,6 +112,7 @@ class XtreamDataSource {
     required String username,
     required String password,
     int? portOverride,
+    bool allowInsecureCertificates = false,
   }) async {
     return _fetchCategories(
       serverUrl: serverUrl,
@@ -108,6 +120,7 @@ class XtreamDataSource {
       password: password,
       portOverride: portOverride,
       action: 'get_live_categories',
+      allowInsecureCertificates: allowInsecureCertificates,
     );
   }
 
@@ -118,6 +131,7 @@ class XtreamDataSource {
     required String password,
     int? portOverride,
     String? categoryId,
+    bool allowInsecureCertificates = false,
   }) async {
     final baseUrl = _buildBaseUrl(serverUrl, portOverride);
     var url = '$baseUrl/player_api.php'
@@ -128,29 +142,11 @@ class XtreamDataSource {
       url += '&category_id=$categoryId';
     }
 
-    final response = await _client.get<List<dynamic>>(url);
-
-    return response.when(
-      success: (res) {
-        final data = res.data;
-        if (data == null) return const Success([]);
-
-        try {
-          final streams = data
-              .cast<Map<String, dynamic>>()
-              .map(XtreamLiveStream.fromJson)
-              .toList();
-          return Success(streams);
-        } catch (e) {
-          return Failure(
-            PlaylistParseFailure(
-              message: 'Erro ao interpretar lista de canais.',
-              originalError: e,
-            ),
-          );
-        }
-      },
-      failure: (f) => Failure(f),
+    return _fetchList(
+      url,
+      parseItem: XtreamLiveStream.fromJson,
+      parseErrorMessage: 'Erro ao interpretar lista de canais.',
+      allowInsecureCertificates: allowInsecureCertificates,
     );
   }
 
@@ -164,6 +160,7 @@ class XtreamDataSource {
     required String username,
     required String password,
     int? portOverride,
+    bool allowInsecureCertificates = false,
   }) async {
     return _fetchCategories(
       serverUrl: serverUrl,
@@ -171,6 +168,7 @@ class XtreamDataSource {
       password: password,
       portOverride: portOverride,
       action: 'get_vod_categories',
+      allowInsecureCertificates: allowInsecureCertificates,
     );
   }
 
@@ -181,6 +179,7 @@ class XtreamDataSource {
     required String password,
     int? portOverride,
     String? categoryId,
+    bool allowInsecureCertificates = false,
   }) async {
     final baseUrl = _buildBaseUrl(serverUrl, portOverride);
     var url = '$baseUrl/player_api.php'
@@ -191,29 +190,11 @@ class XtreamDataSource {
       url += '&category_id=$categoryId';
     }
 
-    final response = await _client.get<List<dynamic>>(url);
-
-    return response.when(
-      success: (res) {
-        final data = res.data;
-        if (data == null) return const Success([]);
-
-        try {
-          final streams = data
-              .cast<Map<String, dynamic>>()
-              .map(XtreamVodStream.fromJson)
-              .toList();
-          return Success(streams);
-        } catch (e) {
-          return Failure(
-            PlaylistParseFailure(
-              message: 'Erro ao interpretar lista de filmes.',
-              originalError: e,
-            ),
-          );
-        }
-      },
-      failure: (f) => Failure(f),
+    return _fetchList(
+      url,
+      parseItem: XtreamVodStream.fromJson,
+      parseErrorMessage: 'Erro ao interpretar lista de filmes.',
+      allowInsecureCertificates: allowInsecureCertificates,
     );
   }
 
@@ -268,6 +249,7 @@ class XtreamDataSource {
     required String username,
     required String password,
     int? portOverride,
+    bool allowInsecureCertificates = false,
   }) async {
     return _fetchCategories(
       serverUrl: serverUrl,
@@ -275,6 +257,7 @@ class XtreamDataSource {
       password: password,
       portOverride: portOverride,
       action: 'get_series_categories',
+      allowInsecureCertificates: allowInsecureCertificates,
     );
   }
 
@@ -285,6 +268,7 @@ class XtreamDataSource {
     required String password,
     int? portOverride,
     String? categoryId,
+    bool allowInsecureCertificates = false,
   }) async {
     final baseUrl = _buildBaseUrl(serverUrl, portOverride);
     var url = '$baseUrl/player_api.php'
@@ -295,29 +279,11 @@ class XtreamDataSource {
       url += '&category_id=$categoryId';
     }
 
-    final response = await _client.get<List<dynamic>>(url);
-
-    return response.when(
-      success: (res) {
-        final data = res.data;
-        if (data == null) return const Success([]);
-
-        try {
-          final series = data
-              .cast<Map<String, dynamic>>()
-              .map(XtreamSeries.fromJson)
-              .toList();
-          return Success(series);
-        } catch (e) {
-          return Failure(
-            PlaylistParseFailure(
-              message: 'Erro ao interpretar lista de séries.',
-              originalError: e,
-            ),
-          );
-        }
-      },
-      failure: (f) => Failure(f),
+    return _fetchList(
+      url,
+      parseItem: XtreamSeries.fromJson,
+      parseErrorMessage: 'Erro ao interpretar lista de séries.',
+      allowInsecureCertificates: allowInsecureCertificates,
     );
   }
 
@@ -415,6 +381,69 @@ class XtreamDataSource {
   // Private Helpers
   // ───────────────────────────────────────────────────────────────────────────
 
+  /// GET that optionally opts the request host into invalid-certificate
+  /// acceptance (per-source opt-in, ADR-002). The opt-in is scoped to the
+  /// request and removed afterwards.
+  Future<Result<Response<T>>> _get<T>(
+    String url, {
+    bool allowInsecureCertificates = false,
+    Options? options,
+  }) async {
+    if (!allowInsecureCertificates) {
+      return _client.get<T>(url, options: options);
+    }
+    _client.allowInsecureFor(url);
+    try {
+      return await _client.get<T>(url, options: options);
+    } finally {
+      _client.disallowInsecureFor(url);
+    }
+  }
+
+  /// Fetches a large list endpoint, decoding and mapping the raw JSON
+  /// body outside the main thread.
+  Future<Result<List<T>>> _fetchList<T>(
+    String url, {
+    required T Function(Map<String, dynamic>) parseItem,
+    required String parseErrorMessage,
+    bool allowInsecureCertificates = false,
+  }) async {
+    final response = await _get<String>(
+      url,
+      allowInsecureCertificates: allowInsecureCertificates,
+      options: Options(responseType: ResponseType.plain),
+    );
+
+    return await response.when(
+      success: (res) async {
+        final raw = res.data;
+        if (raw == null || raw.isEmpty) return const Success([]);
+
+        try {
+          final items = await parseInIsolate(raw, (String body) {
+            final decoded = jsonDecode(body);
+            if (decoded is! List) {
+              throw const FormatException('Resposta não é uma lista.');
+            }
+            return decoded
+                .cast<Map<String, dynamic>>()
+                .map(parseItem)
+                .toList();
+          });
+          return Success(items);
+        } catch (e) {
+          return Failure(
+            PlaylistParseFailure(
+              message: parseErrorMessage,
+              originalError: e,
+            ),
+          );
+        }
+      },
+      failure: (f) => Failure(f),
+    );
+  }
+
   /// Generic category fetcher (all category endpoints share the same format).
   Future<Result<List<XtreamCategory>>> _fetchCategories({
     required String serverUrl,
@@ -422,13 +451,17 @@ class XtreamDataSource {
     required String password,
     required String action,
     int? portOverride,
+    bool allowInsecureCertificates = false,
   }) async {
     final baseUrl = _buildBaseUrl(serverUrl, portOverride);
     final url = '$baseUrl/player_api.php'
         '?username=$username&password=$password'
         '&action=$action';
 
-    final response = await _client.get<List<dynamic>>(url);
+    final response = await _get<List<dynamic>>(
+      url,
+      allowInsecureCertificates: allowInsecureCertificates,
+    );
 
     return response.when(
       success: (res) {

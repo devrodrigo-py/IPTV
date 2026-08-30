@@ -1,16 +1,14 @@
-import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/core/network/dio_client.dart';
-import 'package:nebula_iptv/core/errors/app_failure.dart';
-import 'package:nebula_iptv/core/result/result.dart';
 import 'package:nebula_iptv/data/database/app_database.dart';
-import 'package:nebula_iptv/data/database/tables/channels_table.dart';
+import 'package:nebula_iptv/data/database/database_provider.dart';
 import 'package:nebula_iptv/data/database/tables/playlists_table.dart';
-import 'package:nebula_iptv/data/datasources/xtream/xtream_datasource.dart';
-import 'package:nebula_iptv/domain/services/channel_dedup_service.dart';
 import 'package:nebula_iptv/data/datasources/m3u/m3u_datasource.dart';
+import 'package:nebula_iptv/data/datasources/xtream/xtream_datasource.dart';
 import 'package:nebula_iptv/data/repositories/playlist_import_repository.dart';
+import 'package:nebula_iptv/data/repositories/xtream_import_repository.dart';
+import 'package:nebula_iptv/domain/services/channel_dedup_service.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/features/series/providers/series_provider.dart';
 import 'package:nebula_iptv/features/vod/providers/vod_provider.dart';
@@ -54,22 +52,32 @@ final playlistManagementProvider = StateNotifierProvider<
 );
 
 /// Manages playlist CRUD operations.
+///
+/// All import/refresh flows are delegated to the repositories, which own
+/// the business logic and return [Result] — the notifier only maps the
+/// outcome to screen state.
 class PlaylistManagementNotifier
     extends StateNotifier<PlaylistManagementState> {
   final Ref _ref;
   late final PlaylistImportRepository _importRepo;
+  late final XtreamImportRepository _xtreamRepo;
   late final PlaylistFilePicker _filePicker;
-  late final XtreamDataSource _xtreamDataSource;
 
   PlaylistManagementNotifier(this._ref)
       : super(const PlaylistManagementState()) {
     final db = _ref.read(databaseProvider);
+    final client = DioClient();
+    final xtreamDataSource = XtreamDataSource(client: client);
     _importRepo = PlaylistImportRepository(
       db: db,
-      m3uDataSource: M3uDataSource(client: DioClient()),
+      m3uDataSource: M3uDataSource(client: client),
+    );
+    _xtreamRepo = XtreamImportRepository(
+      db: db,
+      xtreamDataSource: xtreamDataSource,
+      credentialStore: _ref.read(credentialStoreProvider),
     );
     _filePicker = PlaylistFilePicker();
-    _xtreamDataSource = XtreamDataSource(client: DioClient());
     _loadPlaylists();
   }
 
@@ -83,12 +91,16 @@ class PlaylistManagementNotifier
   Future<void> importFromUrl({
     required String name,
     required String url,
+    String? epgUrl,
+    bool allowInsecureTls = false,
   }) async {
     state = state.copyWith(isLoading: true, clearStatus: true);
 
     final result = await _importRepo.importFromUrl(
       name: name,
       url: url,
+      epgUrl: epgUrl,
+      allowInsecureTls: allowInsecureTls,
     );
 
     result.when(
@@ -161,7 +173,7 @@ class PlaylistManagementNotifier
     );
   }
 
-  /// Refreshes a playlist (re-fetches from source).
+  /// Refreshes a playlist (re-fetches from source and reconciles).
   Future<void> refreshPlaylist(int playlistId) async {
     state = state.copyWith(isLoading: true, clearStatus: true);
 
@@ -176,18 +188,9 @@ class PlaylistManagementNotifier
       return;
     }
 
-    if (playlist.type == PlaylistType.xtream) {
-      await importFromXtream(
-        name: playlist.name,
-        serverUrl: playlist.url,
-        username: playlist.username ?? '',
-        password: playlist.credentialKey ?? '',
-        existingPlaylistId: playlist.id,
-      );
-      return;
-    }
-
-    final result = await _importRepo.refreshPlaylist(playlistId);
+    final result = playlist.type == PlaylistType.xtream
+        ? await _xtreamRepo.refreshXtream(playlistId)
+        : await _importRepo.refreshPlaylist(playlistId);
 
     result.when(
       success: (data) {
@@ -244,251 +247,55 @@ class PlaylistManagementNotifier
     );
   }
 
-  /// Imports a source via Xtream Codes API (live + VOD + series) with fast batch database operations.
+  /// Imports a source via Xtream Codes API (live + VOD + series).
+  ///
+  /// Delegates entirely to [XtreamImportRepository] — credentials are stored
+  /// in the platform secure store and content is reconciled by stable id.
   Future<void> importFromXtream({
     required String name,
     required String serverUrl,
     required String username,
     required String password,
-    int? existingPlaylistId,
+    String? epgUrl,
+    bool allowInsecureTls = false,
   }) async {
     state = state.copyWith(isLoading: true, clearStatus: true);
 
-    // 1. Authenticate
-    final authResult = await _xtreamDataSource.authenticate(
+    final result = await _xtreamRepo.importXtream(
+      name: name,
       serverUrl: serverUrl,
       username: username,
-      password: password,
+      userPass: password,
+      epgUrl: epgUrl,
+      allowInsecureTls: allowInsecureTls,
     );
 
-    if (authResult.isFailure) {
-      final failure = (authResult as Failure).failure;
-      state = state.copyWith(
-        isLoading: false,
-        statusMessage: failure.message,
-        isError: true,
-      );
-      return;
-    }
-
-    final db = _ref.read(databaseProvider);
-
-    int playlistId;
-    if (existingPlaylistId != null) {
-      playlistId = existingPlaylistId;
-      // Clean up previous records for this playlist
-      await db.customStatement('DELETE FROM channels WHERE playlist_id = ?', [playlistId]);
-      await db.customStatement('DELETE FROM vod_items WHERE playlist_id = ?', [playlistId]);
-      await db.customStatement('DELETE FROM series_items WHERE playlist_id = ?', [playlistId]);
-      await db.playlistsDao.updateSyncStatus(playlistId, status: PlaylistSyncStatus.syncing);
-    } else {
-      // Create playlist entry first
-      playlistId = await db.playlistsDao.insertPlaylist(
-        PlaylistsCompanion.insert(
-          name: name,
-          type: PlaylistType.xtream,
-          url: Value(serverUrl),
-          username: Value(username),
-          credentialKey: Value(password),
-          lastSyncAt: Value(DateTime.now()),
-          syncStatus: const Value(PlaylistSyncStatus.idle),
-        ),
-      );
-    }
-
-    var liveCount = 0;
-    var vodCount = 0;
-    var seriesCount = 0;
-
-    // 2. Fetch category maps in parallel
-    final catFutures = await Future.wait([
-      _fetchCategoryMap(serverUrl: serverUrl, username: username, password: password, action: 'live'),
-      _fetchCategoryMap(serverUrl: serverUrl, username: username, password: password, action: 'vod'),
-      _fetchCategoryMap(serverUrl: serverUrl, username: username, password: password, action: 'series'),
-    ]);
-    final liveCatMap = catFutures[0];
-    final vodCatMap = catFutures[1];
-    final seriesCatMap = catFutures[2];
-
-    // 3. Import live streams (BATCH)
-    final liveResult = await _xtreamDataSource.getLiveStreams(
-      serverUrl: serverUrl,
-      username: username,
-      password: password,
-    );
-    if (liveResult case Success(data: final streams)) {
-      final liveCompanions = streams.map((stream) {
-        final streamUrl = _xtreamDataSource.buildStreamUrl(
-          serverUrl: serverUrl,
-          username: username,
-          password: password,
-          streamId: stream.streamId,
-          extension: stream.containerExtension ?? 'ts',
+    result.when(
+      success: (data) {
+        state = state.copyWith(
+          isLoading: false,
+          statusMessage:
+              '✓ Importado: ${data.channelsAdded} itens '
+              '(${data.vodItemsImported} filmes, ${data.seriesImported} séries)',
+          isError: false,
         );
-        return ChannelsCompanion.insert(
-          playlistId: playlistId,
-          name: stream.name,
-          streamUrl: streamUrl,
-          sourceType: ChannelSourceType.xtream,
-          sourceId: Value(stream.streamId.toString()),
-          logoUrl: Value(stream.streamIcon),
-          groupName: Value(liveCatMap[stream.categoryId] ?? stream.categoryId),
-          tvgId: Value(stream.epgChannelId),
+        _loadPlaylists();
+        _ref.read(channelsScreenProvider.notifier).refresh();
+        _ref.read(seriesScreenProvider.notifier).refresh();
+        _ref.read(vodScreenProvider.notifier).refresh();
+
+        // Run channel deduplication in background (non-blocking)
+        _runDeduplicationInBackground();
+        _runEnrichmentInBackground();
+      },
+      failure: (f) {
+        state = state.copyWith(
+          isLoading: false,
+          statusMessage: f.message,
+          isError: true,
         );
-      }).toList();
-
-      if (liveCompanions.isNotEmpty) {
-        await db.channelsDao.insertChannels(liveCompanions);
-      }
-      liveCount = streams.length;
-    }
-
-    // 4. Import VOD (movies) (BATCH)
-    final vodResult = await _xtreamDataSource.getVodStreams(
-      serverUrl: serverUrl,
-      username: username,
-      password: password,
+      },
     );
-    if (vodResult case Success(data: final movies)) {
-      final vodChannels = <ChannelsCompanion>[];
-      final vodItems = <VodItemsCompanion>[];
-
-      for (final movie in movies) {
-        final streamUrl = _xtreamDataSource.buildVodStreamUrl(
-          serverUrl: serverUrl,
-          username: username,
-          password: password,
-          streamId: movie.streamId,
-          extension: movie.containerExtension ?? 'mp4',
-        );
-        final cat = vodCatMap[movie.categoryId] ?? movie.categoryId;
-        vodChannels.add(ChannelsCompanion.insert(
-          playlistId: playlistId,
-          name: movie.name,
-          streamUrl: streamUrl,
-          sourceType: ChannelSourceType.vod,
-          sourceId: Value(movie.streamId.toString()),
-          logoUrl: Value(movie.streamIcon),
-          groupName: Value(cat),
-        ));
-        vodItems.add(VodItemsCompanion.insert(
-          playlistId: playlistId,
-          sourceId: movie.streamId.toString(),
-          name: movie.name,
-          streamUrl: streamUrl,
-          logoUrl: Value(movie.streamIcon),
-          categoryName: Value(cat),
-          containerExtension: Value(movie.containerExtension ?? 'mp4'),
-        ));
-      }
-
-      if (vodChannels.isNotEmpty) {
-        await db.channelsDao.insertChannels(vodChannels);
-      }
-      if (vodItems.isNotEmpty) {
-        await db.vodDao.insertVodBatch(vodItems);
-      }
-      vodCount = movies.length;
-    }
-
-    // 5. Import Series (BATCH)
-    final seriesResult = await _xtreamDataSource.getSeries(
-      serverUrl: serverUrl,
-      username: username,
-      password: password,
-    );
-    if (seriesResult case Success(data: final seriesList)) {
-      final seriesChannels = <ChannelsCompanion>[];
-      final seriesItems = <SeriesItemsCompanion>[];
-
-      for (final s in seriesList) {
-        final cat = seriesCatMap[s.categoryId] ?? s.categoryId;
-        final sourceIdStr = s.seriesId.toString();
-        seriesChannels.add(ChannelsCompanion.insert(
-          playlistId: playlistId,
-          name: s.name,
-          streamUrl: '',
-          sourceType: ChannelSourceType.series,
-          sourceId: Value(sourceIdStr),
-          logoUrl: Value(s.cover),
-          groupName: Value(cat),
-        ));
-        seriesItems.add(SeriesItemsCompanion.insert(
-          playlistId: playlistId,
-          sourceId: sourceIdStr,
-          name: s.name,
-          coverUrl: Value(s.cover),
-          categoryName: Value(cat),
-          plot: Value(s.plot),
-          cast: Value(s.cast),
-          director: Value(s.director),
-          genre: Value(s.genre),
-          rating: Value(s.rating),
-          year: Value(s.year),
-          backdropUrl: Value(s.backdropPath),
-        ));
-      }
-
-      if (seriesChannels.isNotEmpty) {
-        await db.channelsDao.insertChannels(seriesChannels);
-      }
-      if (seriesItems.isNotEmpty) {
-        await db.seriesDao.insertSeriesBatch(seriesItems);
-      }
-      seriesCount = seriesList.length;
-    }
-
-    await db.playlistsDao.updateSyncStatus(
-      playlistId,
-      status: PlaylistSyncStatus.idle,
-      syncedAt: DateTime.now(),
-    );
-
-    state = state.copyWith(
-      isLoading: false,
-      statusMessage:
-          '✓ Importado: $liveCount canais, $vodCount filmes, $seriesCount séries',
-      isError: false,
-    );
-    _loadPlaylists();
-    _ref.read(channelsScreenProvider.notifier).refresh();
-    _ref.read(seriesScreenProvider.notifier).refresh();
-    _ref.read(vodScreenProvider.notifier).refresh();
-
-    // Run channel deduplication in background (non-blocking)
-    _runDeduplicationInBackground();
-    _runEnrichmentInBackground();
-  }
-
-  /// Fetches category name map (id → name) from Xtream API.
-  Future<Map<String, String>> _fetchCategoryMap({
-    required String serverUrl,
-    required String username,
-    required String password,
-    required String action, // 'live', 'vod', 'series'
-  }) async {
-    final map = <String, String>{};
-    try {
-      final result = switch (action) {
-        'live' => await _xtreamDataSource.getLiveCategories(
-            serverUrl: serverUrl, username: username, password: password),
-        'vod' => await _xtreamDataSource.getVodCategories(
-            serverUrl: serverUrl, username: username, password: password),
-        'series' => await _xtreamDataSource.getSeriesCategories(
-            serverUrl: serverUrl, username: username, password: password),
-        _ => await _xtreamDataSource.getLiveCategories(
-            serverUrl: serverUrl, username: username, password: password),
-      };
-      result.when(
-        success: (categories) {
-          for (final cat in categories) {
-            map[cat.categoryId] = cat.categoryName;
-          }
-        },
-        failure: (_) {},
-      );
-    } catch (_) {}
-    return map;
   }
 
   /// Runs channel deduplication in background after import.

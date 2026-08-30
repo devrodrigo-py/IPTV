@@ -17,12 +17,20 @@ class PlaylistImportResult {
   final int channelsDeactivated;
   final int parseErrors;
 
+  /// Number of VOD items imported (Xtream imports only).
+  final int vodItemsImported;
+
+  /// Number of series imported (Xtream imports only).
+  final int seriesImported;
+
   const PlaylistImportResult({
     required this.playlistId,
     required this.channelsAdded,
     required this.channelsUpdated,
     required this.channelsDeactivated,
     required this.parseErrors,
+    this.vodItemsImported = 0,
+    this.seriesImported = 0,
   });
 
   int get totalChannels => channelsAdded + channelsUpdated;
@@ -44,13 +52,18 @@ class PlaylistImportRepository {
     required String name,
     required String url,
     String? epgUrl,
+    bool allowInsecureTls = false,
   }) async {
-    final parseResult = await _m3uDataSource.fetchFromUrl(url);
+    final parseResult = await _m3uDataSource.fetchFromUrl(
+      url,
+      allowInsecureCertificates: allowInsecureTls,
+    );
     return parseResult.when(
       success: (result) => _persistPlaylist(
         name: name,
         url: url,
         epgUrl: epgUrl,
+        allowInsecureTls: allowInsecureTls,
         parseResult: result,
       ),
       failure: (f) => Failure(f),
@@ -69,6 +82,7 @@ class PlaylistImportRepository {
         name: name,
         url: filePath,
         epgUrl: epgUrl,
+        allowInsecureTls: false,
         parseResult: result,
       ),
       failure: (f) => Failure(f),
@@ -124,6 +138,7 @@ class PlaylistImportRepository {
     required String name,
     required String url,
     String? epgUrl,
+    required bool allowInsecureTls,
     required M3uParseResult parseResult,
   }) async {
     try {
@@ -133,6 +148,7 @@ class PlaylistImportRepository {
           type: PlaylistType.m3u,
           url: Value(url),
           epgUrl: Value(epgUrl),
+          allowInsecureTls: Value(allowInsecureTls),
           lastSyncAt: Value(DateTime.now()),
           syncStatus: const Value(PlaylistSyncStatus.idle),
         ),
@@ -172,7 +188,7 @@ class PlaylistImportRepository {
   }) async {
     try {
       final existingChannels =
-          await _db.channelsDao.getChannelsByPlaylist(playlistId);
+          await _db.channelsDao.getAllChannelsByPlaylist(playlistId);
 
       final existingBySourceId = <String, Channel>{};
       final existingByUrl = <String, Channel>{};
@@ -183,9 +199,12 @@ class PlaylistImportRepository {
         existingByUrl[ch.streamUrl] = ch;
       }
 
+      // Diff phase (pure, no I/O): classify every incoming entry against
+      // the existing rows by stable identifier (spec §19).
+      final toInsert = <ChannelsCompanion>[];
+      final toUpdate = <int, ChannelsCompanion>{};
+      final toActivate = <int>[];
       final matchedIds = <int>{};
-      var added = 0;
-      var updated = 0;
 
       for (final entry in parseResult.entries) {
         if (!entry.hasValidUrl) continue;
@@ -199,53 +218,66 @@ class PlaylistImportRepository {
         if (existing != null) {
           matchedIds.add(existing.id);
           if (_hasChanges(existing, entry)) {
-            await ((_db.update(_db.channels))
-                  ..where((c) => c.id.equals(existing!.id)))
-                .write(
+            toUpdate[existing.id] = _companionForUpdate(entry);
+          } else if (!existing.isActive) {
+            toActivate.add(existing.id);
+          }
+        } else {
+          toInsert.add(_entryToCompanion(entry, playlistId));
+        }
+      }
+
+      final toDeactivate = existingChannels
+          .where((ch) => !matchedIds.contains(ch.id))
+          .map((ch) => ch.id)
+          .toList();
+
+      // Write phase: a single transactional batch instead of tens of
+      // thousands of sequential statements on large playlists.
+      final added = toInsert.length;
+      final updated = toUpdate.length + toActivate.length;
+      final deactivated = toDeactivate.length;
+
+      await _db.transaction(() async {
+        await _db.batch((b) {
+          if (toInsert.isNotEmpty) {
+            b.insertAll(_db.channels, toInsert);
+          }
+          toUpdate.forEach((id, companion) {
+            b.update(
+              _db.channels,
+              companion,
+              where: (c) => c.id.equals(id),
+            );
+          });
+          if (toActivate.isNotEmpty) {
+            b.update(
+              _db.channels,
               ChannelsCompanion(
-                name: Value(entry.name),
-                streamUrl: Value(entry.streamUrl),
-                logoUrl: Value(entry.logoUrl),
-                groupName: Value(entry.groupTitle),
-                tvgId: Value(entry.tvgId),
-                tvgName: Value(entry.tvgName),
-                sourceId: Value(entry.sourceId),
                 isActive: const Value(true),
                 updatedAt: Value(DateTime.now()),
               ),
+              where: (c) => c.id.isIn(toActivate),
             );
-            updated++;
-          } else if (!existing.isActive) {
-            await _db.channelsDao.activateChannel(existing.id);
-            updated++;
           }
-        } else {
-          await _db.channelsDao.insertChannel(
-            _entryToCompanion(entry, playlistId),
-          );
-          added++;
-        }
-      }
+          if (toDeactivate.isNotEmpty) {
+            b.update(
+              _db.channels,
+              ChannelsCompanion(
+                isActive: const Value(false),
+                updatedAt: Value(DateTime.now()),
+              ),
+              where: (c) => c.id.isIn(toDeactivate),
+            );
+          }
+        });
 
-      var deactivated = 0;
-      for (final ch in existingChannels) {
-        if (!matchedIds.contains(ch.id)) {
-          await ((_db.update(_db.channels))..where((c) => c.id.equals(ch.id)))
-              .write(
-            ChannelsCompanion(
-              isActive: const Value(false),
-              updatedAt: Value(DateTime.now()),
-            ),
-          );
-          deactivated++;
-        }
-      }
-
-      await _db.playlistsDao.updateSyncStatus(
-        playlistId,
-        status: PlaylistSyncStatus.idle,
-        syncedAt: DateTime.now(),
-      );
+        await _db.playlistsDao.updateSyncStatus(
+          playlistId,
+          status: PlaylistSyncStatus.idle,
+          syncedAt: DateTime.now(),
+        );
+      });
 
       appLogger.i(
         'Refreshed playlist $playlistId: '
@@ -273,6 +305,20 @@ class PlaylistImportRepository {
         ),
       );
     }
+  }
+
+  ChannelsCompanion _companionForUpdate(M3uEntry entry) {
+    return ChannelsCompanion(
+      name: Value(entry.name),
+      streamUrl: Value(entry.streamUrl),
+      logoUrl: Value(entry.logoUrl),
+      groupName: Value(entry.groupTitle),
+      tvgId: Value(entry.tvgId),
+      tvgName: Value(entry.tvgName),
+      sourceId: Value(entry.sourceId),
+      isActive: const Value(true),
+      updatedAt: Value(DateTime.now()),
+    );
   }
 
   bool _hasChanges(Channel existing, M3uEntry entry) {

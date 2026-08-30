@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
 import 'package:media_kit/media_kit.dart' hide VideoTrack;
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:nebula_iptv/core/errors/app_failure.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/core/result/result.dart';
@@ -9,9 +11,11 @@ import 'package:nebula_iptv/domain/services/video_player_service.dart';
 /// Concrete implementation of [VideoPlayerService] using media_kit (spec §4.1).
 ///
 /// The presentation layer never imports this directly — it only
-/// depends on [VideoPlayerService].
+/// depends on [VideoPlayerService] and embeds the widget returned by
+/// [buildVideoSurface].
 class MediaKitPlayerService implements VideoPlayerService {
   Player? _player;
+  VideoController? _videoController;
 
   final _playbackStateController =
       StreamController<VideoPlaybackState>.broadcast();
@@ -20,6 +24,7 @@ class MediaKitPlayerService implements VideoPlayerService {
   final _audioTracksController = StreamController<List<VideoTrack>>.broadcast();
   final _subtitleTracksController =
       StreamController<List<VideoTrack>>.broadcast();
+  final _completedController = StreamController<void>.broadcast();
 
   VideoPlaybackState _currentState = const VideoPlaybackState();
   final List<StreamSubscription<dynamic>> _subscriptions = [];
@@ -37,6 +42,9 @@ class MediaKitPlayerService implements VideoPlayerService {
           logLevel: MPVLogLevel.warn,
         ),
       );
+      // The render surface is owned by the service so the presentation
+      // layer never touches media_kit types directly.
+      _videoController = VideoController(_player!);
       _setupListeners();
 
       // Configure hardware decoding and network reconnection
@@ -261,6 +269,21 @@ class MediaKitPlayerService implements VideoPlayerService {
       _subtitleTracksController.stream;
 
   @override
+  Stream<void> get completed => _completedController.stream;
+
+  @override
+  Widget? buildVideoSurface() {
+    final controller = _videoController;
+    if (controller == null) return null;
+    return Video(controller: controller);
+  }
+
+  @override
+  VideoPlayerService createIndependentPlayer() {
+    return MediaKitPlayerService();
+  }
+
+  @override
   Future<void> dispose() async {
     for (final sub in _subscriptions) {
       await sub.cancel();
@@ -268,11 +291,13 @@ class MediaKitPlayerService implements VideoPlayerService {
     _subscriptions.clear();
     await _player?.dispose();
     _player = null;
+    _videoController = null;
     await _playbackStateController.close();
     await _bufferStateController.close();
     await _errorController.close();
     await _audioTracksController.close();
     await _subtitleTracksController.close();
+    await _completedController.close();
   }
 
   void _setupListeners() {
@@ -324,6 +349,14 @@ class MediaKitPlayerService implements VideoPlayerService {
     _subscriptions.add(
       player.stream.duration.listen((duration) {
         _updateState(_currentState.copyWith(duration: duration));
+      }),
+    );
+
+    _subscriptions.add(
+      player.stream.completed.listen((completed) {
+        if (completed) {
+          _completedController.add(null);
+        }
       }),
     );
 

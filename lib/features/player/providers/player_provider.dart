@@ -6,7 +6,6 @@ import 'package:nebula_iptv/domain/services/stream_reconnection_service.dart';
 import 'package:nebula_iptv/domain/services/video_player_service.dart';
 import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
-import 'package:nebula_iptv/data/datasources/player/media_kit_player_service.dart';
 
 /// State for the player screen.
 class PlayerState {
@@ -76,7 +75,8 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
         if (mounted) {
           state = state.copyWith(playbackState: playback);
 
-          // Update watch tracking with progress (on every state change while playing)
+          // Update watch tracking with progress (on every state change while
+          // playing). media_kit forwards position updates through this stream.
           if (_contentInfo != null &&
               playback.status == PlaybackStatus.playing &&
               playback.position > Duration.zero) {
@@ -105,22 +105,6 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     // Start watch tracking
     if (_contentInfo != null) {
       _ref.read(watchTrackingServiceProvider).startTracking(_contentInfo!);
-
-      // Listen to position directly from native player for accurate tracking
-      final service = _ref.read(videoPlayerServiceProvider);
-      if (service is MediaKitPlayerService && service.player != null) {
-        _subscriptions.add(
-          service.player!.stream.position.listen((position) {
-            final duration = service.player!.state.duration;
-            if (position > Duration.zero) {
-              _ref.read(watchTrackingServiceProvider).updateProgress(
-                position: position,
-                duration: duration,
-              );
-            }
-          }),
-        );
-      }
     }
 
     await player.play(url);
@@ -129,23 +113,22 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     if (seekToMs != null && seekToMs > 0) {
       final targetMs = seekToMs; // Capture for closure
       appLogger.d('[Player] Will seek to ${targetMs}ms once stream is playing');
-      // Wait for the video to actually start playing, then seek
-      final service = _ref.read(videoPlayerServiceProvider);
-      if (service is MediaKitPlayerService && service.player != null) {
-        late final StreamSubscription<Duration> seekSub;
-        seekSub = service.player!.stream.position.listen((pos) {
-          // Once we get a real position (video is playing), do the seek
-          if (pos.inMilliseconds > 100) {
-            seekSub.cancel();
-            appLogger.d('[Player] Stream playing at ${pos.inMilliseconds}ms, seeking to ${targetMs}ms');
-            service.player!.seek(Duration(milliseconds: targetMs));
-          }
-        });
-        // Safety timeout: cancel listener after 15s if video never starts
-        Future.delayed(const Duration(seconds: 15), () {
+      // Once a real position arrives (video is playing), do the seek
+      late final StreamSubscription<VideoPlaybackState> seekSub;
+      seekSub = player.playbackState.listen((playback) {
+        if (playback.position.inMilliseconds > 100) {
           seekSub.cancel();
-        });
-      }
+          appLogger.d(
+            '[Player] Stream playing at ${playback.position.inMilliseconds}ms, '
+            'seeking to ${targetMs}ms',
+          );
+          player.seek(Duration(milliseconds: targetMs));
+        }
+      });
+      // Safety timeout: cancel listener after 15s if video never starts
+      Future.delayed(const Duration(seconds: 15), () {
+        seekSub.cancel();
+      });
     }
   }
 

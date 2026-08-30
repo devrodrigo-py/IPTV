@@ -4,6 +4,7 @@ import 'package:nebula_iptv/core/errors/app_failure.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/core/result/result.dart';
 import 'package:nebula_iptv/data/database/app_database.dart';
+import 'package:nebula_iptv/data/database/tables/channels_table.dart';
 import 'package:nebula_iptv/data/datasources/xtream/xtream_datasource.dart';
 import 'package:nebula_iptv/data/datasources/xtream/xtream_models.dart';
 
@@ -226,6 +227,16 @@ class VodImportRepository {
         }
       }
 
+      await _reconcileChannelRows(
+        playlistId: playlistId,
+        serverUrl: serverUrl,
+        username: username,
+        password: password,
+        portOverride: portOverride,
+        categoryMap: categoryMap,
+        streams: streams,
+      );
+
       appLogger.i(
         'VOD import for playlist $playlistId: '
         '+$added, ~$updated, -$deactivated',
@@ -247,5 +258,116 @@ class VodImportRepository {
         ),
       );
     }
+  }
+
+  /// Reconciles the `channels` rows backed by VOD movies (search/home read
+  /// from the channels table). Diff by sourceId, single batch.
+  Future<void> _reconcileChannelRows({
+    required int playlistId,
+    required String serverUrl,
+    required String username,
+    required String password,
+    required int? portOverride,
+    required Map<String, String> categoryMap,
+    required List<XtreamVodStream> streams,
+  }) async {
+    final existingRows =
+        await _db.channelsDao.getAllChannelsByPlaylistAndType(
+      playlistId,
+      ChannelSourceType.vod,
+    );
+
+    final bySourceId = <String, Channel>{};
+    for (final row in existingRows) {
+      if (row.sourceId != null) {
+        bySourceId[row.sourceId!] = row;
+      }
+    }
+
+    final toInsert = <ChannelsCompanion>[];
+    final toUpdate = <int, ChannelsCompanion>{};
+    final toActivate = <int>[];
+    final matchedIds = <int>{};
+
+    for (final movie in streams) {
+      final sourceId = movie.streamId.toString();
+      final streamUrl = _xtreamDataSource.buildVodStreamUrl(
+        serverUrl: serverUrl,
+        username: username,
+        password: password,
+        streamId: movie.streamId,
+        portOverride: portOverride,
+        extension: movie.containerExtension ?? 'mp4',
+      );
+
+      final row = bySourceId[sourceId];
+      if (row != null) {
+        matchedIds.add(row.id);
+        if (row.name != movie.name ||
+            row.streamUrl != streamUrl ||
+            row.logoUrl != movie.streamIcon) {
+          toUpdate[row.id] = ChannelsCompanion(
+            name: Value(movie.name),
+            streamUrl: Value(streamUrl),
+            logoUrl: Value(movie.streamIcon),
+            groupName: Value(
+              categoryMap[movie.categoryId] ?? movie.categoryId,
+            ),
+            isActive: const Value(true),
+            updatedAt: Value(DateTime.now()),
+          );
+        } else if (!row.isActive) {
+          toActivate.add(row.id);
+        }
+      } else {
+        toInsert.add(
+          ChannelsCompanion.insert(
+            playlistId: playlistId,
+            name: movie.name,
+            streamUrl: streamUrl,
+            sourceType: ChannelSourceType.vod,
+            sourceId: Value(sourceId),
+            logoUrl: Value(movie.streamIcon),
+            groupName: Value(
+              categoryMap[movie.categoryId] ?? movie.categoryId,
+            ),
+          ),
+        );
+      }
+    }
+
+    final toDeactivate = existingRows
+        .where((row) => !matchedIds.contains(row.id))
+        .map((row) => row.id)
+        .toList();
+
+    await _db.batch((b) {
+      if (toInsert.isNotEmpty) {
+        b.insertAll(_db.channels, toInsert);
+      }
+      toUpdate.forEach((id, companion) {
+        b.update(_db.channels, companion, where: (c) => c.id.equals(id));
+      });
+      if (toActivate.isNotEmpty) {
+        b.update(
+          _db.channels,
+          ChannelsCompanion(
+            isActive: const Value(true),
+            updatedAt: Value(DateTime.now()),
+          ),
+          where: (c) => c.id.isIn(toActivate),
+        );
+      }
+      if (toDeactivate.isNotEmpty) {
+        b.update(
+          _db.channels,
+          ChannelsCompanion(
+            isActive: const Value(false),
+            updatedAt: Value(DateTime.now()),
+          ),
+          where: (c) => c.id.isIn(toDeactivate),
+        );
+      }
+    });
   }
 }

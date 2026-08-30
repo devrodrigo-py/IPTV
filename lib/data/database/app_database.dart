@@ -68,7 +68,7 @@ class AppDatabase extends _$AppDatabase {
       const DriftDatabaseOptions(storeDateTimeAsText: true);
 
   @override
-int get schemaVersion => 10;
+int get schemaVersion => 11;
 
   // Manual DAO gette
   CategoryCacheDao get categoryCacheDao => CategoryCacheDao(this);
@@ -147,6 +147,10 @@ int get schemaVersion => 10;
         }
         if (from < 10) {
           await _createRatingsTables();
+        }
+        if (from < 11) {
+          // v10 → v11: per-source TLS opt-in column (ADR-002)
+          await m.addColumn(playlists, playlists.allowInsecureTls);
         }
       },
     );

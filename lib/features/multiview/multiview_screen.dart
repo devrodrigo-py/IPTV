@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:media_kit_video/media_kit_video.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/features/multiview/providers/multiview_provider.dart';
@@ -187,10 +186,9 @@ class _MultiviewScreenState extends ConsumerState<MultiviewScreen> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Video
-            Video(
-              controller: slot.videoController,
-            ),
+            // Video — surface comes from the player abstraction
+            slot.player.buildVideoSurface() ??
+                const ColoredBox(color: Colors.black),
 
             // Channel name overlay at bottom
             Positioned(

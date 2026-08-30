@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
 import 'package:nebula_iptv/core/errors/app_failure.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/core/result/result.dart';
@@ -23,6 +24,7 @@ class WebPlayerService implements VideoPlayerService {
       StreamController<List<VideoTrack>>.broadcast();
   final _subtitleTracksController =
       StreamController<List<VideoTrack>>.broadcast();
+  final _completedController = StreamController<void>.broadcast();
 
   VideoPlaybackState _currentState = const VideoPlaybackState();
 
@@ -140,6 +142,24 @@ class WebPlayerService implements VideoPlayerService {
       _subtitleTracksController.stream;
 
   @override
+  Stream<void> get completed => _completedController.stream;
+
+  @override
+  Widget? buildVideoSurface() {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return null;
+    return AspectRatio(
+      aspectRatio: controller.value.aspectRatio,
+      child: VideoPlayer(controller),
+    );
+  }
+
+  @override
+  VideoPlayerService createIndependentPlayer() {
+    return WebPlayerService();
+  }
+
+  @override
   Future<void> dispose() async {
     _controller?.removeListener(_onPlayerUpdate);
     await _controller?.dispose();
@@ -149,6 +169,7 @@ class WebPlayerService implements VideoPlayerService {
     await _errorController.close();
     await _audioTracksController.close();
     await _subtitleTracksController.close();
+    await _completedController.close();
   }
 
   void _onPlayerUpdate() {
@@ -182,6 +203,13 @@ class WebPlayerService implements VideoPlayerService {
     _bufferStateController.add(VideoBufferState(
       isBuffering: value.isBuffering,
     ));
+
+    if (value.duration > Duration.zero &&
+        value.position >= value.duration &&
+        !value.isPlaying &&
+        !value.isBuffering) {
+      _completedController.add(null);
+    }
   }
 
   void _updateState(VideoPlaybackState newState) {

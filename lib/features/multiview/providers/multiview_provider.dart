@@ -1,14 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:media_kit/media_kit.dart';
-import 'package:media_kit_video/media_kit_video.dart';
+import 'package:nebula_iptv/domain/services/video_player_service.dart';
+import 'package:nebula_iptv/features/player/providers/player_provider.dart';
 
 /// Represents one slot in the multiview grid.
+///
+/// Each slot owns an independent [VideoPlayerService] instance; the render
+/// surface is obtained through [VideoPlayerService.buildVideoSurface].
 class MultiviewSlot {
   final int channelId;
   final String name;
   final String streamUrl;
-  final Player player;
-  final VideoController videoController;
+  final VideoPlayerService player;
   final bool isAudioActive;
 
   MultiviewSlot({
@@ -16,7 +18,6 @@ class MultiviewSlot {
     required this.name,
     required this.streamUrl,
     required this.player,
-    required this.videoController,
     this.isAudioActive = false,
   });
 
@@ -26,7 +27,6 @@ class MultiviewSlot {
       name: name,
       streamUrl: streamUrl,
       player: player,
-      videoController: videoController,
       isAudioActive: isAudioActive ?? this.isAudioActive,
     );
   }
@@ -56,12 +56,14 @@ class MultiviewState {
 /// Provider for multiview state.
 final multiviewProvider =
     StateNotifierProvider.autoDispose<MultiviewNotifier, MultiviewState>(
-  (ref) => MultiviewNotifier(),
+  (ref) => MultiviewNotifier(ref.read(videoPlayerServiceProvider)),
 );
 
 /// Manages multiple simultaneous video streams.
 class MultiviewNotifier extends StateNotifier<MultiviewState> {
-  MultiviewNotifier() : super(const MultiviewState());
+  final VideoPlayerService _playerFactory;
+
+  MultiviewNotifier(this._playerFactory) : super(const MultiviewState());
 
   /// Add a channel to multiview. Max 4 slots.
   Future<void> addChannel({
@@ -71,8 +73,8 @@ class MultiviewNotifier extends StateNotifier<MultiviewState> {
   }) async {
     if (state.slots.length >= 4) return;
 
-    final player = Player();
-    final controller = VideoController(player);
+    final player = _playerFactory.createIndependentPlayer();
+    await player.initialize();
 
     // Convert live .ts URLs to .m3u8 for HLS
     var playUrl = streamUrl;
@@ -91,14 +93,13 @@ class MultiviewNotifier extends StateNotifier<MultiviewState> {
       name: name,
       streamUrl: streamUrl,
       player: player,
-      videoController: controller,
       isAudioActive: isFirst,
     );
 
     state = state.copyWith(slots: [...state.slots, slot]);
 
     // Start playback
-    await player.open(Media(playUrl));
+    await player.play(playUrl);
   }
 
   /// Remove a channel from multiview by index.
@@ -114,7 +115,7 @@ class MultiviewNotifier extends StateNotifier<MultiviewState> {
     // If we removed the audio-active slot, activate the first remaining
     if (slot.isAudioActive && newSlots.isNotEmpty) {
       newSlots[0] = newSlots[0].copyWith(isAudioActive: true);
-      await newSlots[0].player.setVolume(100);
+      await newSlots[0].player.setVolume(1.0);
     }
 
     state = state.copyWith(slots: newSlots);
@@ -129,7 +130,7 @@ class MultiviewNotifier extends StateNotifier<MultiviewState> {
       final slot = state.slots[i];
       final isActive = i == index;
       newSlots.add(slot.copyWith(isAudioActive: isActive));
-      await slot.player.setVolume(isActive ? 100 : 0);
+      await slot.player.setVolume(isActive ? 1.0 : 0.0);
     }
 
     state = state.copyWith(slots: newSlots);

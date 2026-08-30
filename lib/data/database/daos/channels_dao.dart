@@ -19,6 +19,28 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
         .get();
   }
 
+  /// Returns all channels for a playlist, including inactive ones.
+  ///
+  /// Reconciliation needs inactive rows so channels that reappear in the
+  /// source are reactivated instead of inserted as duplicates (spec §19).
+  Future<List<Channel>> getAllChannelsByPlaylist(int playlistId) {
+    return (select(channels)
+          ..where((c) => c.playlistId.equals(playlistId)))
+        .get();
+  }
+
+  /// Returns all channels of a playlist with the given source type,
+  /// including inactive ones.
+  Future<List<Channel>> getAllChannelsByPlaylistAndType(
+    int playlistId,
+    ChannelSourceType sourceType,
+  ) {
+    return (select(channels)
+          ..where((c) => c.playlistId.equals(playlistId))
+          ..where((c) => c.sourceType.equalsValue(sourceType)))
+        .get();
+  }
+
   /// Returns all active channels across all playlists.
   Future<List<Channel>> getAllActiveChannels() {
     return (select(channels)

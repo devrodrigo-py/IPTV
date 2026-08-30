@@ -4,6 +4,7 @@ import 'package:nebula_iptv/core/errors/app_failure.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/core/result/result.dart';
 import 'package:nebula_iptv/data/database/app_database.dart';
+import 'package:nebula_iptv/data/database/tables/channels_table.dart';
 import 'package:nebula_iptv/data/datasources/xtream/xtream_datasource.dart';
 import 'package:nebula_iptv/data/datasources/xtream/xtream_models.dart';
 
@@ -283,6 +284,12 @@ class SeriesImportRepository {
         }
       }
 
+      await _reconcileChannelRows(
+        playlistId: playlistId,
+        categoryMap: categoryMap,
+        seriesList: seriesList,
+      );
+
       appLogger.i(
         'Series import for playlist $playlistId: '
         '+$added, ~$updated, -$deactivated',
@@ -304,6 +311,102 @@ class SeriesImportRepository {
         ),
       );
     }
+  }
+
+  /// Reconciles the `channels` rows backed by series (search/home read from
+  /// the channels table). Diff by sourceId, single batch.
+  Future<void> _reconcileChannelRows({
+    required int playlistId,
+    required Map<String, String> categoryMap,
+    required List<XtreamSeries> seriesList,
+  }) async {
+    final existingRows =
+        await _db.channelsDao.getAllChannelsByPlaylistAndType(
+      playlistId,
+      ChannelSourceType.series,
+    );
+
+    final bySourceId = <String, Channel>{};
+    for (final row in existingRows) {
+      if (row.sourceId != null) {
+        bySourceId[row.sourceId!] = row;
+      }
+    }
+
+    final toInsert = <ChannelsCompanion>[];
+    final toUpdate = <int, ChannelsCompanion>{};
+    final toActivate = <int>[];
+    final matchedIds = <int>{};
+
+    for (final series in seriesList) {
+      final sourceId = series.seriesId.toString();
+      final row = bySourceId[sourceId];
+
+      if (row != null) {
+        matchedIds.add(row.id);
+        if (row.name != series.name || row.logoUrl != series.cover) {
+          toUpdate[row.id] = ChannelsCompanion(
+            name: Value(series.name),
+            logoUrl: Value(series.cover),
+            groupName: Value(
+              categoryMap[series.categoryId] ?? series.categoryId,
+            ),
+            isActive: const Value(true),
+            updatedAt: Value(DateTime.now()),
+          );
+        } else if (!row.isActive) {
+          toActivate.add(row.id);
+        }
+      } else {
+        toInsert.add(
+          ChannelsCompanion.insert(
+            playlistId: playlistId,
+            name: series.name,
+            streamUrl: '',
+            sourceType: ChannelSourceType.series,
+            sourceId: Value(sourceId),
+            logoUrl: Value(series.cover),
+            groupName: Value(
+              categoryMap[series.categoryId] ?? series.categoryId,
+            ),
+          ),
+        );
+      }
+    }
+
+    final toDeactivate = existingRows
+        .where((row) => !matchedIds.contains(row.id))
+        .map((row) => row.id)
+        .toList();
+
+    await _db.batch((b) {
+      if (toInsert.isNotEmpty) {
+        b.insertAll(_db.channels, toInsert);
+      }
+      toUpdate.forEach((id, companion) {
+        b.update(_db.channels, companion, where: (c) => c.id.equals(id));
+      });
+      if (toActivate.isNotEmpty) {
+        b.update(
+          _db.channels,
+          ChannelsCompanion(
+            isActive: const Value(true),
+            updatedAt: Value(DateTime.now()),
+          ),
+          where: (c) => c.id.isIn(toActivate),
+        );
+      }
+      if (toDeactivate.isNotEmpty) {
+        b.update(
+          _db.channels,
+          ChannelsCompanion(
+            isActive: const Value(false),
+            updatedAt: Value(DateTime.now()),
+          ),
+          where: (c) => c.id.isIn(toDeactivate),
+        );
+      }
+    });
   }
 
   Future<Result<void>> _persistSeriesDetails({
