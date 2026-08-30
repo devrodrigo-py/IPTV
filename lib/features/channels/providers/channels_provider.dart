@@ -120,17 +120,21 @@ class ChannelsScreenNotifier extends StateNotifier<ChannelsScreenState> {
   }
 
   /// Filters out duplicate channels using channel_groups.
-  /// Keeps only the primary_channel_id from each group.
+  ///
+  /// Groups persist across refreshes, but a group's stored primary can be
+  /// deactivated by a later reconcile. The keeper is resolved at read time:
+  /// the stored primary if still active, otherwise the highest-priority
+  /// active member — so duplicates stay collapsed even with stale groups.
   Future<List<Channel>> _filterDuplicates(
       AppDatabase db, List<Channel> channels) async {
     try {
-      // Get primary channel IDs and all grouped channel IDs
+      final activeIds = channels.map((c) => c.id).toSet();
+
       final groupRows = await db
           .customSelect(
-            'SELECT g.primary_channel_id, m.channel_id '
+            'SELECT g.id AS gid, g.primary_channel_id, m.channel_id, m.priority '
             'FROM channel_groups g '
-            'INNER JOIN channel_group_members m ON m.group_id = g.id '
-            'WHERE g.primary_channel_id IS NOT NULL',
+            'INNER JOIN channel_group_members m ON m.group_id = g.id',
           )
           .get();
 
@@ -138,34 +142,58 @@ class ChannelsScreenNotifier extends StateNotifier<ChannelsScreenState> {
 
       if (groupRows.isEmpty) return channels;
 
-      // Build sets
-      final primaryIds = <int>{};
-      final allGroupedIds = <int>{};
+      // group id → active members; group id → stored primary (nullable).
+      final membersByGroup = <int, List<(int channelId, int priority)>>{};
+      final primaryByGroup = <int, int>{};
       for (final row in groupRows) {
-        final primaryId = row.read<int>('primary_channel_id');
+        final gid = row.read<int>('gid');
         final memberId = row.read<int>('channel_id');
-        primaryIds.add(primaryId);
-        allGroupedIds.add(memberId);
+        if (!activeIds.contains(memberId)) continue;
+        membersByGroup.putIfAbsent(gid, () => []).add(
+              (memberId, row.readNullable<int>('priority') ?? 0),
+            );
+        final primaryId = row.readNullable<int>('primary_channel_id');
+        if (primaryId != null) primaryByGroup[gid] = primaryId;
+      }
+
+      // Resolve the effective keeper per group and hide the rest.
+      final hiddenIds = <int>{};
+      for (final entry in membersByGroup.entries) {
+        final members = entry.value;
+        if (members.length < 2) continue;
+
+        final primaryId = primaryByGroup[entry.key];
+        final primaryMember = primaryId == null
+            ? null
+            : members.where((m) => m.$1 == primaryId).firstOrNull;
+
+        final keeper = primaryMember?.$1 ?? _bestMember(members);
+        for (final m in members) {
+          if (m.$1 != keeper) hiddenIds.add(m.$1);
+        }
       }
 
       appLogger.d(
-        '[Dedup UI] ${primaryIds.length} primary, ${allGroupedIds.length} grouped total, '
+        '[Dedup UI] ${hiddenIds.length} duplicates hidden, '
         '${channels.length} channels before filter',
       );
 
-      // Keep channels that are: not in any group, OR are the primary of their group
-      final filtered = channels.where((c) {
-        if (!allGroupedIds.contains(c.id)) return true; // not grouped
-        return primaryIds.contains(c.id); // is primary
-      }).toList();
-
-      appLogger.d('[Dedup UI] ${filtered.length} channels after filter');
-      return filtered;
+      return channels.where((c) => !hiddenIds.contains(c.id)).toList();
     } catch (e) {
       appLogger.w('[Dedup UI] Filter failed: $e');
       // If dedup query fails, return all channels
       return channels;
     }
+  }
+
+  /// Highest priority wins; ties break to the lowest channel id
+  /// (deterministic across loads).
+  int _bestMember(List<(int channelId, int priority)> members) {
+    var best = members.first;
+    for (final m in members.skip(1)) {
+      if (m.$2 > best.$2 || (m.$2 == best.$2 && m.$1 < best.$1)) best = m;
+    }
+    return best.$1;
   }
 
   /// Searches channels with debounce (spec §16).

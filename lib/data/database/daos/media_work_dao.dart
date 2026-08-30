@@ -456,10 +456,14 @@ class MediaWorkDao extends DatabaseAccessor<AppDatabase> {
         .toList();
   }
 
-  /// Deletes an alias row (used when its normalized form was produced by
-  /// the old normalizer — the mapping itself may point at the wrong work).
-  Future<void> deleteAliasRow(int id) async {
-    await customStatement('DELETE FROM content_aliases WHERE id = ?', [id]);
+  /// Deletes alias rows in one statement (used when their normalized form
+  /// was produced by the old normalizer — the mapping itself may point at
+  /// the wrong work).
+  Future<void> deleteAliasRows(List<int> ids) async {
+    await customStatement(
+      'DELETE FROM content_aliases WHERE id IN (${List.filled(ids.length, '?').join(', ')})',
+      ids,
+    );
   }
 
   /// Returns every work's canonical vs stored normalized title.

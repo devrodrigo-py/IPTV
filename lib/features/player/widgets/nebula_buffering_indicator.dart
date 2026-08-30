@@ -66,12 +66,15 @@ class _NebulaBufferingIndicatorState extends State<NebulaBufferingIndicator>
         children: [
           // Logotipo da marca: aparece imediatamente ao abrir o player
           // (identidade no carregamento), com respiração sutil de opacidade.
+          // cacheWidth evita decodificar os 1400px do asset (~8MB) em
+          // dispositivos fracos.
           Opacity(
             opacity: 0.55 + 0.45 * _pulse.value,
             child: Image.asset(
               'assets/branding/nebula_logo_transparent.png',
               height: widget.size * 0.62,
               fit: BoxFit.contain,
+              cacheWidth: 200,
             ),
           ),
           SizedBox(height: widget.size * 0.26),

@@ -31,6 +31,7 @@ final epgSyncSchedulerProvider = Provider<EpgSyncScheduler>((ref) {
   return EpgSyncScheduler(
     db: db,
     epgRepository: ref.read(epgRepositoryProvider),
+    settingsDao: db.appSettingsDao,
     intervalProvider: () =>
         Duration(hours: ref.read(epgSyncIntervalHoursProvider)),
   );

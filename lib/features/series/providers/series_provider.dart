@@ -7,6 +7,7 @@ import 'package:nebula_iptv/core/errors/app_failure.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/core/network/dio_client.dart';
 import 'package:nebula_iptv/data/database/daos/tmdb_cache_dao.dart';
+import 'package:nebula_iptv/data/database/database_provider.dart';
 import 'package:nebula_iptv/data/database/tables/channels_table.dart';
 import 'package:nebula_iptv/data/datasources/tmdb/tmdb_datasource.dart';
 import 'package:nebula_iptv/data/datasources/xtream/xtream_datasource.dart';
@@ -962,12 +963,28 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
       final serverUrl = playlistRows.first.read<String>('url');
       final username =
           playlistRows.first.readNullable<String>('username') ?? '';
-      final password =
+      final credentialKey =
           playlistRows.first.readNullable<String>('credential_key') ?? '';
 
-      if (serverUrl.isEmpty || username.isEmpty || password.isEmpty) {
+      if (serverUrl.isEmpty || username.isEmpty || credentialKey.isEmpty) {
         return null;
       }
+
+      // A coluna credential_key é a CHAVE do cofre seguro (spec §4.12) —
+      // a senha real precisa ser resolvida por ela. Enviar a chave como
+      // senha autenticava com lixo e a busca de episódios falhava sempre.
+      var password = '';
+      final stored = await _ref
+          .read(credentialStoreProvider)
+          .read(key: credentialKey);
+      stored.when(
+        success: (value) => password = value ?? '',
+        failure: (f) =>
+            appLogger.w('[SeriesDetail] Falha ao ler credencial: ${f.message}'),
+      );
+
+      // Legado: registros antigos podiam guardar a senha crua na coluna.
+      if (password.isEmpty) password = credentialKey;
 
       return (serverUrl: serverUrl, username: username, password: password);
     } catch (e) {

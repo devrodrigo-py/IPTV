@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nebula_iptv/core/errors/app_failure.dart';
 import 'package:nebula_iptv/core/result/result.dart';
 import 'package:nebula_iptv/data/database/app_database.dart';
+import 'package:nebula_iptv/data/database/daos/app_settings_dao.dart';
 import 'package:nebula_iptv/data/database/tables/playlists_table.dart';
 import 'package:nebula_iptv/data/datasources/epg/epg_datasource.dart';
 import 'package:nebula_iptv/data/datasources/epg/xmltv_parser.dart';
@@ -85,6 +86,8 @@ void main() {
           db: db,
           epgDataSource: dataSource,
         ),
+        settingsDao: db.appSettingsDao,
+        initialDelay: const Duration(milliseconds: 5),
       );
 
       await scheduler.syncAll();
@@ -106,6 +109,8 @@ void main() {
           db: db,
           epgDataSource: dataSource,
         ),
+        settingsDao: db.appSettingsDao,
+        initialDelay: const Duration(milliseconds: 5),
       );
 
       await scheduler.syncAll();
@@ -126,6 +131,8 @@ void main() {
           db: db,
           epgDataSource: dataSource,
         ),
+        settingsDao: db.appSettingsDao,
+        initialDelay: const Duration(milliseconds: 5),
         intervalProvider: () => const Duration(milliseconds: 30),
       );
 
@@ -157,6 +164,8 @@ void main() {
           db: db,
           epgDataSource: dataSource,
         ),
+        settingsDao: db.appSettingsDao,
+        initialDelay: const Duration(milliseconds: 5),
         intervalProvider: () => const Duration(milliseconds: 20),
       );
 
@@ -176,6 +185,48 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 10));
       }
       expect(dataSource.calls.length, greaterThanOrEqualTo(2));
+      scheduler.stop();
+    });
+
+    test('a recent last-sync defers the cycle until the interval elapses',
+        () async {
+      await _insertPlaylist(db, name: 'a', epgUrl: 'http://epg/a.xml');
+      await db.appSettingsDao.setString(
+        kSettingEpgLastSyncAtMs,
+        '${DateTime.now().millisecondsSinceEpoch}',
+      );
+
+      final dataSource = FakeEpgDataSource({
+        'http://epg/a.xml': const Success(_emptyResult),
+      });
+      final scheduler = EpgSyncScheduler(
+        db: db,
+        epgRepository: EpgRepository(
+          db: db,
+          epgDataSource: dataSource,
+        ),
+        settingsDao: db.appSettingsDao,
+        intervalProvider: () => const Duration(hours: 6),
+        initialDelay: const Duration(milliseconds: 10),
+      );
+
+      // Reabrir o app antes do intervalo não deve re-baixar o guia.
+      scheduler.start();
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      expect(dataSource.calls, isEmpty);
+      scheduler.stop();
+
+      // Intervalo cumprido → o ciclo roda.
+      await db.appSettingsDao.setString(
+        kSettingEpgLastSyncAtMs,
+        '${DateTime.now().subtract(const Duration(hours: 7)).millisecondsSinceEpoch}',
+      );
+      scheduler.start();
+      final deadline = DateTime.now().add(const Duration(seconds: 5));
+      while (dataSource.calls.isEmpty && DateTime.now().isBefore(deadline)) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+      expect(dataSource.calls, isNotEmpty);
       scheduler.stop();
     });
   });

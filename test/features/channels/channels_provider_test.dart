@@ -160,5 +160,72 @@ void main() {
       expect(state.filteredChannels, hasLength(1));
       expect(state.filteredChannels.first.name, 'ESPN Sports');
     });
+
+    test('keeps the best active member when the group primary is stale',
+        () async {
+      await db.channelGroupDao.ensureTables();
+
+      // Two variants of the same channel; primary = "Globo HD".
+      await db.channelsDao.insertChannels([
+        ChannelsCompanion.insert(
+          playlistId: 1,
+          name: 'Globo HD',
+          streamUrl: 'http://s/globo-hd',
+          sourceType: ChannelSourceType.m3u,
+        ),
+        ChannelsCompanion.insert(
+          playlistId: 1,
+          name: 'Globo SD',
+          streamUrl: 'http://s/globo-sd',
+          sourceType: ChannelSourceType.m3u,
+        ),
+      ]);
+      final rows = await db.customSelect(
+        "SELECT id, name FROM channels WHERE name LIKE 'Globo%'",
+      ).get();
+      final hdId =
+          rows.map((r) => (r.read<int>('id'), r.read<String>('name')))
+              .firstWhere((r) => r.$2 == 'Globo HD')
+              .$1;
+      final sdId =
+          rows.map((r) => (r.read<int>('id'), r.read<String>('name')))
+              .firstWhere((r) => r.$2 == 'Globo SD')
+              .$1;
+
+      final groupId = await db.channelGroupDao.createGroup(
+        displayName: 'Globo',
+        normalizedName: 'globo',
+        primaryChannelId: hdId,
+      );
+      await db.channelGroupDao.addMember(
+        groupId: groupId,
+        channelId: hdId,
+        qualityTag: 'HD',
+        priority: 2,
+      );
+      await db.channelGroupDao.addMember(
+        groupId: groupId,
+        channelId: sdId,
+        qualityTag: 'SD',
+        priority: 1,
+      );
+
+      // Um refresh desativa o primário — o grupo fica órfão.
+      await (db.update(db.channels)..where((c) => c.id.equals(hdId))).write(
+        const ChannelsCompanion(isActive: Value(false)),
+      );
+
+      container.read(channelsScreenProvider);
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      final state = container.read(channelsScreenProvider);
+      // A variante ativa restante NÃO pode sumir como "duplicada".
+      expect(
+        state.filteredChannels.map((c) => c.name),
+        contains('Globo SD'),
+      );
+      // E as demais continuam intactas.
+      expect(state.filteredChannels, hasLength(5));
+    });
   });
 }

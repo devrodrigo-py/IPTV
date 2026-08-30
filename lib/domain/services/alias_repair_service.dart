@@ -32,31 +32,43 @@ class AliasRepairService {
     try {
       await _db.mediaWorkDao.ensureTables();
 
-      var aliasesRemoved = 0;
+      final staleAliasIds = <int>[];
       for (final alias in await _db.mediaWorkDao.getAllAliasRowsForRepair()) {
         final recomputed = _matching.normalize(alias.aliasText);
         if (recomputed != alias.normalizedText) {
-          await _db.mediaWorkDao.deleteAliasRow(alias.id);
-          aliasesRemoved++;
+          staleAliasIds.add(alias.id);
         }
       }
 
-      var titlesRepaired = 0;
+      final staleTitles = <(int, String)>[];
       for (final work in await _db.mediaWorkDao.getWorkTitleRowsForRepair()) {
         final recomputed = _matching.normalize(work.canonicalTitle);
         if (recomputed != work.normalizedTitle) {
-          await _db.mediaWorkDao.updateNormalizedTitle(work.id, recomputed);
-          titlesRepaired++;
+          staleTitles.add((work.id, recomputed));
         }
       }
 
-      if (aliasesRemoved > 0 || titlesRepaired > 0) {
+      // Single transaction with a batched DELETE: keeps the write burst
+      // short so weaker devices don't jank at boot.
+      if (staleAliasIds.isNotEmpty || staleTitles.isNotEmpty) {
+        await _db.transaction(() async {
+          if (staleAliasIds.isNotEmpty) {
+            await _db.mediaWorkDao.deleteAliasRows(staleAliasIds);
+          }
+          for (final (id, normalized) in staleTitles) {
+            await _db.mediaWorkDao.updateNormalizedTitle(id, normalized);
+          }
+        });
         appLogger.i(
-          '[AliasRepair] $aliasesRemoved aliases removidos, '
-          '$titlesRepaired títulos re-normalizados (correção do normalizer antigo)',
+          '[AliasRepair] ${staleAliasIds.length} aliases removidos, '
+          '${staleTitles.length} títulos re-normalizados '
+          '(correção do normalizer antigo)',
         );
       }
-      return (aliasesRemoved: aliasesRemoved, titlesRepaired: titlesRepaired);
+      return (
+        aliasesRemoved: staleAliasIds.length,
+        titlesRepaired: staleTitles.length,
+      );
     } catch (e) {
       // Reparo é best-effort: nunca bloquear o bootstrap por ele.
       appLogger.w('[AliasRepair] Falhou (best-effort): $e');

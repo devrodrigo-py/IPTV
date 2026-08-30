@@ -3,6 +3,7 @@ import 'package:nebula_iptv/data/database/app_database.dart';
 /// Well-known keys persisted in the app_settings table.
 const kSettingHealthCheckEnabled = 'health_check_enabled';
 const kSettingEpgSyncIntervalHours = 'epg_sync_interval_hours';
+const kSettingEpgLastSyncAtMs = 'epg_last_sync_at_ms';
 
 /// EPG auto-sync default interval (spec §18).
 const kDefaultEpgSyncIntervalHours = 6;
