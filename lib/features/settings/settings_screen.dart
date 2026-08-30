@@ -672,7 +672,13 @@ class _SettingsSection extends StatelessWidget {
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Column(children: children),
+          // ListTile-family (SwitchListTile etc.) pinta fundo e ink splash no
+          // Material mais próximo — sem isto, o Container com cor os esconde
+          // (asserção do framework + feedback de toque invisível).
+          child: Material(
+            type: MaterialType.transparency,
+            child: Column(children: children),
+          ),
         ),
       ],
     );

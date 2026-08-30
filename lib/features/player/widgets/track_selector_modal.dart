@@ -384,26 +384,32 @@ class _TrackSelectorModalState extends ConsumerState<TrackSelectorModal>
           width: 1.5,
         ),
       ),
-      child: ListTile(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        dense: true,
-        title: Text(
-          title,
-          style: TextStyle(
-            color: isSelected ? AppColors.primary : Colors.white,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            fontSize: 13,
+      // ListTile pinta no Material mais próximo; sem isto o fundo do
+      // Container esconde o destaque de seleção (asserção do framework).
+      child: Material(
+        type: MaterialType.transparency,
+        child: ListTile(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          dense: true,
+          title: Text(
+            title,
+            style: TextStyle(
+              color: isSelected ? AppColors.primary : Colors.white,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              fontSize: 13,
+            ),
           ),
+          subtitle: Text(
+            subtitle,
+            style: const TextStyle(color: Colors.white54, fontSize: 11),
+          ),
+          trailing: isSelected
+              ? const Icon(Icons.check_circle_rounded,
+                  color: AppColors.primary, size: 20)
+              : null,
+          onTap: onTap,
         ),
-        subtitle: Text(
-          subtitle,
-          style: const TextStyle(color: Colors.white54, fontSize: 11),
-        ),
-        trailing: isSelected
-            ? const Icon(Icons.check_circle_rounded,
-                color: AppColors.primary, size: 20)
-            : null,
-        onTap: onTap,
       ),
     );
   }
