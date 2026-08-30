@@ -5,7 +5,9 @@ import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
+import 'package:nebula_iptv/data/database/daos/app_settings_dao.dart';
 import 'package:nebula_iptv/data/database/tables/playlists_table.dart';
+import 'package:nebula_iptv/domain/providers/epg_providers.dart';
 import 'package:nebula_iptv/domain/providers/health_check_providers.dart';
 import 'package:nebula_iptv/domain/services/subtitle_search_service.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
@@ -323,6 +325,14 @@ class SettingsScreen extends ConsumerWidget {
                 subtitle: 'Enriquece filmes e séries com pôsteres e sinopses',
                 onTap: () => _runMetadataEnrichment(context, ref),
               ),
+              _SettingsTile(
+                icon: Icons.calendar_month_rounded,
+                title: 'Sincronização do EPG',
+                subtitle: 'Programação automática a cada '
+                    '${ref.watch(epgSyncIntervalHoursProvider)} h — '
+                    'toque para alterar',
+                onTap: () => _showEpgIntervalDialog(context, ref),
+              ),
               SwitchListTile(
                 secondary: const Icon(
                   Icons.health_and_safety_rounded,
@@ -341,7 +351,7 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ),
                 value: ref.watch(healthCheckEnabledProvider),
-                onChanged: (enabled) {
+                onChanged: (enabled) async {
                   final service = ref.read(healthCheckServiceProvider);
                   if (enabled) {
                     service.startBackgroundCheck();
@@ -349,6 +359,17 @@ class SettingsScreen extends ConsumerWidget {
                     service.stop();
                   }
                   ref.read(healthCheckEnabledProvider.notifier).state = enabled;
+                  // Persist the choice so the next bootstrap honors it.
+                  try {
+                    await ref
+                        .read(databaseProvider)
+                        .appSettingsDao
+                        .setBool(kSettingHealthCheckEnabled, value: enabled);
+                  } catch (e) {
+                    appLogger.w(
+                      '[Settings] Falha ao persistir health check: $e',
+                    );
+                  }
                 },
               ),
             ],
@@ -356,6 +377,59 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// Picks the EPG auto-sync interval (spec §18) and persists it. The
+  /// scheduler is restarted so the new cadence applies immediately.
+  Future<void> _showEpgIntervalDialog(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final selected = await showDialog<int>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Sincronizar EPG a cada:'),
+        children: [
+          for (final hours in const [6, 12, 24, 48])
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(ctx, hours),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  children: [
+                    Icon(
+                      ref.read(epgSyncIntervalHoursProvider) == hours
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_unchecked,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text('$hours horas'),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+
+    if (selected == null ||
+        selected == ref.read(epgSyncIntervalHoursProvider)) {
+      return;
+    }
+
+    ref.read(epgSyncIntervalHoursProvider.notifier).state = selected;
+    try {
+      await ref
+          .read(databaseProvider)
+          .appSettingsDao
+          .setInt(kSettingEpgSyncIntervalHours, value: selected);
+      ref.read(epgSyncSchedulerProvider).restart();
+      appLogger.i('[Settings] EPG sync interval set to ${selected}h');
+    } catch (e) {
+      appLogger.w('[Settings] Falha ao persistir intervalo do EPG: $e');
+    }
   }
 
   /// Runs TMDB batch enrichment with explicit user consent (moved out of

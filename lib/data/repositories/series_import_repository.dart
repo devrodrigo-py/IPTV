@@ -217,15 +217,19 @@ class SeriesImportRepository {
         );
       }
 
-      final existing = await _db.seriesDao.getSeriesByPlaylist(playlistId);
+      // Reconcile against the full set including deactivated rows, so a
+      // series that left the source and came back reactivates (never
+      // duplicates).
+      final existing = await _db.seriesDao.getAllSeriesByPlaylist(playlistId);
       final existingBySourceId = <String, SeriesItem>{};
       for (final s in existing) {
         existingBySourceId[s.sourceId] = s;
       }
 
+      final toInsert = <SeriesItemsCompanion>[];
+      final toUpdate = <int, SeriesItemsCompanion>{};
+      final toActivate = <int>[];
       final matchedIds = <int>{};
-      var added = 0;
-      var updated = 0;
 
       for (final series in seriesList) {
         final sourceId = series.seriesId.toString();
@@ -233,41 +237,27 @@ class SeriesImportRepository {
 
         if (existingSeries != null) {
           matchedIds.add(existingSeries.id);
-          // Update if changed
           if (existingSeries.name != series.name ||
               existingSeries.coverUrl != series.cover ||
               existingSeries.rating != series.rating) {
-            await (_db.update(_db.seriesItems)
-                  ..where((s) => s.id.equals(existingSeries.id)))
-                .write(
-              SeriesItemsCompanion(
-                name: Value(series.name),
-                coverUrl: Value(series.cover),
-                plot: Value(series.plot),
-                cast: Value(series.cast),
-                director: Value(series.director),
-                genre: Value(series.genre),
-                rating: Value(series.rating),
-                year: Value(series.year),
-                backdropUrl: Value(series.backdropPath),
-                isActive: const Value(true),
-                updatedAt: Value(DateTime.now()),
-              ),
+            toUpdate[existingSeries.id] = SeriesItemsCompanion(
+              name: Value(series.name),
+              coverUrl: Value(series.cover),
+              plot: Value(series.plot),
+              cast: Value(series.cast),
+              director: Value(series.director),
+              genre: Value(series.genre),
+              rating: Value(series.rating),
+              year: Value(series.year),
+              backdropUrl: Value(series.backdropPath),
+              isActive: const Value(true),
+              updatedAt: Value(DateTime.now()),
             );
-            updated++;
           } else if (!existingSeries.isActive) {
-            await (_db.update(_db.seriesItems)
-                  ..where((s) => s.id.equals(existingSeries.id)))
-                .write(
-              SeriesItemsCompanion(
-                isActive: const Value(true),
-                updatedAt: Value(DateTime.now()),
-              ),
-            );
-            updated++;
+            toActivate.add(existingSeries.id);
           }
         } else {
-          await _db.seriesDao.insertSeries(
+          toInsert.add(
             SeriesItemsCompanion.insert(
               playlistId: playlistId,
               sourceId: sourceId,
@@ -284,30 +274,56 @@ class SeriesImportRepository {
               backdropUrl: Value(series.backdropPath),
             ),
           );
-          added++;
         }
       }
 
-      // Deactivate series no longer in the source
-      var deactivated = 0;
-      for (final s in existing) {
-        if (!matchedIds.contains(s.id)) {
-          await (_db.update(_db.seriesItems)..where((si) => si.id.equals(s.id)))
-              .write(
-            SeriesItemsCompanion(
-              isActive: const Value(false),
-              updatedAt: Value(DateTime.now()),
-            ),
-          );
-          deactivated++;
-        }
-      }
+      final toDeactivate = existing
+          .where((s) => s.isActive && !matchedIds.contains(s.id))
+          .map((s) => s.id)
+          .toList();
 
-      await _reconcileChannelRows(
-        playlistId: playlistId,
-        categoryMap: categoryMap,
-        seriesList: seriesList,
-      );
+      final added = toInsert.length;
+      final updated = toUpdate.length + toActivate.length;
+      final deactivated = toDeactivate.length;
+
+      // Single atomic pass: series_items + the channels-table mirror rows,
+      // both reconciled as batch operations inside one transaction.
+      await _db.transaction(() async {
+        await _db.batch((b) {
+          if (toInsert.isNotEmpty) {
+            b.insertAll(_db.seriesItems, toInsert);
+          }
+          toUpdate.forEach((id, companion) {
+            b.update(_db.seriesItems, companion, where: (s) => s.id.equals(id));
+          });
+          if (toActivate.isNotEmpty) {
+            b.update(
+              _db.seriesItems,
+              SeriesItemsCompanion(
+                isActive: const Value(true),
+                updatedAt: Value(DateTime.now()),
+              ),
+              where: (s) => s.id.isIn(toActivate),
+            );
+          }
+          if (toDeactivate.isNotEmpty) {
+            b.update(
+              _db.seriesItems,
+              SeriesItemsCompanion(
+                isActive: const Value(false),
+                updatedAt: Value(DateTime.now()),
+              ),
+              where: (s) => s.id.isIn(toDeactivate),
+            );
+          }
+        });
+
+        await _reconcileChannelRows(
+          playlistId: playlistId,
+          categoryMap: categoryMap,
+          seriesList: seriesList,
+        );
+      });
 
       appLogger.i(
         'Series import for playlist $playlistId: '

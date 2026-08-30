@@ -555,7 +555,7 @@ class _PlaylistTile extends StatelessWidget {
                 Text(
                   lastSync != null
                       ? 'Atualizado: ${_formatDate(lastSync!)}'
-                      : url,
+                      : _sourceSubtitle(url),
                   style: AppTypography.caption,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -586,5 +586,12 @@ class _PlaylistTile extends StatelessWidget {
         '${local.month.toString().padLeft(2, '0')} '
         '${local.hour.toString().padLeft(2, '0')}:'
         '${local.minute.toString().padLeft(2, '0')}';
+  }
+
+  /// File imports store the M3U content in the `url` column (the repository
+  /// re-reads it on refresh) — never render megabytes of playlist here.
+  String _sourceSubtitle(String url) {
+    final isRemote = url.startsWith('http://') || url.startsWith('https://');
+    return isRemote ? url : 'Arquivo local';
   }
 }

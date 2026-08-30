@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:nebula_iptv/data/database/daos/app_settings_dao.dart';
 import 'package:nebula_iptv/data/database/daos/category_cache_dao.dart';
 import 'package:nebula_iptv/data/database/daos/channel_group_dao.dart';
 import 'package:nebula_iptv/data/database/daos/channels_dao.dart';
@@ -16,6 +17,7 @@ import 'package:nebula_iptv/data/database/daos/tmdb_cache_dao.dart';
 import 'package:nebula_iptv/data/database/daos/vod_dao.dart';
 import 'package:nebula_iptv/data/database/daos/watch_history_dao.dart';
 import 'package:nebula_iptv/data/database/daos/watch_stats_dao.dart';
+import 'package:nebula_iptv/data/database/tables/app_settings_table.dart';
 import 'package:nebula_iptv/data/database/tables/channel_group_tables.dart';
 import 'package:nebula_iptv/data/database/tables/channels_table.dart';
 import 'package:nebula_iptv/data/database/tables/epg_programs_table.dart';
@@ -49,6 +51,7 @@ part 'app_database.g.dart';
     SeriesItems,
     Seasons,
     Episodes,
+    AppSettings,
   ],
   daos: [
     PlaylistsDao,
@@ -66,9 +69,10 @@ class AppDatabase extends _$AppDatabase {
       const DriftDatabaseOptions(storeDateTimeAsText: true);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   // Manual DAO gette
+  AppSettingsDao get appSettingsDao => AppSettingsDao(this);
   CategoryCacheDao get categoryCacheDao => CategoryCacheDao(this);
   VodDao get vodDao => VodDao(this);
   SeriesDao get seriesDao => SeriesDao(this);
@@ -149,6 +153,10 @@ class AppDatabase extends _$AppDatabase {
         if (from < 11) {
           // v10 → v11: per-source TLS opt-in column (ADR-005)
           await m.addColumn(playlists, playlists.allowInsecureTls);
+        }
+        if (from < 12) {
+          // v11 → v12: persisted app settings (health check toggle, EPG interval)
+          await m.createTable(appSettings);
         }
       },
     );

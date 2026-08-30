@@ -17,18 +17,8 @@
   <title>Nebula IPTV</title>
   <link rel="manifest" href="manifest.json">
 
-  <!-- sql.js for drift web database - wasm served locally -->
-  <script>
-    var Module = {
-      locateFile: function(filename) {
-        if (filename === 'sql-wasm.wasm') {
-          return 'sql-wasm.wasm';
-        }
-        return filename;
-      }
-    };
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js"></script>
+  <!-- Drift web database (WASM): sqlite3.wasm + drift_worker.js are served
+       locally from this folder. No external script tags needed. -->
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

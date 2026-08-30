@@ -142,16 +142,19 @@ class VodImportRepository {
         );
       }
 
-      // Get existing VOD items for reconciliation
-      final existing = await _db.vodDao.getVodByPlaylist(playlistId);
+      // Get existing VOD items for reconciliation — the full set including
+      // deactivated rows, so restored source items reactivate (never
+      // duplicate).
+      final existing = await _db.vodDao.getAllVodByPlaylist(playlistId);
       final existingBySourceId = <String, VodItem>{};
       for (final vod in existing) {
         existingBySourceId[vod.sourceId] = vod;
       }
 
+      final toInsert = <VodItemsCompanion>[];
+      final toUpdate = <int, VodItemsCompanion>{};
+      final toActivate = <int>[];
       final matchedIds = <int>{};
-      var added = 0;
-      var updated = 0;
 
       for (final stream in streams) {
         final sourceId = stream.streamId.toString();
@@ -165,44 +168,29 @@ class VodImportRepository {
         );
 
         final existingVod = existingBySourceId[sourceId];
-
         if (existingVod != null) {
           matchedIds.add(existingVod.id);
-          // Update if changed
           if (existingVod.name != stream.name ||
               existingVod.streamUrl != streamUrl ||
               existingVod.logoUrl != stream.streamIcon) {
-            await (_db.update(_db.vodItems)
-                  ..where((v) => v.id.equals(existingVod.id)))
-                .write(
-              VodItemsCompanion(
-                name: Value(stream.name),
-                streamUrl: Value(streamUrl),
-                logoUrl: Value(stream.streamIcon),
-                plot: Value(stream.plot),
-                cast: Value(stream.cast),
-                director: Value(stream.director),
-                genre: Value(stream.genre),
-                rating: Value(stream.rating),
-                year: Value(stream.year),
-                isActive: const Value(true),
-                updatedAt: Value(DateTime.now()),
-              ),
+            toUpdate[existingVod.id] = VodItemsCompanion(
+              name: Value(stream.name),
+              streamUrl: Value(streamUrl),
+              logoUrl: Value(stream.streamIcon),
+              plot: Value(stream.plot),
+              cast: Value(stream.cast),
+              director: Value(stream.director),
+              genre: Value(stream.genre),
+              rating: Value(stream.rating),
+              year: Value(stream.year),
+              isActive: const Value(true),
+              updatedAt: Value(DateTime.now()),
             );
-            updated++;
           } else if (!existingVod.isActive) {
-            await (_db.update(_db.vodItems)
-                  ..where((v) => v.id.equals(existingVod.id)))
-                .write(
-              VodItemsCompanion(
-                isActive: const Value(true),
-                updatedAt: Value(DateTime.now()),
-              ),
-            );
-            updated++;
+            toActivate.add(existingVod.id);
           }
         } else {
-          await _db.vodDao.insertVod(
+          toInsert.add(
             VodItemsCompanion.insert(
               playlistId: playlistId,
               sourceId: sourceId,
@@ -220,34 +208,60 @@ class VodImportRepository {
               containerExtension: Value(stream.containerExtension ?? 'mp4'),
             ),
           );
-          added++;
         }
       }
 
-      // Deactivate items no longer in the source
-      var deactivated = 0;
-      for (final vod in existing) {
-        if (!matchedIds.contains(vod.id)) {
-          await (_db.update(_db.vodItems)..where((v) => v.id.equals(vod.id)))
-              .write(
-            VodItemsCompanion(
-              isActive: const Value(false),
-              updatedAt: Value(DateTime.now()),
-            ),
-          );
-          deactivated++;
-        }
-      }
+      final toDeactivate = existing
+          .where((vod) => vod.isActive && !matchedIds.contains(vod.id))
+          .map((vod) => vod.id)
+          .toList();
 
-      await _reconcileChannelRows(
-        playlistId: playlistId,
-        serverUrl: serverUrl,
-        username: username,
-        password: password,
-        portOverride: portOverride,
-        categoryMap: categoryMap,
-        streams: streams,
-      );
+      final added = toInsert.length;
+      final updated = toUpdate.length + toActivate.length;
+      final deactivated = toDeactivate.length;
+
+      // Single atomic pass: vod_items + the channels-table mirror rows,
+      // both reconciled as batch operations inside one transaction.
+      await _db.transaction(() async {
+        await _db.batch((b) {
+          if (toInsert.isNotEmpty) {
+            b.insertAll(_db.vodItems, toInsert);
+          }
+          toUpdate.forEach((id, companion) {
+            b.update(_db.vodItems, companion, where: (c) => c.id.equals(id));
+          });
+          if (toActivate.isNotEmpty) {
+            b.update(
+              _db.vodItems,
+              VodItemsCompanion(
+                isActive: const Value(true),
+                updatedAt: Value(DateTime.now()),
+              ),
+              where: (c) => c.id.isIn(toActivate),
+            );
+          }
+          if (toDeactivate.isNotEmpty) {
+            b.update(
+              _db.vodItems,
+              VodItemsCompanion(
+                isActive: const Value(false),
+                updatedAt: Value(DateTime.now()),
+              ),
+              where: (c) => c.id.isIn(toDeactivate),
+            );
+          }
+        });
+
+        await _reconcileChannelRows(
+          playlistId: playlistId,
+          serverUrl: serverUrl,
+          username: username,
+          password: password,
+          portOverride: portOverride,
+          categoryMap: categoryMap,
+          streams: streams,
+        );
+      });
 
       appLogger.i(
         'VOD import for playlist $playlistId: '

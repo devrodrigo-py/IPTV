@@ -70,17 +70,20 @@ class PlaylistImportRepository {
     );
   }
 
-  /// Imports a new M3U playlist from local file.
+  /// Imports a new M3U playlist from the [content] of a local file.
+  ///
+  /// File imports have no remote URL — the content itself is stored in the
+  /// playlist's `url` column so [refreshPlaylist] can re-read it.
   Future<Result<PlaylistImportResult>> importFromFile({
     required String name,
-    required String filePath,
+    required String content,
     String? epgUrl,
   }) async {
-    final parseResult = await _m3uDataSource.readFromContent(filePath);
+    final parseResult = await _m3uDataSource.readFromContent(content);
     return parseResult.when(
       success: (result) => _persistPlaylist(
         name: name,
-        url: filePath,
+        url: content,
         epgUrl: epgUrl,
         allowInsecureTls: false,
         parseResult: result,
@@ -88,6 +91,12 @@ class PlaylistImportRepository {
       failure: (f) => Failure(f),
     );
   }
+
+  /// File imports store the playlist content itself in the `url` column;
+  /// anything that is not an http(s) URL is that content.
+  bool _isLocalContent(String urlOrContent) =>
+      !urlOrContent.startsWith('http://') &&
+      !urlOrContent.startsWith('https://');
 
   /// Refreshes an existing playlist (re-fetches and reconciles).
   Future<Result<PlaylistImportResult>> refreshPlaylist(
@@ -106,7 +115,9 @@ class PlaylistImportRepository {
     );
 
     try {
-      final parseResult = await _m3uDataSource.fetchFromUrl(playlist.url);
+      final parseResult = _isLocalContent(playlist.url)
+          ? await _m3uDataSource.readFromContent(playlist.url)
+          : await _m3uDataSource.fetchFromUrl(playlist.url);
       return await parseResult.when(
         success: (result) => _reconcilePlaylist(
           playlistId: playlistId,

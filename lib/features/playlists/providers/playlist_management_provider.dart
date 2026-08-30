@@ -4,13 +4,13 @@ import 'package:nebula_iptv/core/network/dio_client.dart';
 import 'package:nebula_iptv/data/database/app_database.dart';
 import 'package:nebula_iptv/data/database/database_provider.dart';
 import 'package:nebula_iptv/data/database/tables/playlists_table.dart';
-import 'package:nebula_iptv/data/datasources/epg/epg_datasource.dart';
 import 'package:nebula_iptv/data/datasources/m3u/m3u_datasource.dart';
 import 'package:nebula_iptv/data/datasources/xtream/xtream_datasource.dart';
 import 'package:nebula_iptv/data/repositories/epg_repository.dart';
 import 'package:nebula_iptv/data/repositories/playlist_import_repository.dart';
 import 'package:nebula_iptv/data/repositories/xtream_import_repository.dart';
 import 'package:nebula_iptv/domain/providers/dedup_providers.dart';
+import 'package:nebula_iptv/domain/providers/epg_providers.dart';
 import 'package:nebula_iptv/domain/services/channel_dedup_service.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/features/playlists/widgets/playlist_file_picker.dart';
@@ -81,10 +81,7 @@ class PlaylistManagementNotifier
       xtreamDataSource: xtreamDataSource,
       credentialStore: _ref.read(credentialStoreProvider),
     );
-    _epgRepo = EpgRepository(
-      db: db,
-      epgDataSource: EpgDataSource(client: client),
-    );
+    _epgRepo = _ref.read(epgRepositoryProvider);
     _filePicker = PlaylistFilePicker();
     _loadPlaylists();
   }
@@ -146,7 +143,7 @@ class PlaylistManagementNotifier
 
         final result = await _importRepo.importFromFile(
           name: file.fileName.replaceAll(RegExp(r'\.\w+$'), ''),
-          filePath: file.content, // readFromContent expects content string
+          content: file.content,
         );
 
         result.when(

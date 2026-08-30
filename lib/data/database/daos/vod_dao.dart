@@ -15,6 +15,18 @@ class VodDao extends DatabaseAccessor<AppDatabase> {
         .get();
   }
 
+  /// Returns every VOD item of a playlist, including deactivated rows.
+  ///
+  /// Reconciliation must diff against the full set — an item that left the
+  /// source in an earlier refresh and came back must be reactivated, not
+  /// duplicated.
+  Future<List<VodItem>> getAllVodByPlaylist(int playlistId) {
+    return (select(attachedDatabase.vodItems)
+          ..where((v) => v.playlistId.equals(playlistId))
+          ..orderBy([(v) => OrderingTerm.asc(v.name)]))
+        .get();
+  }
+
   /// Returns all active VOD items across all playlists.
   Future<List<VodItem>> getAllActiveVod() {
     return (select(attachedDatabase.vodItems)
@@ -57,11 +69,6 @@ class VodDao extends DatabaseAccessor<AppDatabase> {
                 v.playlistId.equals(playlistId) & v.sourceId.equals(sourceId),
           ))
         .getSingleOrNull();
-  }
-
-  /// Inserts a VOD item and returns its ID.
-  Future<int> insertVod(VodItemsCompanion entry) {
-    return into(attachedDatabase.vodItems).insert(entry);
   }
 
   /// Batch-inserts multiple VOD items.
