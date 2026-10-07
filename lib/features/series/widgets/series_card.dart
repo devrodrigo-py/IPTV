@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
+import 'package:nebula_iptv/core/widgets/nebula_cached_image.dart';
 import 'package:nebula_iptv/features/series/providers/series_provider.dart';
 
 /// A card displaying a series poster and title.
@@ -26,7 +27,7 @@ class SeriesCard extends StatelessWidget {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           transform: isFocused
-              ? (Matrix4.identity()..scale(1.03))
+              ? (Matrix4.identity()..scaleByDouble(1.03, 1.03, 1.03, 1.0))
               : Matrix4.identity(),
           // O anel de foco (3px, gradiente violeta→teal) é desenhado pelo
           // FocusableWidget que envolve este builder.
@@ -46,13 +47,12 @@ class SeriesCard extends StatelessWidget {
                       // Background image or placeholder
                       if (series.displayPosterUrl != null &&
                           series.displayPosterUrl!.isNotEmpty)
-                        Image.network(
-                          series.displayPosterUrl!,
+                        NebulaCachedImage(
+                          imageUrl: series.displayPosterUrl,
                           fit: BoxFit.cover,
                           cacheWidth: 300,
                           cacheHeight: 450,
-                          errorBuilder: (_, __, ___) =>
-                              _buildPlaceholder(),
+                          placeholder: _buildPlaceholder(),
                         )
                       else
                         _buildPlaceholder(),
@@ -117,14 +117,11 @@ class SeriesCard extends StatelessWidget {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color:
-                                  AppColors.primary.withValues(alpha: 0.9),
+                              color: AppColors.primary.withValues(alpha: 0.9),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              '★ ${series.tmdbRating != null
-                                  ? series.tmdbRating!.toStringAsFixed(1)
-                                  : series.rating}',
+                              '★ ${series.tmdbRating != null ? series.tmdbRating!.toStringAsFixed(1) : series.rating}',
                               style: AppTypography.caption.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
@@ -140,8 +137,7 @@ class SeriesCard extends StatelessWidget {
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color:
-                                  AppColors.primary.withValues(alpha: 0.9),
+                              color: AppColors.primary.withValues(alpha: 0.9),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(

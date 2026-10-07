@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
+import 'package:nebula_iptv/core/utils/isolate_parse.dart';
 import 'package:nebula_iptv/data/database/app_database.dart';
 import 'package:nebula_iptv/data/database/daos/channel_group_dao.dart';
 
@@ -21,6 +22,37 @@ class ChannelDeduplicationResult {
   String toString() =>
       'DeduplicationResult(groups: $groupsCreated, channels: $channelsGrouped, '
       'skipped: $groupsSkipped, elapsed: ${elapsed.inMilliseconds}ms)';
+}
+
+/// Lightweight channel identity used as dedup input.
+class ChannelNameInfo {
+  final int id;
+  final String name;
+
+  const ChannelNameInfo({required this.id, required this.name});
+}
+
+/// A candidate group produced by the pure normalization pass.
+class ComputedChannelGroup {
+  final String normalizedName;
+  final String displayName;
+
+  /// Members sorted best quality first.
+  final List<ComputedChannelMember> members;
+
+  const ComputedChannelGroup({
+    required this.normalizedName,
+    required this.displayName,
+    required this.members,
+  });
+}
+
+/// A member of a [ComputedChannelGroup].
+class ComputedChannelMember {
+  final int channelId;
+  final String? qualityTag;
+
+  const ComputedChannelMember({required this.channelId, this.qualityTag});
 }
 
 /// Service that detects channels which are quality variants of the same stream.
@@ -62,68 +94,48 @@ class ChannelDeduplicationService {
       '[ChannelDedup] Scanning ${channels.length} channels for duplicates...',
     );
 
-    // Group by normalized name
-    final groups = <String, List<_ChannelInfo>>{};
-    for (final ch in channels) {
-      final normalized = normalizeChannelName(ch.name);
-      if (normalized.isEmpty) continue;
-      groups.putIfAbsent(normalized, () => []).add(ch);
-    }
+    // Pure CPU pass — normalization, grouping, quality sorting — runs
+    // outside the main thread.
+    final groups = await parseInIsolate(channels, computeGroups);
 
     var groupsCreated = 0;
     var channelsGrouped = 0;
     var groupsSkipped = 0;
 
-    // Process groups with 2+ members
-    for (final entry in groups.entries) {
-      if (entry.value.length < 2) continue;
-
-      final normalizedName = entry.key;
+    // Persist groups with 2+ members
+    for (final group in groups) {
+      if (group.members.length < 2) continue;
 
       // Check if a group already exists for this normalized name
       final existingGroupId =
-          await _groupDao.findGroupByNormalizedName(normalizedName);
+          await _groupDao.findGroupByNormalizedName(group.normalizedName);
       if (existingGroupId != null) {
         groupsSkipped++;
         continue;
       }
 
-      // Determine display name (longest common prefix or first channel name)
-      final displayName = _pickDisplayName(entry.value);
-
-      // Sort by quality priority (highest first)
-      final sorted = entry.value.toList()
-        ..sort((a, b) {
-          final tagA = extractQualityTag(a.name);
-          final tagB = extractQualityTag(b.name);
-          return qualityPriority(tagB).compareTo(qualityPriority(tagA));
-        });
-
-      final primaryChannel = sorted.first;
-
-      // Create the group
+      // Create the group (primary = best quality, first member)
       final groupId = await _groupDao.createGroup(
-        displayName: displayName,
-        normalizedName: normalizedName,
-        primaryChannelId: primaryChannel.id,
+        displayName: group.displayName,
+        normalizedName: group.normalizedName,
+        primaryChannelId: group.members.first.channelId,
         confidenceScore: 1.0,
         source: 'auto',
       );
 
       // Add all members
-      for (var i = 0; i < sorted.length; i++) {
-        final ch = sorted[i];
-        final tag = extractQualityTag(ch.name);
+      for (var i = 0; i < group.members.length; i++) {
+        final member = group.members[i];
         await _groupDao.addMember(
           groupId: groupId,
-          channelId: ch.id,
-          qualityTag: tag,
-          priority: sorted.length - i, // Higher = better
+          channelId: member.channelId,
+          qualityTag: member.qualityTag,
+          priority: group.members.length - i, // Higher = better
         );
       }
 
       groupsCreated++;
-      channelsGrouped += sorted.length;
+      channelsGrouped += group.members.length;
     }
 
     stopwatch.stop();
@@ -135,6 +147,47 @@ class ChannelDeduplicationService {
     );
 
     appLogger.i('[ChannelDedup] $result');
+    return result;
+  }
+
+  /// Pure normalization + grouping pass — "channel names in, candidate
+  /// groups out". No I/O; safe to run inside an isolate.
+  static List<ComputedChannelGroup> computeGroups(
+    List<ChannelNameInfo> channels,
+  ) {
+    final grouped = <String, List<ChannelNameInfo>>{};
+    for (final ch in channels) {
+      final normalized = normalizeChannelName(ch.name);
+      if (normalized.isEmpty) continue;
+      grouped.putIfAbsent(normalized, () => []).add(ch);
+    }
+
+    final result = <ComputedChannelGroup>[];
+    for (final entry in grouped.entries) {
+      if (entry.value.length < 2) continue;
+
+      final sorted = entry.value.toList()
+        ..sort((a, b) {
+          final tagA = extractQualityTag(a.name);
+          final tagB = extractQualityTag(b.name);
+          return qualityPriority(tagB).compareTo(qualityPriority(tagA));
+        });
+
+      result.add(
+        ComputedChannelGroup(
+          normalizedName: entry.key,
+          displayName: _pickDisplayName(sorted),
+          members: sorted
+              .map(
+                (ch) => ComputedChannelMember(
+                  channelId: ch.id,
+                  qualityTag: extractQualityTag(ch.name),
+                ),
+              )
+              .toList(),
+        ),
+      );
+    }
     return result;
   }
 
@@ -246,16 +299,9 @@ class ChannelDeduplicationService {
     };
   }
 
-  /// Picks the best display name for a group.
-  String _pickDisplayName(List<_ChannelInfo> channels) {
+  /// Picks the best display name for a group (from quality-sorted members).
+  static String _pickDisplayName(List<ChannelNameInfo> sorted) {
     // Use the name of the highest-quality channel, stripped of tag
-    final sorted = channels.toList()
-      ..sort((a, b) {
-        final tagA = extractQualityTag(a.name);
-        final tagB = extractQualityTag(b.name);
-        return qualityPriority(tagB).compareTo(qualityPriority(tagA));
-      });
-
     var name = sorted.first.name;
 
     // Remove the quality tag from the display name
@@ -275,7 +321,7 @@ class ChannelDeduplicationService {
   }
 
   /// Loads channels from the database.
-  Future<List<_ChannelInfo>> _loadChannels(int? playlistId) async {
+  Future<List<ChannelNameInfo>> _loadChannels(int? playlistId) async {
     final String query;
     final List<Variable> variables;
 
@@ -290,22 +336,44 @@ class ChannelDeduplicationService {
 
     final results = await _db.customSelect(query, variables: variables).get();
     return results
-        .map((row) => _ChannelInfo(
-              id: row.read<int>('id'),
-              name: row.read<String>('name'),
-            ))
+        .map(
+          (row) => ChannelNameInfo(
+            id: row.read<int>('id'),
+            name: row.read<String>('name'),
+          ),
+        )
         .toList();
   }
 
   /// Removes diacritics/accents.
   static String _removeDiacritics(String text) {
     const map = {
-      'à': 'a', 'á': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a',
-      'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
-      'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i',
-      'ò': 'o', 'ó': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o',
-      'ù': 'u', 'ú': 'u', 'û': 'u', 'ü': 'u',
-      'ñ': 'n', 'ç': 'c', 'ý': 'y', 'ÿ': 'y',
+      'à': 'a',
+      'á': 'a',
+      'â': 'a',
+      'ã': 'a',
+      'ä': 'a',
+      'è': 'e',
+      'é': 'e',
+      'ê': 'e',
+      'ë': 'e',
+      'ì': 'i',
+      'í': 'i',
+      'î': 'i',
+      'ï': 'i',
+      'ò': 'o',
+      'ó': 'o',
+      'ô': 'o',
+      'õ': 'o',
+      'ö': 'o',
+      'ù': 'u',
+      'ú': 'u',
+      'û': 'u',
+      'ü': 'u',
+      'ñ': 'n',
+      'ç': 'c',
+      'ý': 'y',
+      'ÿ': 'y',
     };
 
     final buffer = StringBuffer();
@@ -314,12 +382,4 @@ class ChannelDeduplicationService {
     }
     return buffer.toString();
   }
-}
-
-/// Internal model for channel info during deduplication.
-class _ChannelInfo {
-  final int id;
-  final String name;
-
-  const _ChannelInfo({required this.id, required this.name});
 }

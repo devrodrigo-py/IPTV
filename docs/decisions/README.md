@@ -21,6 +21,7 @@ ADRs follow the standard format established by Michael Nygard:
 | # | Title | Status | Date | Description |
 |---|-------|--------|------|-------------|
 | **ADR-001** | [MediaWork-Centric Content Foundation Architecture](./ADR-001-media-work-content-foundation.md) | Accepted | 2026-08-20 | Migrate from simple `tmdb_cache` table to a robust relational model with `MediaWork`, `ContentAlias`, and `MediaWorkMergeLog` tables. Introduces multi-source integration, fuzzy matching, and manual override capabilities. |
+| **ADR-005** | [TLS Certificate Validation Policy](./ADR-005-tls-certificate-policy.md) | Accepted | 2026-08-29 | Reject invalid TLS certificates by default; per-source opt-in (schema `playlists.allow_insecure_tls`, v11) with a visible UI warning for self-signed IPTV panels. |
 
 ### Phase 2: Matching & Normalization *(Planned)*
 

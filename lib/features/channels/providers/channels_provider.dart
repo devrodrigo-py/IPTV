@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/errors/app_failure.dart';
+import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/data/database/app_database.dart';
 import 'package:nebula_iptv/data/database/tables/channels_table.dart';
-import 'package:nebula_iptv/core/logging/app_logger.dart';
 
 /// State for the channels screen.
 class ChannelsScreenState {
@@ -82,7 +82,9 @@ class ChannelsScreenNotifier extends StateNotifier<ChannelsScreenState> {
       final allChannels = await db.channelsDao.getAllActiveChannels();
       // Only show live channels (xtream/m3u) — VOD and Series have their own screens
       final channels = allChannels
-          .where((c) => c.sourceType == ChannelSourceType.xtream || c.sourceType == ChannelSourceType.m3u)
+          .where((c) =>
+              c.sourceType == ChannelSourceType.xtream ||
+              c.sourceType == ChannelSourceType.m3u)
           .toList();
       // Groups must come from the live-only collection. Using every row in
       // `channels` leaked movie and series categories into the Ao Vivo filter.
@@ -119,15 +121,18 @@ class ChannelsScreenNotifier extends StateNotifier<ChannelsScreenState> {
 
   /// Filters out duplicate channels using channel_groups.
   /// Keeps only the primary_channel_id from each group.
-  Future<List<Channel>> _filterDuplicates(AppDatabase db, List<Channel> channels) async {
+  Future<List<Channel>> _filterDuplicates(
+      AppDatabase db, List<Channel> channels) async {
     try {
       // Get primary channel IDs and all grouped channel IDs
-      final groupRows = await db.customSelect(
-        'SELECT g.primary_channel_id, m.channel_id '
-        'FROM channel_groups g '
-        'INNER JOIN channel_group_members m ON m.group_id = g.id '
-        'WHERE g.primary_channel_id IS NOT NULL',
-      ).get();
+      final groupRows = await db
+          .customSelect(
+            'SELECT g.primary_channel_id, m.channel_id '
+            'FROM channel_groups g '
+            'INNER JOIN channel_group_members m ON m.group_id = g.id '
+            'WHERE g.primary_channel_id IS NOT NULL',
+          )
+          .get();
 
       appLogger.d('[Dedup UI] Found ${groupRows.length} group member rows');
 
@@ -189,8 +194,11 @@ class ChannelsScreenNotifier extends StateNotifier<ChannelsScreenState> {
       await db.favoritesDao.toggleFavorite(channelId);
       final favoriteIds = await db.favoritesDao.getFavoriteChannelIds();
       state = state.copyWith(favoriteIds: favoriteIds);
-    } catch (_) {
-      // Silently fail — don't break UI for favorite toggle
+    } catch (e) {
+      // Don't break UI for favorite toggle — the optimistic list stays
+      // correct, but the persistence failure must be observable.
+      appLogger
+          .w('[Channels] Falha ao alternar favorito (canal $channelId): $e');
     }
   }
 

@@ -8,11 +8,15 @@ import 'package:nebula_iptv/data/database/tables/channels_table.dart';
 import 'package:nebula_iptv/data/database/tables/playlists_table.dart';
 import 'package:nebula_iptv/data/datasources/xtream/xtream_datasource.dart';
 import 'package:nebula_iptv/data/datasources/xtream/xtream_models.dart';
+import 'package:nebula_iptv/data/repositories/playlist_import_repository.dart';
 import 'package:nebula_iptv/data/repositories/series_import_repository.dart';
 import 'package:nebula_iptv/data/repositories/vod_import_repository.dart';
-import 'package:nebula_iptv/data/repositories/playlist_import_repository.dart';
 
 /// Repository for importing and syncing Xtream Codes playlists.
+///
+/// Single source of truth for Xtream imports (live + VOD + series).
+/// The presentation layer consumes the [Result] returned by
+/// [importXtream]/[refreshXtream]; it must not re-implement the flow.
 class XtreamImportRepository {
   final AppDatabase _db;
   final XtreamDataSource _xtreamDataSource;
@@ -39,8 +43,10 @@ class XtreamImportRepository {
     );
   }
 
-  /// Imports a new Xtream source.
-  /// Also imports VOD and series content in parallel.
+  /// Imports a new Xtream source: live channels, VOD and series.
+  ///
+  /// Live streams are mandatory — a failure aborts the import before any
+  /// row is written. VOD/series failures are logged and non-blocking.
   Future<Result<PlaylistImportResult>> importXtream({
     required String name,
     required String serverUrl,
@@ -48,59 +54,230 @@ class XtreamImportRepository {
     required String userPass,
     int? portOverride,
     String? epgUrl,
+    bool allowInsecureTls = false,
   }) async {
     final authResult = await _xtreamDataSource.authenticate(
       serverUrl: serverUrl,
       username: username,
       password: userPass,
       portOverride: portOverride,
+      allowInsecureCertificates: allowInsecureTls,
     );
 
     return await authResult.when(
-      success: (auth) async {
-        final credentialKey = 'xtream_${username}_${serverUrl.hashCode}';
-        final saveResult = await _credentialStore.save(
-          key: credentialKey,
-          value: userPass,
-        );
-
-        if (saveResult.isFailure) {
-          return const Failure(
-            CredentialFailure(
-              message: 'Não foi possível salvar as credenciais.',
-            ),
-          );
-        }
-
-        final streamsResult = await _xtreamDataSource.getLiveStreams(
-          serverUrl: serverUrl,
-          username: username,
-          password: userPass,
-          portOverride: portOverride,
-        );
-
-        return await streamsResult.when(
-          success: (streams) => _persistXtreamPlaylist(
-            name: name,
-            serverUrl: serverUrl,
-            username: username,
-            credentialKey: credentialKey,
-            portOverride: portOverride,
-            epgUrl: epgUrl,
-            streams: streams,
-            userPass: userPass,
-          ),
-          failure: (f) => Failure(f),
-        );
-      },
+      success: (auth) => _persistXtreamImport(
+        name: name,
+        serverUrl: serverUrl,
+        username: username,
+        userPass: userPass,
+        portOverride: portOverride,
+        epgUrl: epgUrl,
+        allowInsecureTls: allowInsecureTls,
+        accountStatus: auth.userInfo.status,
+      ),
       failure: (f) => Failure(f),
     );
   }
 
+  Future<Result<PlaylistImportResult>> _persistXtreamImport({
+    required String name,
+    required String serverUrl,
+    required String username,
+    required String userPass,
+    required int? portOverride,
+    required String? epgUrl,
+    required bool allowInsecureTls,
+    required String accountStatus,
+  }) async {
+    final credentialKey = 'xtream_${username}_${serverUrl.hashCode}';
+    final saveResult = await _credentialStore.save(
+      key: credentialKey,
+      value: userPass,
+    );
+
+    if (saveResult.isFailure) {
+      return const Failure(
+        CredentialFailure(
+          message: 'Não foi possível salvar as credenciais.',
+        ),
+      );
+    }
+
+    try {
+      // Fetch everything BEFORE creating the playlist row: a live failure
+      // aborts here and no half-imported source is left behind.
+      final categoryMaps = await Future.wait([
+        _fetchCategoryMap(
+          serverUrl: serverUrl,
+          username: username,
+          password: userPass,
+          portOverride: portOverride,
+          action: 'live',
+          allowInsecureCertificates: allowInsecureTls,
+        ),
+        _fetchCategoryMap(
+          serverUrl: serverUrl,
+          username: username,
+          password: userPass,
+          portOverride: portOverride,
+          action: 'vod',
+          allowInsecureCertificates: allowInsecureTls,
+        ),
+        _fetchCategoryMap(
+          serverUrl: serverUrl,
+          username: username,
+          password: userPass,
+          portOverride: portOverride,
+          action: 'series',
+          allowInsecureCertificates: allowInsecureTls,
+        ),
+      ]);
+      final liveCatMap = categoryMaps[0];
+      final vodCatMap = categoryMaps[1];
+      final seriesCatMap = categoryMaps[2];
+
+      final liveResult = await _xtreamDataSource.getLiveStreams(
+        serverUrl: serverUrl,
+        username: username,
+        password: userPass,
+        portOverride: portOverride,
+        allowInsecureCertificates: allowInsecureTls,
+      );
+      if (liveResult case Failure(:final failure)) {
+        return Failure(failure);
+      }
+      final liveStreams = liveResult.when(
+          success: (s) => s, failure: (_) => <XtreamLiveStream>[]);
+
+      final vodStreams = await _fetchStreamsOrEmpty(
+        fetch: () => _xtreamDataSource.getVodStreams(
+          serverUrl: serverUrl,
+          username: username,
+          password: userPass,
+          portOverride: portOverride,
+          allowInsecureCertificates: allowInsecureTls,
+        ),
+        context: 'VOD',
+      );
+
+      final seriesList = await _fetchStreamsOrEmpty(
+        fetch: () => _xtreamDataSource.getSeries(
+          serverUrl: serverUrl,
+          username: username,
+          password: userPass,
+          portOverride: portOverride,
+          allowInsecureCertificates: allowInsecureTls,
+        ),
+        context: 'séries',
+      );
+
+      // Build all rows in memory (pure), then write in one transaction.
+      final liveCompanions = _liveToCompanions(
+        streams: liveStreams,
+        playlistId: 0,
+        serverUrl: serverUrl,
+        username: username,
+        userPass: userPass,
+        portOverride: portOverride,
+        categoryMap: liveCatMap,
+      );
+      final vodContent = _vodToCompanions(
+        movies: vodStreams,
+        playlistId: 0,
+        serverUrl: serverUrl,
+        username: username,
+        userPass: userPass,
+        portOverride: portOverride,
+        categoryMap: vodCatMap,
+      );
+      final seriesContent = _seriesToCompanions(
+        seriesList: seriesList,
+        playlistId: 0,
+        categoryMap: seriesCatMap,
+      );
+
+      final playlistId = await _db.playlistsDao.insertPlaylist(
+        PlaylistsCompanion.insert(
+          name: name,
+          type: PlaylistType.xtream,
+          url: Value(serverUrl),
+          epgUrl: Value(epgUrl),
+          username: Value(username),
+          credentialKey: Value(credentialKey),
+          xtreamPortOverride: Value(portOverride),
+          allowInsecureTls: Value(allowInsecureTls),
+          lastSyncAt: Value(DateTime.now()),
+          syncStatus: const Value(PlaylistSyncStatus.idle),
+        ),
+      );
+
+      final allChannels = [
+        ..._rebind(liveCompanions, playlistId),
+        ..._rebind(vodContent.channels, playlistId),
+        ..._rebind(seriesContent.channels, playlistId),
+      ];
+
+      await _db.transaction(() async {
+        await _db.channelsDao.insertChannels(allChannels);
+        if (vodContent.items.isNotEmpty) {
+          await _db.vodDao.insertVodBatch(
+            _rebindVodItems(vodContent.items, playlistId),
+          );
+        }
+        if (seriesContent.items.isNotEmpty) {
+          await _db.seriesDao.insertSeriesBatch(
+            _rebindSeriesItems(seriesContent.items, playlistId),
+          );
+        }
+
+        await _cacheCategories(
+          playlistId: playlistId,
+          liveCatMap: liveCatMap,
+          vodCatMap: vodCatMap,
+          seriesCatMap: seriesCatMap,
+        );
+
+        await _db.playlistsDao.updateSyncStatus(
+          playlistId,
+          status: PlaylistSyncStatus.idle,
+          syncedAt: DateTime.now(),
+        );
+      });
+
+      appLogger.i(
+        'Imported Xtream "$name" (account: $accountStatus): '
+        '${liveStreams.length} live, ${vodStreams.length} vod, '
+        '${seriesList.length} series',
+      );
+
+      return Success(
+        PlaylistImportResult(
+          playlistId: playlistId,
+          channelsAdded: allChannels.length,
+          channelsUpdated: 0,
+          channelsDeactivated: 0,
+          parseErrors: 0,
+          vodItemsImported: vodContent.items.length,
+          seriesImported: seriesContent.items.length,
+        ),
+      );
+    } catch (e) {
+      return Failure(
+        DatabaseFailure(
+          message: 'Erro ao salvar a fonte Xtream.',
+          originalError: e,
+        ),
+      );
+    }
+  }
+
   /// Refreshes an existing Xtream playlist.
-  Future<Result<PlaylistImportResult>> refreshXtream(
-    int playlistId,
-  ) async {
+  ///
+  /// Reconciles live channels by `sourceId` (spec §19) using a diff and a
+  /// single batch — removed channels are deactivated, never deleted, so
+  /// favorites and history are preserved. VOD/series are reconciled in the
+  /// background via their own repositories.
+  Future<Result<PlaylistImportResult>> refreshXtream(int playlistId) async {
     final playlist = await _db.playlistsDao.getPlaylistById(playlistId);
     if (playlist == null) {
       return const Failure(
@@ -113,7 +290,13 @@ class XtreamImportRepository {
     );
     final userPass = credResult.when(
       success: (val) => val,
-      failure: (_) => null,
+      failure: (f) {
+        appLogger.w(
+          'Xtream import (playlist $playlistId): falha ao ler credenciais: '
+          '${f.message}',
+        );
+        return null;
+      },
     );
 
     if (userPass == null || userPass.isEmpty) {
@@ -129,132 +312,63 @@ class XtreamImportRepository {
       status: PlaylistSyncStatus.syncing,
     );
 
-    final authResult = await _xtreamDataSource.authenticate(
-      serverUrl: playlist.url,
-      username: playlist.username ?? '',
-      password: userPass,
-      portOverride: playlist.xtreamPortOverride,
-    );
-
-    return await authResult.when(
-      success: (auth) async {
-        final streamsResult = await _xtreamDataSource.getLiveStreams(
-          serverUrl: playlist.url,
-          username: playlist.username ?? '',
-          password: userPass,
-          portOverride: playlist.xtreamPortOverride,
-        );
-
-        return await streamsResult.when(
-          success: (streams) => _reconcileXtreamPlaylist(
-            playlistId: playlistId,
-            serverUrl: playlist.url,
-            username: playlist.username ?? '',
-            userPass: userPass,
-            portOverride: playlist.xtreamPortOverride,
-            streams: streams,
-          ),
-          failure: (f) async {
-            await _db.playlistsDao.updateSyncStatus(
-              playlistId,
-              status: PlaylistSyncStatus.error,
-            );
-            return Failure(f);
-          },
-        );
-      },
-      failure: (f) async {
+    try {
+      final authResult = await _xtreamDataSource.authenticate(
+        serverUrl: playlist.url,
+        username: playlist.username ?? '',
+        password: userPass,
+        portOverride: playlist.xtreamPortOverride,
+        allowInsecureCertificates: playlist.allowInsecureTls,
+      );
+      if (authResult case Failure(:final failure)) {
         await _db.playlistsDao.updateSyncStatus(
           playlistId,
           status: PlaylistSyncStatus.error,
         );
-        return Failure(f);
-      },
-    );
-  }
-
-  Future<Result<PlaylistImportResult>> _persistXtreamPlaylist({
-    required String name,
-    required String serverUrl,
-    required String username,
-    required String credentialKey,
-    required String userPass,
-    required List<XtreamLiveStream> streams,
-    int? portOverride,
-    String? epgUrl,
-  }) async {
-    try {
-      final playlistId = await _db.playlistsDao.insertPlaylist(
-        PlaylistsCompanion.insert(
-          name: name,
-          type: PlaylistType.xtream,
-          url: Value(serverUrl),
-          epgUrl: Value(epgUrl),
-          username: Value(username),
-          credentialKey: Value(credentialKey),
-          xtreamPortOverride: Value(portOverride),
-          lastSyncAt: Value(DateTime.now()),
-          syncStatus: const Value(PlaylistSyncStatus.idle),
-        ),
-      );
-
-      // Fetch category names to resolve numeric IDs
-      final categoryMap = await _fetchLiveCategoryMap(
-        serverUrl: serverUrl,
-        username: username,
-        password: userPass,
-        portOverride: portOverride,
-      );
-
-      // Cache categories for future resolution
-      if (categoryMap.isNotEmpty) {
-        await _db.categoryCacheDao.ensureTable();
-        await _db.categoryCacheDao.upsertCategories(
-          playlistId: playlistId,
-          categoryMap: categoryMap,
-          sourceType: 'live',
-        );
+        return Failure(failure);
       }
 
-      final companions = _streamsToCompanions(
-        streams: streams,
-        playlistId: playlistId,
-        serverUrl: serverUrl,
-        username: username,
-        userPass: userPass,
-        portOverride: portOverride,
-        categoryMap: categoryMap,
-      );
-
-      await _db.channelsDao.insertChannels(companions);
-
-      appLogger.i(
-        'Imported Xtream "$name": ${companions.length} channels',
-      );
-
-      // Import VOD and series in the background (non-blocking)
-      _importVodAndSeriesInBackground(
-        playlistId: playlistId,
-        serverUrl: serverUrl,
-        username: username,
+      final streamsResult = await _xtreamDataSource.getLiveStreams(
+        serverUrl: playlist.url,
+        username: playlist.username ?? '',
         password: userPass,
-        portOverride: portOverride,
+        portOverride: playlist.xtreamPortOverride,
+        allowInsecureCertificates: playlist.allowInsecureTls,
+      );
+      if (streamsResult case Failure(:final failure)) {
+        await _db.playlistsDao.updateSyncStatus(
+          playlistId,
+          status: PlaylistSyncStatus.error,
+        );
+        return Failure(failure);
+      }
+      final streams = streamsResult.when(
+        success: (s) => s,
+        failure: (_) => <XtreamLiveStream>[],
       );
 
-
-      return Success(
-        PlaylistImportResult(
-          playlistId: playlistId,
-          channelsAdded: companions.length,
-          channelsUpdated: 0,
-          channelsDeactivated: 0,
-          parseErrors: 0,
-        ),
+      final result = await _reconcileXtreamPlaylist(
+        playlistId: playlistId,
+        serverUrl: playlist.url,
+        username: playlist.username ?? '',
+        userPass: userPass,
+        portOverride: playlist.xtreamPortOverride,
+        allowInsecureTls: playlist.allowInsecureTls,
+        streams: streams,
       );
+
+      // VOD/series refresh in the background — failures logged, non-blocking.
+      _refreshVodAndSeriesInBackground(playlistId);
+
+      return result;
     } catch (e) {
+      await _db.playlistsDao.updateSyncStatus(
+        playlistId,
+        status: PlaylistSyncStatus.error,
+      );
       return Failure(
-        DatabaseFailure(
-          message: 'Erro ao salvar a fonte Xtream.',
+        UnknownFailure(
+          message: 'Erro ao atualizar a fonte.',
           originalError: e,
         ),
       );
@@ -266,29 +380,26 @@ class XtreamImportRepository {
     required String serverUrl,
     required String username,
     required String userPass,
+    required int? portOverride,
+    required bool allowInsecureTls,
     required List<XtreamLiveStream> streams,
-    int? portOverride,
   }) async {
     try {
-      // Fetch category names
-      final categoryMap = await _fetchLiveCategoryMap(
+      final liveCatMap = await _fetchCategoryMap(
         serverUrl: serverUrl,
         username: username,
         password: userPass,
         portOverride: portOverride,
+        action: 'live',
+        allowInsecureCertificates: allowInsecureTls,
       );
 
-      // Cache categories
-      if (categoryMap.isNotEmpty) {
-        await _db.categoryCacheDao.ensureTable();
-        await _db.categoryCacheDao.upsertCategories(
-          playlistId: playlistId,
-          categoryMap: categoryMap,
-          sourceType: 'live',
-        );
-      }
-
-      final existing = await _db.channelsDao.getChannelsByPlaylist(playlistId);
+      // Only live rows take part in the live reconciliation — VOD/series
+      // rows have their own sourceId space and are reconciled separately.
+      final existing = await _db.channelsDao.getAllChannelsByPlaylistAndType(
+        playlistId,
+        ChannelSourceType.xtream,
+      );
 
       final existingBySourceId = <String, Channel>{};
       for (final ch in existing) {
@@ -297,9 +408,11 @@ class XtreamImportRepository {
         }
       }
 
+      // Diff phase.
+      final toInsert = <ChannelsCompanion>[];
+      final toUpdate = <int, ChannelsCompanion>{};
+      final toActivate = <int>[];
       final matchedIds = <int>{};
-      var added = 0;
-      var updated = 0;
 
       for (final stream in streams) {
         final sourceId = stream.streamId.toString();
@@ -319,24 +432,18 @@ class XtreamImportRepository {
           if (existingCh.name != stream.name ||
               existingCh.streamUrl != streamUrl ||
               existingCh.logoUrl != stream.streamIcon) {
-            await ((_db.update(_db.channels))
-                  ..where((c) => c.id.equals(existingCh.id)))
-                .write(
-              ChannelsCompanion(
-                name: Value(stream.name),
-                streamUrl: Value(streamUrl),
-                logoUrl: Value(stream.streamIcon),
-                isActive: const Value(true),
-                updatedAt: Value(DateTime.now()),
-              ),
+            toUpdate[existingCh.id] = ChannelsCompanion(
+              name: Value(stream.name),
+              streamUrl: Value(streamUrl),
+              logoUrl: Value(stream.streamIcon),
+              isActive: const Value(true),
+              updatedAt: Value(DateTime.now()),
             );
-            updated++;
           } else if (!existingCh.isActive) {
-            await _db.channelsDao.activateChannel(existingCh.id);
-            updated++;
+            toActivate.add(existingCh.id);
           }
         } else {
-          await _db.channelsDao.insertChannel(
+          toInsert.add(
             ChannelsCompanion.insert(
               playlistId: playlistId,
               name: stream.name,
@@ -344,47 +451,78 @@ class XtreamImportRepository {
               sourceType: ChannelSourceType.xtream,
               sourceId: Value(sourceId),
               logoUrl: Value(stream.streamIcon),
-              groupName: Value(categoryMap[stream.categoryId] ?? stream.categoryId),
+              groupName: Value(
+                liveCatMap[stream.categoryId] ?? stream.categoryId,
+              ),
               tvgId: Value(stream.epgChannelId),
             ),
           );
-          added++;
         }
       }
 
-      var deactivated = 0;
-      for (final ch in existing) {
-        if (!matchedIds.contains(ch.id)) {
-          await ((_db.update(_db.channels))..where((c) => c.id.equals(ch.id)))
-              .write(
-            ChannelsCompanion(
-              isActive: const Value(false),
-              updatedAt: Value(DateTime.now()),
-            ),
+      final toDeactivate = existing
+          .where((ch) => !matchedIds.contains(ch.id))
+          .map((ch) => ch.id)
+          .toList();
+
+      final added = toInsert.length;
+      final updated = toUpdate.length + toActivate.length;
+      final deactivated = toDeactivate.length;
+
+      // Write phase: one transactional batch.
+      await _db.transaction(() async {
+        await _db.batch((b) {
+          if (toInsert.isNotEmpty) {
+            b.insertAll(_db.channels, toInsert);
+          }
+          toUpdate.forEach((id, companion) {
+            b.update(
+              _db.channels,
+              companion,
+              where: (c) => c.id.equals(id),
+            );
+          });
+          if (toActivate.isNotEmpty) {
+            b.update(
+              _db.channels,
+              ChannelsCompanion(
+                isActive: const Value(true),
+                updatedAt: Value(DateTime.now()),
+              ),
+              where: (c) => c.id.isIn(toActivate),
+            );
+          }
+          if (toDeactivate.isNotEmpty) {
+            b.update(
+              _db.channels,
+              ChannelsCompanion(
+                isActive: const Value(false),
+                updatedAt: Value(DateTime.now()),
+              ),
+              where: (c) => c.id.isIn(toDeactivate),
+            );
+          }
+        });
+
+        if (liveCatMap.isNotEmpty) {
+          await _db.categoryCacheDao.ensureTable();
+          await _db.categoryCacheDao.upsertCategories(
+            playlistId: playlistId,
+            categoryMap: liveCatMap,
+            sourceType: 'live',
           );
-          deactivated++;
         }
-      }
 
-      await _db.playlistsDao.updateSyncStatus(
-        playlistId,
-        status: PlaylistSyncStatus.idle,
-        syncedAt: DateTime.now(),
-      );
+        await _db.playlistsDao.updateSyncStatus(
+          playlistId,
+          status: PlaylistSyncStatus.idle,
+          syncedAt: DateTime.now(),
+        );
+      });
 
       appLogger.i(
         'Refreshed Xtream $playlistId: +$added, ~$updated, -$deactivated',
       );
-
-      // Also refresh VOD and series
-      _importVodAndSeriesInBackground(
-        playlistId: playlistId,
-        serverUrl: serverUrl,
-        username: username,
-        password: userPass,
-        portOverride: portOverride,
-      );
-
 
       return Success(
         PlaylistImportResult(
@@ -409,14 +547,18 @@ class XtreamImportRepository {
     }
   }
 
-  List<ChannelsCompanion> _streamsToCompanions({
+  // ─────────────────────────────────────────────────────────────────────────
+  // Row builders (pure)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  List<ChannelsCompanion> _liveToCompanions({
     required List<XtreamLiveStream> streams,
     required int playlistId,
     required String serverUrl,
     required String username,
     required String userPass,
-    int? portOverride,
-    Map<String, String> categoryMap = const {},
+    required int? portOverride,
+    required Map<String, String> categoryMap,
   }) {
     return streams.map((stream) {
       final streamUrl = _xtreamDataSource.buildStreamUrl(
@@ -441,65 +583,253 @@ class XtreamImportRepository {
     }).toList();
   }
 
-  /// Imports VOD and series content in the background.
-  /// Failures are logged but don't affect the main import result.
-  void _importVodAndSeriesInBackground({
+  ({List<ChannelsCompanion> channels, List<VodItemsCompanion> items})
+      _vodToCompanions({
+    required List<XtreamVodStream> movies,
     required int playlistId,
     required String serverUrl,
     required String username,
-    required String password,
-    int? portOverride,
+    required String userPass,
+    required int? portOverride,
+    required Map<String, String> categoryMap,
   }) {
-    // Import VOD
-    _vodImportRepository.importVod(
-      playlistId: playlistId,
-      serverUrl: serverUrl,
-      username: username,
-      password: password,
-      portOverride: portOverride,
-    ).then((result) => result.when(
-      success: (r) => appLogger.i('VOD import: +${r.moviesAdded} movies'),
-      failure: (f) => appLogger.w('VOD import failed: ${f.message}'),
-    ));
+    final channels = <ChannelsCompanion>[];
+    final items = <VodItemsCompanion>[];
 
-    // Import series
-    _seriesImportRepository.importSeries(
-      playlistId: playlistId,
-      serverUrl: serverUrl,
-      username: username,
-      password: password,
-      portOverride: portOverride,
-    ).then((result) => result.when(
-      success: (r) => appLogger.i('Series import: +${r.seriesAdded} series'),
-      failure: (f) => appLogger.w('Series import failed: ${f.message}'),
-    ));
+    for (final movie in movies) {
+      final streamUrl = _xtreamDataSource.buildVodStreamUrl(
+        serverUrl: serverUrl,
+        username: username,
+        password: userPass,
+        streamId: movie.streamId,
+        portOverride: portOverride,
+        extension: movie.containerExtension ?? 'mp4',
+      );
+      final cat = categoryMap[movie.categoryId] ?? movie.categoryId;
+
+      channels.add(
+        ChannelsCompanion.insert(
+          playlistId: playlistId,
+          name: movie.name,
+          streamUrl: streamUrl,
+          sourceType: ChannelSourceType.vod,
+          sourceId: Value(movie.streamId.toString()),
+          logoUrl: Value(movie.streamIcon),
+          groupName: Value(cat),
+        ),
+      );
+      items.add(
+        VodItemsCompanion.insert(
+          playlistId: playlistId,
+          sourceId: movie.streamId.toString(),
+          name: movie.name,
+          streamUrl: streamUrl,
+          logoUrl: Value(movie.streamIcon),
+          categoryName: Value(cat),
+          containerExtension: Value(movie.containerExtension ?? 'mp4'),
+        ),
+      );
+    }
+
+    return (channels: channels, items: items);
   }
 
-  /// Fetches live categories from Xtream API and returns a map of id → name.
-  /// Returns empty map on failure (non-blocking).
-  Future<Map<String, String>> _fetchLiveCategoryMap({
+  ({List<ChannelsCompanion> channels, List<SeriesItemsCompanion> items})
+      _seriesToCompanions({
+    required List<XtreamSeries> seriesList,
+    required int playlistId,
+    required Map<String, String> categoryMap,
+  }) {
+    final channels = <ChannelsCompanion>[];
+    final items = <SeriesItemsCompanion>[];
+
+    for (final s in seriesList) {
+      final cat = categoryMap[s.categoryId] ?? s.categoryId;
+      final sourceIdStr = s.seriesId.toString();
+
+      channels.add(
+        ChannelsCompanion.insert(
+          playlistId: playlistId,
+          name: s.name,
+          streamUrl: '',
+          sourceType: ChannelSourceType.series,
+          sourceId: Value(sourceIdStr),
+          logoUrl: Value(s.cover),
+          groupName: Value(cat),
+        ),
+      );
+      items.add(
+        SeriesItemsCompanion.insert(
+          playlistId: playlistId,
+          sourceId: sourceIdStr,
+          name: s.name,
+          coverUrl: Value(s.cover),
+          categoryName: Value(cat),
+          plot: Value(s.plot),
+          cast: Value(s.cast),
+          director: Value(s.director),
+          genre: Value(s.genre),
+          rating: Value(s.rating),
+          year: Value(s.year),
+          backdropUrl: Value(s.backdropPath),
+        ),
+      );
+    }
+
+    return (channels: channels, items: items);
+  }
+
+  /// Rebinds companions built against a placeholder playlistId (0) to the
+  /// real one, so row building stays decoupled from row insertion.
+  List<ChannelsCompanion> _rebind(
+    List<ChannelsCompanion> companions,
+    int playlistId,
+  ) {
+    return companions
+        .map(
+          (c) => c.copyWith(playlistId: Value(playlistId)),
+        )
+        .toList();
+  }
+
+  List<VodItemsCompanion> _rebindVodItems(
+    List<VodItemsCompanion> items,
+    int playlistId,
+  ) {
+    return items.map((i) => i.copyWith(playlistId: Value(playlistId))).toList();
+  }
+
+  List<SeriesItemsCompanion> _rebindSeriesItems(
+    List<SeriesItemsCompanion> items,
+    int playlistId,
+  ) {
+    return items.map((i) => i.copyWith(playlistId: Value(playlistId))).toList();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Background helpers
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Refreshes VOD and series content in the background.
+  /// Failures are logged but don't affect the main refresh result.
+  void _refreshVodAndSeriesInBackground(int playlistId) {
+    _vodImportRepository.refreshVod(playlistId).then(
+          (result) => result.when(
+            success: (r) =>
+                appLogger.i('VOD refresh: +${r.moviesAdded} movies'),
+            failure: (f) => appLogger.w('VOD refresh failed: ${f.message}'),
+          ),
+          onError: (e) => appLogger.w('VOD refresh crashed: $e'),
+        );
+
+    _seriesImportRepository.refreshSeries(playlistId).then(
+          (result) => result.when(
+            success: (r) =>
+                appLogger.i('Series refresh: +${r.seriesAdded} series'),
+            failure: (f) => appLogger.w('Series refresh failed: ${f.message}'),
+          ),
+          onError: (e) => appLogger.w('Series refresh crashed: $e'),
+        );
+  }
+
+  /// Fetches content-type streams; failures are logged and return an empty
+  /// list (VOD/series must not block the import of live channels).
+  Future<List<T>> _fetchStreamsOrEmpty<T>({
+    required Future<Result<List<T>>> Function() fetch,
+    required String context,
+  }) async {
+    try {
+      final result = await fetch();
+      return await result.when(
+        success: (items) => items,
+        failure: (f) {
+          appLogger.w('Xtream import: $context fetch failed: ${f.message}');
+          return const [];
+        },
+      );
+    } catch (e) {
+      appLogger.w('Xtream import: $context fetch crashed: $e');
+      return const [];
+    }
+  }
+
+  /// Fetches a category name map (id → name). Returns an empty map on
+  /// failure (non-blocking) — group names fall back to the raw id.
+  Future<Map<String, String>> _fetchCategoryMap({
     required String serverUrl,
     required String username,
     required String password,
+    required String action,
     int? portOverride,
+    bool allowInsecureCertificates = false,
   }) async {
-    final categoryMap = <String, String>{};
+    final map = <String, String>{};
     try {
-      final result = await _xtreamDataSource.getLiveCategories(
-        serverUrl: serverUrl,
-        username: username,
-        password: password,
-        portOverride: portOverride,
-      );
+      final result = switch (action) {
+        'live' => await _xtreamDataSource.getLiveCategories(
+            serverUrl: serverUrl,
+            username: username,
+            password: password,
+            portOverride: portOverride,
+            allowInsecureCertificates: allowInsecureCertificates,
+          ),
+        'vod' => await _xtreamDataSource.getVodCategories(
+            serverUrl: serverUrl,
+            username: username,
+            password: password,
+            portOverride: portOverride,
+            allowInsecureCertificates: allowInsecureCertificates,
+          ),
+        'series' => await _xtreamDataSource.getSeriesCategories(
+            serverUrl: serverUrl,
+            username: username,
+            password: password,
+            portOverride: portOverride,
+            allowInsecureCertificates: allowInsecureCertificates,
+          ),
+        _ => await _xtreamDataSource.getLiveCategories(
+            serverUrl: serverUrl,
+            username: username,
+            password: password,
+            portOverride: portOverride,
+            allowInsecureCertificates: allowInsecureCertificates,
+          ),
+      };
       result.when(
         success: (categories) {
           for (final cat in categories) {
-            categoryMap[cat.categoryId] = cat.categoryName;
+            map[cat.categoryId] = cat.categoryName;
           }
         },
-        failure: (_) {},
+        failure: (f) =>
+            appLogger.w('Xtream import: category fetch failed: ${f.message}'),
       );
-    } catch (_) {}
-    return categoryMap;
+    } catch (e) {
+      appLogger.w('Xtream import: category fetch crashed: $e');
+    }
+    return map;
+  }
+
+  /// Caches live/VOD/series category names for future id → name resolution.
+  Future<void> _cacheCategories({
+    required int playlistId,
+    required Map<String, String> liveCatMap,
+    required Map<String, String> vodCatMap,
+    required Map<String, String> seriesCatMap,
+  }) async {
+    await _db.categoryCacheDao.ensureTable();
+    for (final entry in {
+      'live': liveCatMap,
+      'vod': vodCatMap,
+      'series': seriesCatMap,
+    }.entries) {
+      if (entry.value.isNotEmpty) {
+        await _db.categoryCacheDao.upsertCategories(
+          playlistId: playlistId,
+          categoryMap: entry.value,
+          sourceType: entry.key,
+        );
+      }
+    }
   }
 }

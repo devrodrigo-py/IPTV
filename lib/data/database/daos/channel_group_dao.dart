@@ -63,7 +63,7 @@ class ChannelGroupDao extends DatabaseAccessor<AppDatabase> {
     double confidenceScore = 1.0,
     String source = 'auto',
   }) async {
-    return await customInsert(
+    return customInsert(
       '''
       INSERT INTO channel_groups 
         (display_name, normalized_name, primary_channel_id, confidence_score, source)

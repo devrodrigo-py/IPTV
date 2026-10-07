@@ -34,7 +34,9 @@ linter:
     - prefer_final_fields
     - prefer_final_locals
     - prefer_single_quotes
-    - require_trailing_commas
+    # require_trailing_commas removed: it conflicts with the Dart 3.7+
+    # formatter (tall style), which removes redundant trailing commas.
+    # The formatter is the authority here (CI runs dart format).
     - sort_child_properties_last
     - unnecessary_await_in_return
     - unnecessary_null_aware_assignments

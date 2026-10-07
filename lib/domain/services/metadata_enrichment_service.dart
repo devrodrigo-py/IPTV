@@ -192,10 +192,22 @@ class MetadataEnrichmentService {
         final detailsResult = await _tmdbDataSource.getMovieDetails(best.id);
         return detailsResult.when(
           success: (details) => details,
-          failure: (_) => null,
+          failure: (f) {
+            appLogger.w(
+              '[Enrichment] TMDB movie details failed for "$normalizedName": '
+              '${f.message}',
+            );
+            return null;
+          },
         );
       },
-      failure: (_) => null,
+      failure: (f) {
+        appLogger.w(
+          '[Enrichment] TMDB movie search failed for "$normalizedName": '
+          '${f.message}',
+        );
+        return null;
+      },
     );
   }
 
@@ -217,10 +229,22 @@ class MetadataEnrichmentService {
         final detailsResult = await _tmdbDataSource.getTvDetails(best.id);
         return detailsResult.when(
           success: (details) => details,
-          failure: (_) => null,
+          failure: (f) {
+            appLogger.w(
+              '[Enrichment] TMDB tv details failed for "$normalizedName": '
+              '${f.message}',
+            );
+            return null;
+          },
         );
       },
-      failure: (_) => null,
+      failure: (f) {
+        appLogger.w(
+          '[Enrichment] TMDB tv search failed for "$normalizedName": '
+          '${f.message}',
+        );
+        return null;
+      },
     );
   }
 
@@ -254,7 +278,13 @@ class MetadataEnrichmentService {
         if (best.score < 0.5) return null;
         return best.show;
       },
-      failure: (_) => null,
+      failure: (f) {
+        appLogger.w(
+          '[Enrichment] TVMaze search failed for "$normalizedName": '
+          '${f.message}',
+        );
+        return null;
+      },
     );
   }
 
@@ -283,10 +313,8 @@ class MetadataEnrichmentService {
       overviewCache: details.overview,
       posterUrlCache: posterUrl.isNotEmpty ? posterUrl : null,
       bannerUrlCache: bannerUrl.isNotEmpty ? bannerUrl : null,
-      genreCache:
-          details.genreNames.isNotEmpty ? details.genreNames : null,
-      castCache:
-          details.castNames.isNotEmpty ? details.castNames : null,
+      genreCache: details.genreNames.isNotEmpty ? details.genreNames : null,
+      castCache: details.castNames.isNotEmpty ? details.castNames : null,
       externalId: details.id,
       metadataSource: 'tmdb',
     );
@@ -339,10 +367,8 @@ class MetadataEnrichmentService {
       overviewCache: details.overview,
       posterUrlCache: posterUrl.isNotEmpty ? posterUrl : null,
       bannerUrlCache: bannerUrl.isNotEmpty ? bannerUrl : null,
-      genreCache:
-          details.genreNames.isNotEmpty ? details.genreNames : null,
-      castCache:
-          details.castNames.isNotEmpty ? details.castNames : null,
+      genreCache: details.genreNames.isNotEmpty ? details.genreNames : null,
+      castCache: details.castNames.isNotEmpty ? details.castNames : null,
       externalId: details.id,
       metadataSource: 'tmdb',
     );
@@ -383,9 +409,8 @@ class MetadataEnrichmentService {
     final normalizedTitle = _matchingService.normalize(show.name);
 
     // Strip HTML from TVMaze summary
-    final overview = show.summary != null
-        ? TvMazeDataSource.stripHtml(show.summary!)
-        : null;
+    final overview =
+        show.summary != null ? TvMazeDataSource.stripHtml(show.summary!) : null;
 
     final genres = show.genres.isNotEmpty ? show.genres.join(', ') : null;
 
@@ -447,8 +472,7 @@ class MetadataEnrichmentService {
 
     if (_tmdbTimestamps.length >= _tmdbMaxRequestsPer10s) {
       final oldest = _tmdbTimestamps.first;
-      final waitTime =
-          oldest.add(const Duration(seconds: 10)).difference(now);
+      final waitTime = oldest.add(const Duration(seconds: 10)).difference(now);
       if (!waitTime.isNegative) {
         await Future.delayed(waitTime + const Duration(milliseconds: 100));
       }
@@ -464,8 +488,7 @@ class MetadataEnrichmentService {
 
     if (_tvMazeTimestamps.length >= _tvMazeMaxRequestsPer10s) {
       final oldest = _tvMazeTimestamps.first;
-      final waitTime =
-          oldest.add(const Duration(seconds: 10)).difference(now);
+      final waitTime = oldest.add(const Duration(seconds: 10)).difference(now);
       if (!waitTime.isNegative) {
         await Future.delayed(waitTime + const Duration(milliseconds: 100));
       }

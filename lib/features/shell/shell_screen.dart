@@ -8,16 +8,16 @@ import 'package:nebula_iptv/features/epg/epg_screen.dart';
 import 'package:nebula_iptv/features/favorites/favorites_screen.dart';
 import 'package:nebula_iptv/features/history/history_screen.dart';
 import 'package:nebula_iptv/features/home/home_screen.dart';
-import 'package:nebula_iptv/features/playlists/playlists_screen.dart';
-import 'package:nebula_iptv/features/settings/settings_screen.dart';
-import 'package:nebula_iptv/features/stats/stats_screen.dart';
-import 'package:nebula_iptv/features/vod/vod_screen.dart';
-import 'package:nebula_iptv/features/series/series_screen.dart';
 import 'package:nebula_iptv/features/library/library_screen.dart';
+import 'package:nebula_iptv/features/playlists/playlists_screen.dart';
+import 'package:nebula_iptv/features/series/series_screen.dart';
+import 'package:nebula_iptv/features/settings/settings_screen.dart';
+import 'package:nebula_iptv/features/shell/providers/shell_navigation_provider.dart';
 import 'package:nebula_iptv/features/shell/widgets/mobile_bottom_nav.dart';
 import 'package:nebula_iptv/features/shell/widgets/sidebar.dart';
 import 'package:nebula_iptv/features/shell/widgets/top_bar.dart';
-import 'package:nebula_iptv/features/shell/providers/shell_navigation_provider.dart';
+import 'package:nebula_iptv/features/stats/stats_screen.dart';
+import 'package:nebula_iptv/features/vod/vod_screen.dart';
 import 'package:nebula_iptv/l10n/app_localizations.dart';
 
 /// Main shell that provides the application's navigation structure.

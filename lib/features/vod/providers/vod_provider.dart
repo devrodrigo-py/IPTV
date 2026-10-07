@@ -278,13 +278,11 @@ class VodScreenNotifier extends StateNotifier<VodScreenState> {
 
       // 2. Also load from channels table (M3U imports with sourceType vod)
       final channels = await db.channelsDao.getAllActiveChannels();
-      final vodChannels = channels
-          .where((c) => c.sourceType == ChannelSourceType.vod)
-          .toList();
+      final vodChannels =
+          channels.where((c) => c.sourceType == ChannelSourceType.vod).toList();
 
-      final existingSourceIds = allMoviesList
-          .map((v) => v.id.toString())
-          .toSet();
+      final existingSourceIds =
+          allMoviesList.map((v) => v.id.toString()).toSet();
 
       for (final c in vodChannels) {
         if (c.sourceId != null && existingSourceIds.contains(c.sourceId)) {
@@ -339,7 +337,8 @@ class VodScreenNotifier extends StateNotifier<VodScreenState> {
 
       // Pick hero items: movies with poster images, prefer enriched ones
       final moviesWithPoster = allMoviesList
-          .where((m) => m.displayPosterUrl != null && m.displayPosterUrl!.isNotEmpty)
+          .where((m) =>
+              m.displayPosterUrl != null && m.displayPosterUrl!.isNotEmpty)
           .toList();
       List<VodItem> heroItems;
       if (moviesWithPoster.length >= 5) {
@@ -379,7 +378,8 @@ class VodScreenNotifier extends StateNotifier<VodScreenState> {
     movies.sort((a, b) {
       final scoreOrder = score(b).compareTo(score(a));
       if (scoreOrder != 0) return scoreOrder;
-      final enrichedOrder = (b.isEnriched ? 1 : 0).compareTo(a.isEnriched ? 1 : 0);
+      final enrichedOrder =
+          (b.isEnriched ? 1 : 0).compareTo(a.isEnriched ? 1 : 0);
       if (enrichedOrder != 0) return enrichedOrder;
       final recentOrder = (b.addedAt?.millisecondsSinceEpoch ?? b.id)
           .compareTo(a.addedAt?.millisecondsSinceEpoch ?? a.id);

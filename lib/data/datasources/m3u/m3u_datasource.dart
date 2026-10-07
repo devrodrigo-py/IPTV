@@ -1,12 +1,16 @@
 import 'package:nebula_iptv/core/errors/app_failure.dart';
 import 'package:nebula_iptv/core/network/dio_client.dart';
 import 'package:nebula_iptv/core/result/result.dart';
+import 'package:nebula_iptv/core/utils/isolate_parse.dart';
 import 'package:nebula_iptv/data/datasources/m3u/m3u_parser.dart';
 
 /// Data source responsible for fetching and parsing M3U playlists.
 ///
 /// Supports fetching from URL. File import is available only on
 /// native platforms (handled by the UI layer).
+///
+/// Parsing runs outside the main thread (spec §31 — large playlists
+/// must not block the UI).
 class M3uDataSource {
   final DioClient _client;
   final M3uParser _parser;
@@ -18,39 +22,34 @@ class M3uDataSource {
         _parser = parser;
 
   /// Fetches and parses an M3U playlist from a URL.
-  Future<Result<M3uParseResult>> fetchFromUrl(String url) async {
-    final response = await _client.get<String>(url);
+  Future<Result<M3uParseResult>> fetchFromUrl(
+    String url, {
+    bool allowInsecureCertificates = false,
+  }) async {
+    if (allowInsecureCertificates) _client.allowInsecureFor(url);
+    try {
+      final response = await _client.get<String>(url);
 
-    return response.when(
-      success: (res) {
-        final content = res.data;
-        if (content == null || content.isEmpty) {
-          return const Failure(
-            PlaylistParseFailure(message: 'A playlist está vazia.'),
-          );
-        }
-
-        try {
-          final result = _parser.parse(content);
-          if (result.entries.isEmpty) {
+      return await response.when(
+        success: (res) async {
+          final content = res.data;
+          if (content == null || content.isEmpty) {
             return const Failure(
-              PlaylistParseFailure(
-                message: 'Nenhum canal encontrado na playlist.',
-              ),
+              PlaylistParseFailure(message: 'A playlist está vazia.'),
             );
           }
-          return Success(result);
-        } catch (e) {
-          return Failure(
-            PlaylistParseFailure(
-              message: 'Erro ao interpretar a playlist.',
-              originalError: e,
-            ),
+
+          return _parseAndValidate(
+            content,
+            emptyMessage: 'Nenhum canal encontrado na playlist.',
+            errorMessage: 'Erro ao interpretar a playlist.',
           );
-        }
-      },
-      failure: (f) => Failure(f),
-    );
+        },
+        failure: (f) => Failure(f),
+      );
+    } finally {
+      if (allowInsecureCertificates) _client.disallowInsecureFor(url);
+    }
   }
 
   /// Parses an M3U playlist from file content (platform-agnostic).
@@ -61,24 +60,11 @@ class M3uDataSource {
       );
     }
 
-    try {
-      final result = _parser.parse(content);
-      if (result.entries.isEmpty) {
-        return const Failure(
-          PlaylistParseFailure(
-            message: 'Nenhum canal encontrado no arquivo.',
-          ),
-        );
-      }
-      return Success(result);
-    } catch (e) {
-      return Failure(
-        PlaylistParseFailure(
-          message: 'Erro ao interpretar o conteúdo.',
-          originalError: e,
-        ),
-      );
-    }
+    return _parseAndValidate(
+      content,
+      emptyMessage: 'Nenhum canal encontrado no arquivo.',
+      errorMessage: 'Erro ao interpretar o conteúdo.',
+    );
   }
 
   /// Parses raw M3U content directly (useful for testing).
@@ -103,6 +89,32 @@ class M3uDataSource {
           message: 'Erro ao interpretar o conteúdo.',
           originalError: e,
         ),
+      );
+    }
+  }
+
+  /// Runs the parser off the main thread and validates the outcome.
+  Future<Result<M3uParseResult>> _parseAndValidate(
+    String content, {
+    required String emptyMessage,
+    required String errorMessage,
+  }) async {
+    try {
+      // Capture only the parser — a closure that touches instance state
+      // would implicitly capture `this` (and the DioClient it holds),
+      // which cannot cross an isolate boundary.
+      final parser = _parser;
+      final result = await parseInIsolate(
+        content,
+        (String c) => parser.parse(c),
+      );
+      if (result.entries.isEmpty) {
+        return Failure(PlaylistParseFailure(message: emptyMessage));
+      }
+      return Success(result);
+    } catch (e) {
+      return Failure(
+        PlaylistParseFailure(message: errorMessage, originalError: e),
       );
     }
   }

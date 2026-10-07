@@ -39,7 +39,8 @@ class RatingsDao extends DatabaseAccessor<AppDatabase> {
   }
 
   /// Get top rated items with channel info.
-  Future<List<Map<String, dynamic>>> getTopRated(int profileId, {int limit = 20}) async {
+  Future<List<Map<String, dynamic>>> getTopRated(int profileId,
+      {int limit = 20}) async {
     final rows = await customSelect(
       '''
       SELECT

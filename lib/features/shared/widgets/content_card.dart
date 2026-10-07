@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/core/widgets/nebula_cached_image.dart';
 import 'package:nebula_iptv/core/widgets/nebula_focus_ring.dart';
 
 /// A Netflix-style content card with poster image (2:3 ratio).
@@ -272,16 +273,13 @@ class _ContentCardState extends State<ContentCard>
   }
 
   Widget _buildImage() {
-    if (widget.imageUrl != null && widget.imageUrl!.isNotEmpty) {
-      return Image.network(
-        widget.imageUrl!,
-        fit: BoxFit.cover,
-        cacheWidth: 300,
-        cacheHeight: 450,
-        errorBuilder: (_, __, ___) => _buildFallback(),
-      );
-    }
-    return _buildFallback();
+    return NebulaCachedImage(
+      imageUrl: widget.imageUrl,
+      fit: BoxFit.cover,
+      cacheWidth: 300,
+      cacheHeight: 450,
+      placeholder: _buildFallback(),
+    );
   }
 
   Widget _buildFallback() {

@@ -18,15 +18,15 @@ abstract final class WatchStatsSql {
 
   /// Migration: add new columns to watch_history_entries.
   static const alterWatchHistoryColumns = [
-    "ALTER TABLE watch_history_entries ADD COLUMN progress_percent REAL NOT NULL DEFAULT 0",
-    "ALTER TABLE watch_history_entries ADD COLUMN total_duration_ms INTEGER NOT NULL DEFAULT 0",
+    'ALTER TABLE watch_history_entries ADD COLUMN progress_percent REAL NOT NULL DEFAULT 0',
+    'ALTER TABLE watch_history_entries ADD COLUMN total_duration_ms INTEGER NOT NULL DEFAULT 0',
     "ALTER TABLE watch_history_entries ADD COLUMN content_type TEXT NOT NULL DEFAULT 'live'",
-    "ALTER TABLE watch_history_entries ADD COLUMN series_id INTEGER",
-    "ALTER TABLE watch_history_entries ADD COLUMN season_number INTEGER",
-    "ALTER TABLE watch_history_entries ADD COLUMN episode_number INTEGER",
-    "ALTER TABLE watch_history_entries ADD COLUMN episode_title TEXT",
-    "ALTER TABLE watch_history_entries ADD COLUMN thumbnail_url TEXT",
-    "ALTER TABLE watch_history_entries ADD COLUMN content_name TEXT",
+    'ALTER TABLE watch_history_entries ADD COLUMN series_id INTEGER',
+    'ALTER TABLE watch_history_entries ADD COLUMN season_number INTEGER',
+    'ALTER TABLE watch_history_entries ADD COLUMN episode_number INTEGER',
+    'ALTER TABLE watch_history_entries ADD COLUMN episode_title TEXT',
+    'ALTER TABLE watch_history_entries ADD COLUMN thumbnail_url TEXT',
+    'ALTER TABLE watch_history_entries ADD COLUMN content_name TEXT',
   ];
 
   /// Indexes for performance.

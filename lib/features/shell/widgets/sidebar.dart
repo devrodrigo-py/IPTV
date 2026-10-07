@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
+import 'package:nebula_iptv/core/widgets/nebula_brand.dart';
 import 'package:nebula_iptv/features/shell/widgets/nav_item.dart';
 import 'package:nebula_iptv/l10n/app_localizations.dart';
-import 'package:nebula_iptv/core/widgets/nebula_brand.dart';
 
 /// Sidebar navigation for desktop and tablet layouts.
 ///
@@ -27,15 +27,15 @@ class Sidebar extends StatelessWidget {
     final destinations = [
       _NavDestination(Icons.home_rounded, l10n.home),
       _NavDestination(Icons.live_tv_rounded, l10n.channels),
-      _NavDestination(Icons.movie_rounded, 'Filmes'),
-      _NavDestination(Icons.tv_rounded, 'Séries'),
+      const _NavDestination(Icons.movie_rounded, 'Filmes'),
+      const _NavDestination(Icons.tv_rounded, 'Séries'),
       _NavDestination(Icons.favorite_rounded, l10n.favorites),
       _NavDestination(Icons.history_rounded, l10n.history),
       _NavDestination(Icons.playlist_play_rounded, l10n.playlists),
       _NavDestination(Icons.schedule_rounded, l10n.epg),
-      _NavDestination(Icons.bar_chart_rounded, 'Estatísticas'),
+      const _NavDestination(Icons.bar_chart_rounded, 'Estatísticas'),
       _NavDestination(Icons.settings_rounded, l10n.settings),
-      _NavDestination(Icons.library_music_rounded, 'Biblioteca'),
+      const _NavDestination(Icons.library_music_rounded, 'Biblioteca'),
     ];
 
     return FocusTraversalGroup(
@@ -63,7 +63,8 @@ class Sidebar extends StatelessWidget {
                     ? MainAxisAlignment.center
                     : MainAxisAlignment.start,
                 children: [
-                  NebulaBrand(height: isCollapsed ? 38 : 48, compact: isCollapsed),
+                  NebulaBrand(
+                      height: isCollapsed ? 38 : 48, compact: isCollapsed),
                   if (!isCollapsed) ...[
                     const SizedBox(width: 6),
                   ],

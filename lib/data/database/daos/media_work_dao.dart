@@ -74,15 +74,20 @@ class MediaWorkDao extends DatabaseAccessor<AppDatabase> {
 
     // Indexes for efficient lookups.
     await customStatement(
-        'CREATE INDEX IF NOT EXISTS idx_content_aliases_normalized ON content_aliases(normalized_text)');
+      'CREATE INDEX IF NOT EXISTS idx_content_aliases_normalized ON content_aliases(normalized_text)',
+    );
     await customStatement(
-        'CREATE INDEX IF NOT EXISTS idx_media_works_type ON media_works(type)');
+      'CREATE INDEX IF NOT EXISTS idx_media_works_type ON media_works(type)',
+    );
     await customStatement(
-        'CREATE INDEX IF NOT EXISTS idx_media_works_normalized_title ON media_works(normalized_title)');
+      'CREATE INDEX IF NOT EXISTS idx_media_works_normalized_title ON media_works(normalized_title)',
+    );
     await customStatement(
-        'CREATE INDEX IF NOT EXISTS idx_media_works_external_id ON media_works(external_id)');
+      'CREATE INDEX IF NOT EXISTS idx_media_works_external_id ON media_works(external_id)',
+    );
     await customStatement(
-        'CREATE INDEX IF NOT EXISTS idx_pending_matches_status ON pending_matches(status)');
+      'CREATE INDEX IF NOT EXISTS idx_pending_matches_status ON pending_matches(status)',
+    );
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -105,7 +110,7 @@ class MediaWorkDao extends DatabaseAccessor<AppDatabase> {
     String metadataSource = 'none',
   }) async {
     final normalized = normalizedTitle ?? canonicalTitle.toLowerCase();
-    return await customInsert(
+    return customInsert(
       '''
       INSERT INTO media_works 
         (type, canonical_title, original_title, normalized_title, year,
@@ -392,13 +397,15 @@ class MediaWorkDao extends DatabaseAccessor<AppDatabase> {
       final workId = row.read<int>('id');
       final aliases = await _getAliasesForWork(workId);
 
-      entries.add(MediaWorkEntry(
-        id: workId,
-        canonicalTitle: row.read<String>('canonical_title'),
-        normalizedTitle: row.read<String>('normalized_title'),
-        type: row.read<String>('type'),
-        aliases: aliases,
-      ));
+      entries.add(
+        MediaWorkEntry(
+          id: workId,
+          canonicalTitle: row.read<String>('canonical_title'),
+          normalizedTitle: row.read<String>('normalized_title'),
+          type: row.read<String>('type'),
+          aliases: aliases,
+        ),
+      );
     }
 
     return entries;
@@ -418,11 +425,13 @@ class MediaWorkDao extends DatabaseAccessor<AppDatabase> {
     ).get();
 
     return results
-        .map((row) => ContentAliasEntry(
-              id: row.read<int>('id'),
-              mediaWorkId: row.read<int>('media_work_id'),
-              normalizedText: row.read<String>('normalized_text'),
-            ))
+        .map(
+          (row) => ContentAliasEntry(
+            id: row.read<int>('id'),
+            mediaWorkId: row.read<int>('media_work_id'),
+            normalizedText: row.read<String>('normalized_text'),
+          ),
+        )
         .toList();
   }
 

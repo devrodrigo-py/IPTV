@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
+import 'package:nebula_iptv/core/widgets/nebula_cached_image.dart';
 
 /// Widget that displays a channel logo.
 ///
-/// On native: uses ImageCacheService for disk caching.
-/// On web: uses Image.network with browser cache.
+/// On native: resolves the image through ImageCacheService (disk cache,
+/// spec §4.7) via [NebulaCachedImage].
+/// On web: falls back to Image.network with the browser cache.
 /// Cache errors never break the UI (spec §4.7).
 class CachedLogo extends StatelessWidget {
   final String? imageUrl;
@@ -31,33 +33,12 @@ class CachedLogo extends StatelessWidget {
   }
 
   Widget _buildContent() {
-    if (imageUrl == null || imageUrl!.isEmpty) {
-      return _placeholder();
-    }
-
-    return Image.network(
-      imageUrl!,
+    return NebulaCachedImage(
+      imageUrl: imageUrl,
       fit: BoxFit.cover,
       cacheWidth: 96,
       cacheHeight: 96,
-      errorBuilder: (_, __, ___) => _placeholder(),
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) return child;
-        return Center(
-          child: SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: AppColors.textSecondary,
-              value: progress.expectedTotalBytes != null
-                  ? progress.cumulativeBytesLoaded /
-                      progress.expectedTotalBytes!
-                  : null,
-            ),
-          ),
-        );
-      },
+      placeholder: _placeholder(),
     );
   }
 

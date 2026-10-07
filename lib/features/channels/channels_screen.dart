@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
-import 'package:nebula_iptv/features/player/player_screen.dart';
+import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/widgets/empty_view.dart';
 import 'package:nebula_iptv/core/widgets/error_view.dart';
 import 'package:nebula_iptv/core/widgets/loading_view.dart';
-import 'package:nebula_iptv/core/theme/app_colors.dart';
-import 'package:nebula_iptv/features/multiview/multiview_channel_picker.dart';
+import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
-import 'package:nebula_iptv/features/shell/providers/shell_navigation_provider.dart';
 import 'package:nebula_iptv/features/channels/widgets/channel_list_tile.dart';
 import 'package:nebula_iptv/features/channels/widgets/channel_search_bar.dart';
 import 'package:nebula_iptv/features/channels/widgets/group_filter_chips.dart';
+import 'package:nebula_iptv/features/multiview/multiview_channel_picker.dart';
+import 'package:nebula_iptv/features/player/player_screen.dart';
+import 'package:nebula_iptv/features/shell/providers/shell_navigation_provider.dart';
 import 'package:nebula_iptv/l10n/app_localizations.dart';
 
 /// Channel Browser screen (Phase 5).

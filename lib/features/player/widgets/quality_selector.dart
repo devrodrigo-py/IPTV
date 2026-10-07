@@ -46,59 +46,74 @@ class QualitySelector extends StatelessWidget {
         if (value == 'auto') {
           onQualitySelected(null); // null means auto
         } else {
-          final variant = variants.firstWhere(
-            (v) => v.name == value,
-            orElse: () => variants.first,
-          );
-          onQualitySelected(variant);
+          // Busca explícita: sem correspondência, não fabrica seleção —
+          // nenhum callback é disparado e o chip atual permanece visível.
+          QualityVariant? variant;
+          for (final v in variants) {
+            if (v.name == value) {
+              variant = v;
+              break;
+            }
+          }
+          if (variant != null) {
+            onQualitySelected(variant);
+          }
         }
       },
       itemBuilder: (context) {
         final items = <PopupMenuEntry<String>>[];
 
         // Auto option
-        items.add(PopupMenuItem<String>(
-          value: 'auto',
-          child: Row(
-            children: [
-              if (currentQuality == 'Auto')
-                const Icon(Icons.check_rounded, size: 18, color: AppColors.primary)
-              else
-                const SizedBox(width: 18),
-              const SizedBox(width: 8),
-              Text('Auto', style: AppTypography.body),
-              const Spacer(),
-              Text(
-                'Adaptável',
-                style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
-              ),
-            ],
+        items.add(
+          PopupMenuItem<String>(
+            value: 'auto',
+            child: Row(
+              children: [
+                if (currentQuality == 'Auto')
+                  const Icon(Icons.check_rounded,
+                      size: 18, color: AppColors.primary)
+                else
+                  const SizedBox(width: 18),
+                const SizedBox(width: 8),
+                Text('Auto', style: AppTypography.body),
+                const Spacer(),
+                Text(
+                  'Adaptável',
+                  style: AppTypography.caption
+                      .copyWith(color: AppColors.textSecondary),
+                ),
+              ],
+            ),
           ),
-        ));
+        );
 
         items.add(const PopupMenuDivider());
 
         // Quality variants
         for (final variant in variants) {
           final label = _getQualityLabel(variant.name);
-          items.add(PopupMenuItem<String>(
-            value: variant.name,
-            child: Row(
-              children: [
-                if (currentQuality == variant.name)
-                  const Icon(Icons.check_rounded, size: 18, color: AppColors.primary)
-                else
-                  const SizedBox(width: 18),
-                const SizedBox(width: 8),
-                Text(variant.name, style: AppTypography.body),
-                const Spacer(),
-                Text(
-                  label,
-                  style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
-                ),
-              ],
+          items.add(
+            PopupMenuItem<String>(
+              value: variant.name,
+              child: Row(
+                children: [
+                  if (currentQuality == variant.name)
+                    const Icon(Icons.check_rounded,
+                        size: 18, color: AppColors.primary)
+                  else
+                    const SizedBox(width: 18),
+                  const SizedBox(width: 8),
+                  Text(variant.name, style: AppTypography.body),
+                  const Spacer(),
+                  Text(
+                    label,
+                    style: AppTypography.caption
+                        .copyWith(color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
             ),
-          ));
+          );
         }
 
         return items;

@@ -1,22 +1,24 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nebula_iptv/core/constants/tmdb_constants.dart';
+import 'package:nebula_iptv/core/network/dio_client.dart';
+import 'package:nebula_iptv/core/result/result.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
-import 'package:nebula_iptv/features/player/player_screen.dart';
-import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
-import 'package:nebula_iptv/features/vod/providers/vod_provider.dart';
-import 'package:nebula_iptv/data/datasources/tmdb/tmdb_datasource.dart' show TmdbDataSource;
-import 'package:nebula_iptv/core/constants/tmdb_constants.dart';
-import 'package:nebula_iptv/core/result/result.dart';
-import 'package:nebula_iptv/features/shared/widgets/star_rating.dart';
-import 'package:nebula_iptv/features/shared/providers/rating_provider.dart';
-import 'package:nebula_iptv/data/database/app_database.dart' hide VodItem;
+import 'package:nebula_iptv/core/widgets/nebula_cached_image.dart';
+import 'package:nebula_iptv/data/datasources/tmdb/tmdb_datasource.dart'
+    show TmdbDataSource;
 import 'package:nebula_iptv/data/datasources/xtream/xtream_datasource.dart';
-import 'package:nebula_iptv/core/network/dio_client.dart';
-import 'package:nebula_iptv/features/profiles/providers/profile_provider.dart';
+import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
+import 'package:nebula_iptv/features/player/player_screen.dart';
+import 'package:nebula_iptv/features/profiles/providers/profile_provider.dart';
+import 'package:nebula_iptv/features/shared/providers/rating_provider.dart';
+import 'package:nebula_iptv/features/shared/widgets/star_rating.dart';
+import 'package:nebula_iptv/features/vod/providers/vod_provider.dart';
 
 /// Movie detail screen — Netflix-style layout with backdrop, synopsis, metadata.
 /// Fetches TMDB details on-demand when opened.
@@ -251,7 +253,8 @@ class _VodDetailScreenState extends ConsumerState<VodDetailScreen> {
                     const SizedBox(height: 8),
                     GestureDetector(
                       onTap: () => setState(
-                          () => _synopsisExpanded = !_synopsisExpanded),
+                        () => _synopsisExpanded = !_synopsisExpanded,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -270,9 +273,7 @@ class _VodDetailScreenState extends ConsumerState<VodDetailScreen> {
                             Padding(
                               padding: const EdgeInsets.only(top: 4),
                               child: Text(
-                                _synopsisExpanded
-                                    ? 'Ver menos'
-                                    : 'Ver mais...',
+                                _synopsisExpanded ? 'Ver menos' : 'Ver mais...',
                                 style: AppTypography.label.copyWith(
                                   color: AppColors.primary,
                                 ),
@@ -286,22 +287,31 @@ class _VodDetailScreenState extends ConsumerState<VodDetailScreen> {
 
                   // Director
                   if (_director != null && _director!.isNotEmpty) ...[
-                    _buildInfoRow(Icons.movie_creation_outlined, 'Diretor',
-                        _director!),
+                    _buildInfoRow(
+                      Icons.movie_creation_outlined,
+                      'Diretor',
+                      _director!,
+                    ),
                     const SizedBox(height: 12),
                   ],
 
                   // Cast
                   if (_cast != null && _cast!.isNotEmpty) ...[
-                    _buildInfoRow(Icons.people_outline_rounded, 'Elenco',
-                        _cast!),
+                    _buildInfoRow(
+                      Icons.people_outline_rounded,
+                      'Elenco',
+                      _cast!,
+                    ),
                     const SizedBox(height: 12),
                   ],
 
                   // Genres
                   if (_genres != null && _genres!.isNotEmpty) ...[
                     _buildInfoRow(
-                        Icons.category_outlined, 'Gêneros', _genres!),
+                      Icons.category_outlined,
+                      'Gêneros',
+                      _genres!,
+                    ),
                     const SizedBox(height: 12),
                   ],
 
@@ -319,10 +329,11 @@ class _VodDetailScreenState extends ConsumerState<VodDetailScreen> {
     final url = _backdropUrl!;
     // If we have a dedicated backdrop (wide image), use it directly
     if (_movie.tmdbBackdropUrl != null && _movie.tmdbBackdropUrl!.isNotEmpty) {
-      return Image.network(
-        url,
+      return NebulaCachedImage(
+        imageUrl: url,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _buildBackdropPlaceholder(),
+        cacheWidth: 400,
+        placeholder: _buildBackdropPlaceholder(),
       );
     }
     // Otherwise use poster/logo with blur overlay for a softer look
@@ -332,19 +343,21 @@ class _VodDetailScreenState extends ConsumerState<VodDetailScreen> {
         // Blurred background
         ImageFiltered(
           imageFilter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Image.network(
-            url,
+          child: NebulaCachedImage(
+            imageUrl: url,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _buildBackdropPlaceholder(),
+            cacheWidth: 400,
+            placeholder: _buildBackdropPlaceholder(),
           ),
         ),
         // Centered image on top
         Center(
-          child: Image.network(
-            url,
+          child: NebulaCachedImage(
+            imageUrl: url,
             fit: BoxFit.contain,
             height: 250,
-            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            cacheWidth: 400,
+            placeholder: const SizedBox.shrink(),
           ),
         ),
       ],
@@ -368,49 +381,61 @@ class _VodDetailScreenState extends ConsumerState<VodDetailScreen> {
     final items = <Widget>[];
 
     if (_year != null) {
-      items.add(Text(
-        _year!,
-        style: AppTypography.body.copyWith(
-          color: AppColors.textSecondary,
-          fontWeight: FontWeight.w500,
+      items.add(
+        Text(
+          _year!,
+          style: AppTypography.body.copyWith(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
         ),
-      ));
+      );
     }
 
-    if (_rating != null && _rating != '0' && _rating != '0.0' && _rating!.isNotEmpty) {
+    if (_rating != null &&
+        _rating != '0' &&
+        _rating != '0.0' &&
+        _rating!.isNotEmpty) {
       if (items.isNotEmpty) items.add(_dot());
-      items.add(Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.star_rounded, size: 16, color: Colors.amber),
-          const SizedBox(width: 4),
-          Text(
-            _rating!,
-            style: AppTypography.body.copyWith(
-              color: Colors.amber,
-              fontWeight: FontWeight.w600,
+      items.add(
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.star_rounded, size: 16, color: Colors.amber),
+            const SizedBox(width: 4),
+            Text(
+              _rating!,
+              style: AppTypography.body.copyWith(
+                color: Colors.amber,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-        ],
-      ));
+          ],
+        ),
+      );
     }
 
     if (_runtime != null) {
       if (items.isNotEmpty) items.add(_dot());
-      items.add(Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.schedule_rounded,
-              size: 14, color: AppColors.textSecondary),
-          const SizedBox(width: 4),
-          Text(
-            _runtime!,
-            style: AppTypography.body.copyWith(
+      items.add(
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.schedule_rounded,
+              size: 14,
               color: AppColors.textSecondary,
             ),
-          ),
-        ],
-      ));
+            const SizedBox(width: 4),
+            Text(
+              _runtime!,
+              style: AppTypography.body.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     if (items.isEmpty) return const SizedBox.shrink();
@@ -512,7 +537,6 @@ class _VodDetailScreenState extends ConsumerState<VodDetailScreen> {
     );
   }
 
-
   Widget _buildUserRating() {
     final ratingAsync = ref.watch(ratingProvider(_movie.id));
     final currentRating = ratingAsync.valueOrNull ?? 0.0;
@@ -545,10 +569,13 @@ class _VodDetailScreenState extends ConsumerState<VodDetailScreen> {
     if (url.isEmpty || !url.startsWith('http')) {
       final db = ref.read(databaseProvider);
       final ch = await db.channelsDao.getChannelById(_movie.id);
-      if (ch != null && ch.streamUrl.isNotEmpty && ch.streamUrl.startsWith('http')) {
+      if (ch != null &&
+          ch.streamUrl.isNotEmpty &&
+          ch.streamUrl.startsWith('http')) {
         url = ch.streamUrl;
       } else {
-        final playlist = await db.playlistsDao.getPlaylistById(_movie.playlistId);
+        final playlist =
+            await db.playlistsDao.getPlaylistById(_movie.playlistId);
         if (playlist != null && playlist.url.isNotEmpty) {
           final xtream = XtreamDataSource(client: DioClient());
           url = xtream.buildVodStreamUrl(

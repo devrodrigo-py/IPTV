@@ -47,13 +47,17 @@ dependencies:
   # Crypto (for image cache URL hashing)
   crypto: ^3.0.3
   google_fonts: ^8.2.1
+  flutter_secure_storage: ^10.3.1
 
+  intl: any
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
   # Linting
   flutter_lints: ^4.0.0
+  build_runner: ^2.16.0
+  drift_dev: ^2.34.5
 
 flutter:
   uses-material-design: true

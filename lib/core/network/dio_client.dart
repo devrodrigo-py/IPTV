@@ -10,8 +10,17 @@ import 'package:nebula_iptv/core/result/result.dart';
 ///
 /// Provides consistent timeout, error handling, and secure logging
 /// across all network requests in the application.
+///
+/// TLS policy (ADR-005): invalid certificates are **rejected** by default.
+/// A specific host may be opted in — per playlist/source, never globally —
+/// via [allowInsecureFor] while a request from that source is in flight.
 class DioClient {
   late final Dio _dio;
+
+  /// Hosts explicitly allowed to present invalid/self-signed certificates.
+  /// Scoped per client instance; entries are added/removed around the
+  /// request that opted in, so unrelated sources are never affected.
+  final Set<String> _insecureHosts = {};
 
   DioClient({String? baseUrl}) {
     _dio = Dio(
@@ -28,8 +37,11 @@ class DioClient {
       if (adapter is IOHttpClientAdapter) {
         adapter.createHttpClient = () {
           final client = HttpClient();
+          // Reject invalid certificates unless the host was explicitly
+          // opted in by the source being imported (ADR-005).
           client.badCertificateCallback =
-              (X509Certificate cert, String host, int port) => true;
+              (X509Certificate cert, String host, int port) =>
+                  _insecureHosts.contains(host);
           return client;
         };
       }
@@ -39,6 +51,26 @@ class DioClient {
   }
 
   Dio get dio => _dio;
+
+  /// Opts in acceptance of invalid/self-signed certificates for the host
+  /// of [url]. Must be used only for playlists/sources whose user explicitly
+  /// enabled the "trust invalid certificate" option in the UI.
+  void allowInsecureFor(String url) {
+    final host = _hostOf(url);
+    if (host != null) {
+      _insecureHosts.add(host);
+    }
+  }
+
+  /// Removes the insecure-certificate opt-in for the host of [url].
+  void disallowInsecureFor(String url) {
+    final host = _hostOf(url);
+    if (host != null) {
+      _insecureHosts.remove(host);
+    }
+  }
+
+  String? _hostOf(String url) => Uri.tryParse(url)?.host;
 
   /// Executes a GET request and wraps the result in [Result].
   Future<Result<Response<T>>> get<T>(

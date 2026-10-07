@@ -53,8 +53,8 @@ class StarRating extends StatelessWidget {
           SizedBox(width: compact ? 6 : 10),
           Text(
             rating.toStringAsFixed(1),
-            style: (compact ? AppTypography.caption : AppTypography.body)
-                .copyWith(
+            style:
+                (compact ? AppTypography.caption : AppTypography.body).copyWith(
               color: Colors.amber,
               fontWeight: FontWeight.w600,
             ),

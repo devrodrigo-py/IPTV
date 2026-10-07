@@ -91,7 +91,9 @@ class _ProfileEditDialogState extends State<ProfileEditDialog> {
             const SizedBox(height: 16),
 
             // Color picker
-            Text('Cor', style: AppTypography.body.copyWith(fontWeight: FontWeight.w600)),
+            Text('Cor',
+                style:
+                    AppTypography.body.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -122,7 +124,9 @@ class _ProfileEditDialogState extends State<ProfileEditDialog> {
             const SizedBox(height: 16),
 
             // Icon picker
-            Text('Ícone', style: AppTypography.body.copyWith(fontWeight: FontWeight.w600)),
+            Text('Ícone',
+                style:
+                    AppTypography.body.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -137,7 +141,9 @@ class _ProfileEditDialogState extends State<ProfileEditDialog> {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: isSelected ? color.withValues(alpha: 0.2) : AppColors.background,
+                      color: isSelected
+                          ? color.withValues(alpha: 0.2)
+                          : AppColors.background,
                       borderRadius: BorderRadius.circular(8),
                       border: isSelected
                           ? Border.all(color: color, width: 2)

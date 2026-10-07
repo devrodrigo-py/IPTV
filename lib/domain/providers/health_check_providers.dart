@@ -15,6 +15,13 @@ final healthCheckServiceProvider = Provider<ChannelHealthCheckService>((ref) {
   return ChannelHealthCheckService(dao: dao);
 });
 
+/// UI toggle for the background health check loop.
+///
+/// The loop starts enabled at bootstrap; this reflects the last user
+/// choice for the current session (in-memory by design — persistence
+/// would require a settings store, tracked in the remediation report).
+final healthCheckEnabledProvider = StateProvider<bool>((ref) => true);
+
 /// Provider for health statistics (reactive).
 final healthStatsProvider = FutureProvider<HealthStats>((ref) async {
   final dao = ref.read(healthCheckDaoProvider);

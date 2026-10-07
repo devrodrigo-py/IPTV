@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/core/widgets/nebula_cached_image.dart';
 import 'package:nebula_iptv/data/database/app_database.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/features/multiview/multiview_screen.dart';
@@ -24,9 +25,11 @@ class _MultiviewChannelPickerState
   Widget build(BuildContext context) {
     final state = ref.watch(channelsScreenProvider);
     final channels = state.filteredChannels
-        .where((c) =>
-            _searchQuery.isEmpty ||
-            c.name.toLowerCase().contains(_searchQuery.toLowerCase()))
+        .where(
+          (c) =>
+              _searchQuery.isEmpty ||
+              c.name.toLowerCase().contains(_searchQuery.toLowerCase()),
+        )
         .toList();
 
     return Dialog(
@@ -113,8 +116,7 @@ class _MultiviewChannelPickerState
                 itemBuilder: (context, index) {
                   final channel = channels[index];
                   final isSelected = _selectedIds.contains(channel.id);
-                  final canSelect =
-                      _selectedIds.length < 4 || isSelected;
+                  final canSelect = _selectedIds.length < 4 || isSelected;
 
                   return ListTile(
                     leading: _buildLeading(channel, isSelected),
@@ -193,12 +195,12 @@ class _MultiviewChannelPickerState
     if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(4),
-        child: Image.network(
-          channel.logoUrl!,
+        child: NebulaCachedImage(
+          imageUrl: channel.logoUrl,
           width: 40,
           height: 40,
           fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => _buildFallbackIcon(isSelected),
+          placeholder: _buildFallbackIcon(isSelected),
         ),
       );
     }
@@ -226,11 +228,13 @@ class _MultiviewChannelPickerState
   void _startMultiview(List<Channel> channels) {
     final selected = channels
         .where((c) => _selectedIds.contains(c.id))
-        .map((c) => {
-              'id': c.id,
-              'name': c.name,
-              'stream_url': c.streamUrl,
-            })
+        .map(
+          (c) => {
+            'id': c.id,
+            'name': c.name,
+            'stream_url': c.streamUrl,
+          },
+        )
         .toList();
 
     Navigator.pop(context);

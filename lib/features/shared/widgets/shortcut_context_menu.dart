@@ -37,14 +37,17 @@ Future<void> showShortcutContextMenu(
         child: Row(
           children: [
             Icon(
-              isSaved ? Icons.bookmark_remove_rounded : Icons.bookmark_add_rounded,
+              isSaved
+                  ? Icons.bookmark_remove_rounded
+                  : Icons.bookmark_add_rounded,
               size: 18,
               color: isSaved ? AppColors.error : AppColors.primary,
             ),
             const SizedBox(width: 10),
             Text(
               isSaved ? 'Remover dos atalhos' : 'Adicionar aos atalhos',
-              style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+              style:
+                  const TextStyle(color: AppColors.textPrimary, fontSize: 13),
             ),
           ],
         ),

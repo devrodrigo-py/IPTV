@@ -101,8 +101,7 @@ class CategoryCacheDao extends DatabaseAccessor<AppDatabase> {
 
     final map = <String, String>{};
     for (final row in results) {
-      map[row.read<String>('category_id')] =
-          row.read<String>('category_name');
+      map[row.read<String>('category_id')] = row.read<String>('category_name');
     }
     return map;
   }

@@ -1,17 +1,18 @@
 import 'package:drift/drift.dart' hide Column;
-import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/loading_view.dart';
-import 'package:nebula_iptv/data/database/app_database.dart' hide SeriesItem;
+import 'package:nebula_iptv/core/widgets/nebula_cached_image.dart';
 import 'package:nebula_iptv/domain/providers/watch_providers.dart';
+import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/features/player/player_screen.dart';
+import 'package:nebula_iptv/features/series/providers/series_provider.dart'
+    show SeriesItem;
 import 'package:nebula_iptv/features/series/series_detail_screen.dart';
-import 'package:nebula_iptv/features/series/providers/series_provider.dart' show SeriesItem;
-import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
 
 /// History screen — shows recent viewing activity.
 ///
@@ -35,9 +36,11 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final historyAsync = ref.watch(watchHistoryProvider(
-      _selectedFilter == 'all' ? null : _selectedFilter,
-    ));
+    final historyAsync = ref.watch(
+      watchHistoryProvider(
+        _selectedFilter == 'all' ? null : _selectedFilter,
+      ),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,7 +70,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     selectedColor: AppColors.primary,
                     backgroundColor: AppColors.surface,
                     labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : AppColors.textSecondary,
+                      color:
+                          isSelected ? Colors.white : AppColors.textSecondary,
                     ),
                     checkmarkColor: Colors.white,
                   ),
@@ -86,7 +90,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             error: (e, _) => Center(
               child: Text(
                 'Erro ao carregar histórico',
-                style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+                style:
+                    AppTypography.body.copyWith(color: AppColors.textSecondary),
               ),
             ),
             data: (entries) {
@@ -159,9 +164,11 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             categoryName: ch.readNullable<String>('group_name'),
             sourceId: ch.readNullable<String>('source_id'),
           );
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => SeriesDetailScreen(series: seriesItem),
-          ));
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => SeriesDetailScreen(series: seriesItem),
+            ),
+          );
         }
       } catch (e, st) {
         appLogger.e('[History] Error opening series: $e\n$st');
@@ -171,7 +178,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
     if (streamUrl == null || streamUrl.isEmpty) return;
 
-    final progressPercent = (entry['progress_percent'] as num?)?.toDouble() ?? 0.0;
+    final progressPercent =
+        (entry['progress_percent'] as num?)?.toDouble() ?? 0.0;
     final totalDurationMs = entry['total_duration_ms'] as int? ?? 0;
     final watchedDurationMs = entry['watched_duration_ms'] as int? ?? 0;
     final seekToMs = (progressPercent > 0 && totalDurationMs > 0)
@@ -208,10 +216,11 @@ class _HistoryTile extends StatelessWidget {
     final name = entry['content_name'] as String? ??
         entry['channel_name'] as String? ??
         'Canal';
-    final logoUrl = entry['thumbnail_url'] as String? ??
-        entry['logo_url'] as String?;
+    final logoUrl =
+        entry['thumbnail_url'] as String? ?? entry['logo_url'] as String?;
     final contentType = entry['content_type'] as String? ?? 'live';
-    final progressPercent = (entry['progress_percent'] as num?)?.toDouble() ?? 0.0;
+    final progressPercent =
+        (entry['progress_percent'] as num?)?.toDouble() ?? 0.0;
     final watchedMs = entry['watched_duration_ms'] as int? ?? 0;
     final lastWatched = entry['last_watched_at'] as String?;
     final episodeTitle = entry['episode_title'] as String?;
@@ -223,7 +232,9 @@ class _HistoryTile extends StatelessWidget {
 
     // Build subtitle
     String subtitle = '';
-    if (contentType == 'series' && seasonNumber != null && episodeNumber != null) {
+    if (contentType == 'series' &&
+        seasonNumber != null &&
+        episodeNumber != null) {
       subtitle = 'T$seasonNumber E$episodeNumber';
       if (episodeTitle != null) subtitle += ' • $episodeTitle';
     } else if (contentType == 'live') {
@@ -248,10 +259,12 @@ class _HistoryTile extends StatelessWidget {
               child: logoUrl != null && logoUrl.isNotEmpty
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        logoUrl,
+                      child: NebulaCachedImage(
+                        imageUrl: logoUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(
+                        cacheWidth: 96,
+                        cacheHeight: 96,
+                        placeholder: const Icon(
                           Icons.live_tv_rounded,
                           color: AppColors.textSecondary,
                         ),
@@ -338,7 +351,10 @@ class _HistoryTile extends StatelessWidget {
       if (diff.inHours < 24) return 'Há ${diff.inHours}h';
       if (diff.inDays < 7) return 'Há ${diff.inDays} dias';
       return '${date.day}/${date.month}/${date.year}';
-    } catch (_) {
+    } catch (e) {
+      // Formatação best-effort: rótulo vazio é distinguível de "Agora", e a
+      // causa fica registrada.
+      appLogger.d('[History] Falha ao formatar data "$dateStr": $e');
       return '';
     }
   }

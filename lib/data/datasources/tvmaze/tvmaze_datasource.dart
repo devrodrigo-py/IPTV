@@ -33,8 +33,9 @@ class TvMazeDataSource {
         if (data == null || data.isEmpty) return const Success([]);
 
         final results = data
-            .map((e) =>
-                TvMazeSearchResult.fromJson(e as Map<String, dynamic>))
+            .map(
+              (e) => TvMazeSearchResult.fromJson(e as Map<String, dynamic>),
+            )
             .toList();
         return Success(results);
       },
@@ -54,9 +55,11 @@ class TvMazeDataSource {
       success: (res) {
         final data = res.data;
         if (data == null) {
-          return const Failure(NetworkFailure(
-            message: 'Resposta vazia do TVMaze.',
-          ));
+          return const Failure(
+            NetworkFailure(
+              message: 'Resposta vazia do TVMaze.',
+            ),
+          );
         }
         return Success(TvMazeShow.fromJson(data));
       },

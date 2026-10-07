@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
 import 'package:nebula_iptv/core/errors/app_failure.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/core/result/result.dart';
@@ -16,13 +17,12 @@ class WebPlayerService implements VideoPlayerService {
 
   final _playbackStateController =
       StreamController<VideoPlaybackState>.broadcast();
-  final _bufferStateController =
-      StreamController<VideoBufferState>.broadcast();
+  final _bufferStateController = StreamController<VideoBufferState>.broadcast();
   final _errorController = StreamController<VideoPlayerError>.broadcast();
-  final _audioTracksController =
-      StreamController<List<VideoTrack>>.broadcast();
+  final _audioTracksController = StreamController<List<VideoTrack>>.broadcast();
   final _subtitleTracksController =
       StreamController<List<VideoTrack>>.broadcast();
+  final _completedController = StreamController<void>.broadcast();
 
   VideoPlaybackState _currentState = const VideoPlaybackState();
 
@@ -46,11 +46,13 @@ class WebPlayerService implements VideoPlayerService {
       appLogger.i('Web player: playing $url');
       return const Success(null);
     } catch (e) {
-      _errorController.add(VideoPlayerError(
-        code: 'WEB_PLAY_ERROR',
-        message: 'Não foi possível reproduzir o stream no navegador.',
-        originalError: e,
-      ));
+      _errorController.add(
+        VideoPlayerError(
+          code: 'WEB_PLAY_ERROR',
+          message: 'Não foi possível reproduzir o stream no navegador.',
+          originalError: e,
+        ),
+      );
       _updateState(_currentState.copyWith(status: PlaybackStatus.error));
       return Failure(
         StreamUnavailableFailure(
@@ -140,6 +142,24 @@ class WebPlayerService implements VideoPlayerService {
       _subtitleTracksController.stream;
 
   @override
+  Stream<void> get completed => _completedController.stream;
+
+  @override
+  Widget? buildVideoSurface() {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return null;
+    return AspectRatio(
+      aspectRatio: controller.value.aspectRatio,
+      child: VideoPlayer(controller),
+    );
+  }
+
+  @override
+  VideoPlayerService createIndependentPlayer() {
+    return WebPlayerService();
+  }
+
+  @override
   Future<void> dispose() async {
     _controller?.removeListener(_onPlayerUpdate);
     await _controller?.dispose();
@@ -149,6 +169,7 @@ class WebPlayerService implements VideoPlayerService {
     await _errorController.close();
     await _audioTracksController.close();
     await _subtitleTracksController.close();
+    await _completedController.close();
   }
 
   void _onPlayerUpdate() {
@@ -160,10 +181,12 @@ class WebPlayerService implements VideoPlayerService {
     PlaybackStatus status;
     if (value.hasError) {
       status = PlaybackStatus.error;
-      _errorController.add(VideoPlayerError(
-        code: 'PLAYBACK_ERROR',
-        message: value.errorDescription ?? 'Erro de reprodução',
-      ));
+      _errorController.add(
+        VideoPlayerError(
+          code: 'PLAYBACK_ERROR',
+          message: value.errorDescription ?? 'Erro de reprodução',
+        ),
+      );
     } else if (value.isBuffering) {
       status = PlaybackStatus.buffering;
     } else if (value.isPlaying) {
@@ -172,16 +195,27 @@ class WebPlayerService implements VideoPlayerService {
       status = PlaybackStatus.paused;
     }
 
-    _updateState(VideoPlaybackState(
-      status: status,
-      position: value.position,
-      duration: value.duration,
-      volume: value.volume,
-    ));
+    _updateState(
+      VideoPlaybackState(
+        status: status,
+        position: value.position,
+        duration: value.duration,
+        volume: value.volume,
+      ),
+    );
 
-    _bufferStateController.add(VideoBufferState(
-      isBuffering: value.isBuffering,
-    ));
+    _bufferStateController.add(
+      VideoBufferState(
+        isBuffering: value.isBuffering,
+      ),
+    );
+
+    if (value.duration > Duration.zero &&
+        value.position >= value.duration &&
+        !value.isPlaying &&
+        !value.isBuffering) {
+      _completedController.add(null);
+    }
   }
 
   void _updateState(VideoPlaybackState newState) {

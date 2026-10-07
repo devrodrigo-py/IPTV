@@ -49,11 +49,13 @@ class UserDataRepository {
         '${favoriteIds.length} favorites',
       );
 
-      return Success(ExportResult(
-        jsonContent: jsonString,
-        playlistCount: playlists.length,
-        favoriteCount: favoriteIds.length,
-      ));
+      return Success(
+        ExportResult(
+          jsonContent: jsonString,
+          playlistCount: playlists.length,
+          favoriteCount: favoriteIds.length,
+        ),
+      );
     } catch (e) {
       return Failure(
         DatabaseFailure(

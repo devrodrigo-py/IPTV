@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
 import 'package:nebula_iptv/features/player/player_screen.dart';
 import 'package:nebula_iptv/features/search/providers/search_provider.dart';
 import 'package:nebula_iptv/features/search/widgets/search_result_tile.dart';
+import 'package:nebula_iptv/features/series/providers/series_provider.dart'
+    show SeriesItem;
 import 'package:nebula_iptv/features/series/series_detail_screen.dart';
-import 'package:nebula_iptv/features/series/providers/series_provider.dart' show SeriesItem;
-import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
 
 /// Global search screen — fuzzy search across channels, films, and series.
 class SearchScreen extends ConsumerStatefulWidget {
@@ -47,7 +48,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         backgroundColor: AppColors.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back_rounded,
+              color: AppColors.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: TextField(
@@ -56,7 +58,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           style: AppTypography.body,
           decoration: InputDecoration(
             hintText: 'Buscar canais, filmes, séries...',
-            hintStyle: AppTypography.body.copyWith(color: AppColors.textSecondary),
+            hintStyle:
+                AppTypography.body.copyWith(color: AppColors.textSecondary),
             border: InputBorder.none,
           ),
           onChanged: (value) {
@@ -66,7 +69,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         actions: [
           if (_controller.text.isNotEmpty)
             IconButton(
-              icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary),
+              icon: const Icon(Icons.close_rounded,
+                  color: AppColors.textSecondary),
               onPressed: () {
                 _controller.clear();
                 ref.read(searchProvider.notifier).updateQuery('');
@@ -92,7 +96,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             const SizedBox(height: 16),
             Text(
               'O que deseja assistir?',
-              style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+              style:
+                  AppTypography.body.copyWith(color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -119,7 +124,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             const SizedBox(height: 16),
             Text(
               'Nenhum resultado para "${searchState.query}"',
-              style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+              style:
+                  AppTypography.body.copyWith(color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -132,28 +138,34 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         // Channels section
         if (results.channels.isNotEmpty) ...[
           _buildSectionHeader('Canais', results.channels.length),
-          ...results.channels.map((item) => SearchResultTile(
-                item: item,
-                onTap: () => _openItem(item),
-              )),
+          ...results.channels.map(
+            (item) => SearchResultTile(
+              item: item,
+              onTap: () => _openItem(item),
+            ),
+          ),
         ],
 
         // Films section
         if (results.vod.isNotEmpty) ...[
           _buildSectionHeader('Filmes', results.vod.length),
-          ...results.vod.map((item) => SearchResultTile(
-                item: item,
-                onTap: () => _openItem(item),
-              )),
+          ...results.vod.map(
+            (item) => SearchResultTile(
+              item: item,
+              onTap: () => _openItem(item),
+            ),
+          ),
         ],
 
         // Series section
         if (results.series.isNotEmpty) ...[
           _buildSectionHeader('Séries', results.series.length),
-          ...results.series.map((item) => SearchResultTile(
-                item: item,
-                onTap: () => _openItem(item),
-              )),
+          ...results.series.map(
+            (item) => SearchResultTile(
+              item: item,
+              onTap: () => _openItem(item),
+            ),
+          ),
         ],
       ],
     );
@@ -198,24 +210,28 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         categoryName: item.groupName,
         sourceId: item.sourceId,
       );
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => SeriesDetailScreen(series: seriesItem),
-      ));
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => SeriesDetailScreen(series: seriesItem),
+        ),
+      );
     } else {
       if (item.streamUrl == null || item.streamUrl!.isEmpty) return;
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => PlayerScreen(
-          channelName: item.name,
-          streamUrl: item.streamUrl!,
-          logoUrl: item.logoUrl,
-          contentInfo: WatchContentInfo(
-            channelId: item.id,
-            name: item.name,
-            contentType: item.isVod ? 'vod' : 'live',
-            thumbnailUrl: item.logoUrl,
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PlayerScreen(
+            channelName: item.name,
+            streamUrl: item.streamUrl!,
+            logoUrl: item.logoUrl,
+            contentInfo: WatchContentInfo(
+              channelId: item.id,
+              name: item.name,
+              contentType: item.isVod ? 'vod' : 'live',
+              thumbnailUrl: item.logoUrl,
+            ),
           ),
         ),
-      ));
+      );
     }
   }
 }

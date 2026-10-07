@@ -4,10 +4,11 @@ import 'dart:convert';
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/errors/app_failure.dart';
+import 'package:nebula_iptv/core/logging/app_logger.dart';
+import 'package:nebula_iptv/core/network/dio_client.dart';
 import 'package:nebula_iptv/data/database/daos/tmdb_cache_dao.dart';
 import 'package:nebula_iptv/data/database/tables/channels_table.dart';
 import 'package:nebula_iptv/data/datasources/tmdb/tmdb_datasource.dart';
-import 'package:nebula_iptv/core/network/dio_client.dart';
 import 'package:nebula_iptv/data/datasources/xtream/xtream_datasource.dart';
 import 'package:nebula_iptv/domain/providers/content_providers.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
@@ -173,7 +174,8 @@ class EpisodeItem {
     this.totalDurationMs = 0,
   });
 
-  EpisodeItem copyWith({double? watchProgress, int? watchedDurationMs, int? totalDurationMs}) {
+  EpisodeItem copyWith(
+      {double? watchProgress, int? watchedDurationMs, int? totalDurationMs}) {
     return EpisodeItem(
       id: id,
       seasonId: seasonId,
@@ -373,10 +375,8 @@ class SeriesScreenNotifier extends StateNotifier<SeriesScreenState> {
           .toList();
 
       // Avoid duplicates by checking sourceId
-      final existingSourceIds = allSeriesItems
-          .map((s) => s.sourceId)
-          .whereType<String>()
-          .toSet();
+      final existingSourceIds =
+          allSeriesItems.map((s) => s.sourceId).whereType<String>().toSet();
 
       for (final c in seriesFromChannels) {
         if (c.sourceId != null && existingSourceIds.contains(c.sourceId)) {
@@ -429,7 +429,8 @@ class SeriesScreenNotifier extends StateNotifier<SeriesScreenState> {
 
       // Pick hero items: series with poster images
       final seriesWithPoster = allSeriesItems
-          .where((s) => s.displayPosterUrl != null && s.displayPosterUrl!.isNotEmpty)
+          .where((s) =>
+              s.displayPosterUrl != null && s.displayPosterUrl!.isNotEmpty)
           .toList();
       List<SeriesItem> heroItems;
       if (seriesWithPoster.length >= 5) {
@@ -468,7 +469,8 @@ class SeriesScreenNotifier extends StateNotifier<SeriesScreenState> {
     series.sort((a, b) {
       final scoreOrder = score(b).compareTo(score(a));
       if (scoreOrder != 0) return scoreOrder;
-      final enrichedOrder = (b.isEnriched ? 1 : 0).compareTo(a.isEnriched ? 1 : 0);
+      final enrichedOrder =
+          (b.isEnriched ? 1 : 0).compareTo(a.isEnriched ? 1 : 0);
       if (enrichedOrder != 0) return enrichedOrder;
       final idOrder = b.id.compareTo(a.id);
       if (idOrder != 0) return idOrder;
@@ -517,7 +519,11 @@ class SeriesScreenNotifier extends StateNotifier<SeriesScreenState> {
 
       return enriched;
     } catch (e) {
-      // Enrichment failure should never block the UI
+      // Enrichment failure should never block the UI, but must stay
+      // observable (distinguishable from a genuine "no metadata found").
+      appLogger.w(
+        '[Series] Enriquecimento falhou para "${series.name}": $e',
+      );
       return null;
     }
   }
@@ -653,7 +659,10 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
       }
 
       if (series == null) {
-        state = state.copyWith(isLoading: false);
+        state = state.copyWith(
+          isLoading: false,
+          failure: const DatabaseFailure(message: 'Série não encontrada.'),
+        );
         return;
       }
 
@@ -662,7 +671,13 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
       // If already enriched with seasons data, parse it
       if (series.tmdbSeasonsJson != null && series.tmdbId != null) {
         final seasons = _parseSeasonsJson(series.tmdbSeasonsJson!);
-        state = state.copyWith(seasons: seasons, isLoading: false);
+        if (seasons != null && seasons.isNotEmpty) {
+          state = state.copyWith(seasons: seasons, isLoading: false);
+        } else {
+          // Cache ausente ou corrompido: cai para os dados locais em vez de
+          // exibir uma lista vazia que parece estado genuíno.
+          await _loadLocalSeasons();
+        }
       } else {
         // Try enriching from MetadataEnrichmentService
         final enrichmentService = _ref.read(metadataEnrichmentServiceProvider);
@@ -694,30 +709,41 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
           if (tmdbId != null) {
             final tmdbDs = _ref.read(tmdbDataSourceProvider);
             final tvResult = await tmdbDs.getTvDetails(tmdbId);
-            final seasons = tvResult.when(
-              success: (details) => details.seasons.map((s) {
-                return SeasonItem(
-                  id: s.seasonNumber,
-                  seriesId: _seriesId,
-                  seasonNumber: s.seasonNumber,
-                  name: s.name,
-                  episodeCount: s.episodeCount,
-                  coverUrl: TmdbDataSource.getImageUrl(s.posterPath),
-                );
-              }).toList(),
-              failure: (_) => <SeasonItem>[],
-            );
+            await tvResult.when(
+              success: (details) async {
+                final seasons = details.seasons.map((s) {
+                  return SeasonItem(
+                    id: s.seasonNumber,
+                    seriesId: _seriesId,
+                    seasonNumber: s.seasonNumber,
+                    name: s.name,
+                    episodeCount: s.episodeCount,
+                    coverUrl: TmdbDataSource.getImageUrl(s.posterPath),
+                  );
+                }).toList();
 
-            state = state.copyWith(
-              series: series,
-              seasons: seasons,
-              isLoading: false,
-              isLoadingEpisodes: true,
+                state = state.copyWith(
+                  series: series,
+                  seasons: seasons,
+                  isLoading: false,
+                  isLoadingEpisodes: true,
+                );
+                // Auto-load episodes for the first season
+                if (seasons.isNotEmpty) {
+                  await loadSeasonEpisodes(seasons.first.seasonNumber);
+                }
+              },
+              failure: (f) async {
+                appLogger.w(
+                  '[SeriesDetail] Falha ao buscar temporadas no TMDB '
+                  '(série $_seriesId): ${f.message}',
+                );
+                // Não exibir lista vazia como estado genuíno: aplica os dados
+                // enriquecidos e cai para as temporadas locais/Xtream.
+                state = state.copyWith(series: series);
+                await _loadLocalSeasons();
+              },
             );
-            // Auto-load episodes for the first season
-            if (seasons.isNotEmpty) {
-              loadSeasonEpisodes(seasons.first.seasonNumber);
-            }
           } else {
             state = state.copyWith(series: series, isLoading: false);
           }
@@ -743,8 +769,18 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
     final series = state.series;
     if (series == null) return;
 
-    // 1. Fetch episode stream URLs from Xtream API
+    // 1. Fetch episode stream URLs from Xtream API. `null` = fetch failure
+    // (distinguishable from a genuinely empty season).
     final xtreamEpisodes = await _fetchXtreamEpisodes(seasonNumber);
+    if (xtreamEpisodes == null) {
+      state = state.copyWith(
+        isLoadingEpisodes: false,
+        failure: const NetworkFailure(
+          message: 'Erro ao carregar episódios do servidor.',
+        ),
+      );
+      return;
+    }
 
     // 2. If we have TMDB data, enrich with metadata
     List<EpisodeItem> finalEpisodes;
@@ -757,34 +793,44 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
         success: (tmdbEpisodes) {
           // Merge TMDB metadata with Xtream stream URLs by episode number
           return tmdbEpisodes.map((e) {
-            // Find matching Xtream episode
-            final xtreamEp = xtreamEpisodes.firstWhere(
-              (x) => x.episodeNumber == e.episodeNumber,
-              orElse: () => EpisodeItem(
-                id: e.episodeNumber,
-                seasonId: seasonNumber,
-                seriesId: _seriesId,
-                episodeNumber: e.episodeNumber,
-                title: e.name,
-                streamUrl: '',
-              ),
-            );
+            // Localiza o episódio Xtream correspondente (busca explícita —
+            // sem fabricar default silencioso).
+            EpisodeItem? xtreamEp;
+            for (final x in xtreamEpisodes) {
+              if (x.episodeNumber == e.episodeNumber) {
+                xtreamEp = x;
+                break;
+              }
+            }
+            if (xtreamEp == null) {
+              appLogger.d(
+                '[SeriesDetail] Episódio ${e.episodeNumber} da temporada '
+                '$seasonNumber sem correspondência no Xtream (série '
+                '$_seriesId); ficará sem stream URL.',
+              );
+            }
             return EpisodeItem(
-              id: xtreamEp.id,
+              id: xtreamEp?.id ?? e.episodeNumber,
               seasonId: seasonNumber,
               seriesId: _seriesId,
               episodeNumber: e.episodeNumber,
-              title: e.name.isNotEmpty ? e.name : xtreamEp.title,
-              streamUrl: xtreamEp.streamUrl, // Real Xtream URL
+              title: e.name.isNotEmpty ? e.name : (xtreamEp?.title ?? e.name),
+              streamUrl: xtreamEp?.streamUrl ?? '', // vazio = não reproduzível
               plot: e.overview,
               duration: e.runtime?.toString(),
               coverUrl: e.stillPath != null && e.stillPath!.isNotEmpty
-                ? TmdbDataSource.getImageUrl(e.stillPath)
-                : xtreamEp.coverUrl,
+                  ? TmdbDataSource.getImageUrl(e.stillPath)
+                  : xtreamEp?.coverUrl,
             );
           }).toList();
         },
-        failure: (_) => xtreamEpisodes, // Fall back to Xtream-only episodes
+        failure: (f) {
+          appLogger.w(
+            '[SeriesDetail] Falha ao buscar detalhes da temporada '
+            '$seasonNumber no TMDB (série $_seriesId): ${f.message}',
+          );
+          return xtreamEpisodes; // Fall back to Xtream-only episodes
+        },
       );
     } else {
       // No TMDB — use Xtream episodes directly
@@ -792,7 +838,8 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
     }
 
     // Enrich episodes with watch progress from DB
-    final enrichedEpisodes = await _enrichWithProgress(finalEpisodes, seasonNumber);
+    final enrichedEpisodes =
+        await _enrichWithProgress(finalEpisodes, seasonNumber);
 
     final updatedSeasons = state.seasons.map((s) {
       if (s.seasonNumber == seasonNumber) {
@@ -802,7 +849,9 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
           seasonNumber: s.seasonNumber,
           name: s.name,
           coverUrl: s.coverUrl,
-          episodeCount: enrichedEpisodes.isNotEmpty ? enrichedEpisodes.length : s.episodeCount,
+          episodeCount: enrichedEpisodes.isNotEmpty
+              ? enrichedEpisodes.length
+              : s.episodeCount,
           episodes: enrichedEpisodes,
         );
       }
@@ -812,9 +861,9 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
     state = state.copyWith(seasons: updatedSeasons, isLoadingEpisodes: false);
   }
 
-  
   /// Enriches episodes with watch progress from the database.
-  Future<List<EpisodeItem>> _enrichWithProgress(List<EpisodeItem> episodes, int seasonNumber) async {
+  Future<List<EpisodeItem>> _enrichWithProgress(
+      List<EpisodeItem> episodes, int seasonNumber) async {
     if (episodes.isEmpty) return episodes;
     final series = state.series;
     if (series == null) return episodes;
@@ -826,7 +875,10 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
         'SELECT episode_number, progress_percent, watched_duration_ms, total_duration_ms '
         'FROM watch_history_entries '
         'WHERE series_id = ? AND season_number = ? AND content_type = \'series\'',
-        variables: [Variable.withInt(series.id), Variable.withInt(seasonNumber)],
+        variables: [
+          Variable.withInt(series.id),
+          Variable.withInt(seasonNumber)
+        ],
       ).get();
 
       if (rows.isEmpty) return episodes;
@@ -869,12 +921,18 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
         return ep;
       }).toList();
     } catch (e) {
-      return episodes; // Fail silently
+      // Progresso assistido é um enriquecimento opcional; não bloqueia a
+      // lista, mas a falha deve ficar observável.
+      appLogger.w(
+        '[SeriesDetail] Falha ao carregar progresso dos episódios: $e',
+      );
+      return episodes;
     }
   }
 
   /// Helper to get playlist credentials (serverUrl, username, password) for a series.
-  Future<({String serverUrl, String username, String password})?> _getPlaylistCredentials(int playlistId) async {
+  Future<({String serverUrl, String username, String password})?>
+      _getPlaylistCredentials(int playlistId) async {
     try {
       final db = _ref.read(databaseProvider);
       var playlistRows = await db.customSelect(
@@ -892,36 +950,60 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
       }
 
       if (playlistRows.isEmpty) {
-        playlistRows = await db.customSelect(
-          'SELECT url, username, credential_key FROM playlists LIMIT 1',
-        ).get();
+        playlistRows = await db
+            .customSelect(
+              'SELECT url, username, credential_key FROM playlists LIMIT 1',
+            )
+            .get();
       }
 
       if (playlistRows.isEmpty) return null;
 
       final serverUrl = playlistRows.first.read<String>('url');
-      final username = playlistRows.first.readNullable<String>('username') ?? '';
-      final password = playlistRows.first.readNullable<String>('credential_key') ?? '';
+      final username =
+          playlistRows.first.readNullable<String>('username') ?? '';
+      final password =
+          playlistRows.first.readNullable<String>('credential_key') ?? '';
 
-      if (serverUrl.isEmpty || username.isEmpty || password.isEmpty) return null;
+      if (serverUrl.isEmpty || username.isEmpty || password.isEmpty) {
+        return null;
+      }
 
       return (serverUrl: serverUrl, username: username, password: password);
-    } catch (_) {
+    } catch (e) {
+      appLogger.w(
+        '[SeriesDetail] Falha ao resolver credenciais da playlist: $e',
+      );
       return null;
     }
   }
 
   /// Fetches episodes for a season from the Xtream API.
-  Future<List<EpisodeItem>> _fetchXtreamEpisodes(int seasonNumber) async {
+  ///
+  /// Returns `null` when the fetch fails (surfaced as an error state by the
+  /// caller); an empty list means the season genuinely has no episodes.
+  Future<List<EpisodeItem>?> _fetchXtreamEpisodes(int seasonNumber) async {
     final series = state.series;
     if (series == null || series.sourceId == null) return [];
 
     try {
       final creds = await _getPlaylistCredentials(series.playlistId);
-      if (creds == null) return [];
+      if (creds == null) {
+        appLogger.w(
+          '[SeriesDetail] Sem credenciais para buscar episódios '
+          '(série $_seriesId).',
+        );
+        return null;
+      }
 
       final seriesIdInt = int.tryParse(series.sourceId!);
-      if (seriesIdInt == null) return [];
+      if (seriesIdInt == null) {
+        appLogger.w(
+          '[SeriesDetail] sourceId inválido para episódios '
+          '(série $_seriesId).',
+        );
+        return null;
+      }
 
       final xtream = XtreamDataSource(client: DioClient());
       final result = await xtream.getSeriesInfo(
@@ -931,7 +1013,7 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
         seriesId: seriesIdInt,
       );
 
-      return result.when(
+      return await result.when(
         success: (info) {
           final seasonEpisodes = info.episodes[seasonNumber] ?? [];
           return seasonEpisodes.map((ep) {
@@ -955,10 +1037,20 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
             );
           }).toList();
         },
-        failure: (_) => <EpisodeItem>[],
+        failure: (f) {
+          appLogger.w(
+            '[SeriesDetail] Falha ao buscar episódios no Xtream '
+            '(série $_seriesId): ${f.message}',
+          );
+          return null;
+        },
       );
     } catch (e) {
-      return [];
+      appLogger.w(
+        '[SeriesDetail] Erro ao buscar episódios no Xtream '
+        '(série $_seriesId): $e',
+      );
+      return null;
     }
   }
 
@@ -973,7 +1065,10 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
   }
 
   /// Parses seasons JSON from cache.
-  List<SeasonItem> _parseSeasonsJson(String json) {
+  ///
+  /// Returns `null` when the payload is corrupt (distinguishable from a
+  /// genuine empty season list, which parses to an empty list).
+  List<SeasonItem>? _parseSeasonsJson(String json) {
     try {
       final data = jsonDecode(json) as List<dynamic>;
       return data.map((s) {
@@ -986,8 +1081,12 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
           episodeCount: map['episode_count'] as int? ?? 0,
         );
       }).toList();
-    } catch (_) {
-      return [];
+    } catch (e) {
+      appLogger.w(
+        '[SeriesDetail] Falha ao interpretar temporadas em cache '
+        '(série $_seriesId): $e',
+      );
+      return null;
     }
   }
 
@@ -1010,27 +1109,30 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
             variables: [Variable.withInt(seasonId)],
           ).get();
 
-          seasons.add(SeasonItem(
-            id: seasonId,
-            seriesId: _seriesId,
-            seasonNumber: row.read<int>('season_number'),
-            name: row.readNullable<String>('name'),
-            coverUrl: row.readNullable<String>('cover_url'),
-            episodeCount: episodeRows.length,
-            episodes: episodeRows.map((e) {
-              return EpisodeItem(
-                id: e.read<int>('id'),
-                seasonId: seasonId,
-                seriesId: _seriesId,
-                episodeNumber: e.read<int>('episode_number'),
-                title: e.read<String>('title'),
-                streamUrl: e.read<String>('stream_url'),
-                containerExtension: e.readNullable<String>('container_extension'),
-                plot: e.readNullable<String>('plot'),
-                coverUrl: e.readNullable<String>('cover_url'),
-              );
-            }).toList(),
-          ));
+          seasons.add(
+            SeasonItem(
+              id: seasonId,
+              seriesId: _seriesId,
+              seasonNumber: row.read<int>('season_number'),
+              name: row.readNullable<String>('name'),
+              coverUrl: row.readNullable<String>('cover_url'),
+              episodeCount: episodeRows.length,
+              episodes: episodeRows.map((e) {
+                return EpisodeItem(
+                  id: e.read<int>('id'),
+                  seasonId: seasonId,
+                  seriesId: _seriesId,
+                  episodeNumber: e.read<int>('episode_number'),
+                  title: e.read<String>('title'),
+                  streamUrl: e.read<String>('stream_url'),
+                  containerExtension:
+                      e.readNullable<String>('container_extension'),
+                  plot: e.readNullable<String>('plot'),
+                  coverUrl: e.readNullable<String>('cover_url'),
+                );
+              }).toList(),
+            ),
+          );
         }
         state = state.copyWith(seasons: seasons, isLoading: false);
       } else {
@@ -1038,7 +1140,17 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
         await _loadSeasonsFromXtream();
       }
     } catch (e) {
-      state = state.copyWith(isLoading: false);
+      appLogger.w(
+        '[SeriesDetail] Falha ao carregar temporadas locais '
+        '(série $_seriesId): $e',
+      );
+      state = state.copyWith(
+        isLoading: false,
+        failure: DatabaseFailure(
+          message: 'Erro ao carregar temporadas da série.',
+          originalError: e,
+        ),
+      );
     }
   }
 
@@ -1108,12 +1220,26 @@ class SeriesDetailNotifier extends StateNotifier<SeriesDetailState> {
 
           state = state.copyWith(seasons: seasons, isLoading: false);
         },
-        failure: (_) {
-          state = state.copyWith(isLoading: false);
+        failure: (f) {
+          appLogger.w(
+            '[SeriesDetail] Falha ao buscar temporadas no Xtream '
+            '(série $_seriesId): ${f.message}',
+          );
+          state = state.copyWith(isLoading: false, failure: f);
         },
       );
     } catch (e) {
-      state = state.copyWith(isLoading: false);
+      appLogger.w(
+        '[SeriesDetail] Erro ao buscar temporadas no Xtream '
+        '(série $_seriesId): $e',
+      );
+      state = state.copyWith(
+        isLoading: false,
+        failure: UnknownFailure(
+          message: 'Erro ao carregar temporadas da série.',
+          originalError: e,
+        ),
+      );
     }
   }
 }

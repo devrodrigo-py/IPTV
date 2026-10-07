@@ -35,9 +35,12 @@ class TmdbDataSource {
         if (data == null) return const Success([]);
 
         final results = (data['results'] as List<dynamic>?)
-                ?.map((e) => TmdbSearchResult.fromJson(
+                ?.map(
+                  (e) => TmdbSearchResult.fromJson(
                     e as Map<String, dynamic>,
-                    type: 'movie'))
+                    type: 'movie',
+                  ),
+                )
                 .toList() ??
             [];
         return Success(results);
@@ -67,9 +70,12 @@ class TmdbDataSource {
         if (data == null) return const Success([]);
 
         final results = (data['results'] as List<dynamic>?)
-                ?.map((e) => TmdbSearchResult.fromJson(
+                ?.map(
+                  (e) => TmdbSearchResult.fromJson(
                     e as Map<String, dynamic>,
-                    type: 'tv'))
+                    type: 'tv',
+                  ),
+                )
                 .toList() ??
             [];
         return Success(results);
@@ -96,9 +102,11 @@ class TmdbDataSource {
       success: (res) {
         final data = res.data;
         if (data == null) {
-          return const Failure(NetworkFailure(
-            message: 'Resposta vazia do TMDB.',
-          ));
+          return const Failure(
+            NetworkFailure(
+              message: 'Resposta vazia do TMDB.',
+            ),
+          );
         }
         return Success(TmdbMovieDetails.fromJson(data));
       },
@@ -124,9 +132,11 @@ class TmdbDataSource {
       success: (res) {
         final data = res.data;
         if (data == null) {
-          return const Failure(NetworkFailure(
-            message: 'Resposta vazia do TMDB.',
-          ));
+          return const Failure(
+            NetworkFailure(
+              message: 'Resposta vazia do TMDB.',
+            ),
+          );
         }
         return Success(TmdbTvDetails.fromJson(data));
       },
@@ -155,7 +165,8 @@ class TmdbDataSource {
 
         final episodes = (data['episodes'] as List<dynamic>?)
                 ?.map(
-                    (e) => TmdbEpisode.fromJson(e as Map<String, dynamic>))
+                  (e) => TmdbEpisode.fromJson(e as Map<String, dynamic>),
+                )
                 .toList() ??
             [];
         return Success(episodes);

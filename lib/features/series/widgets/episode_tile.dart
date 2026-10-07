@@ -76,7 +76,7 @@ class EpisodeTile extends StatelessWidget {
                             children: [
                               if (episode.duration != null &&
                                   episode.duration!.isNotEmpty) ...[
-                                Icon(
+                                const Icon(
                                   Icons.schedule_rounded,
                                   size: 12,
                                   color: AppColors.textSecondary,

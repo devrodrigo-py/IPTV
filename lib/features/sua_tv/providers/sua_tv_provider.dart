@@ -4,7 +4,8 @@ import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/features/profiles/providers/profile_provider.dart';
 
 /// Provider for the Sua TV queue.
-final suaTvQueueProvider = FutureProvider.autoDispose<List<SuaTvItem>>((ref) async {
+final suaTvQueueProvider =
+    FutureProvider.autoDispose<List<SuaTvItem>>((ref) async {
   final db = ref.read(databaseProvider);
   final profileId = ref.read(activeProfileProvider);
   final service = SuaTvService(db, profileId);

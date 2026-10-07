@@ -27,6 +27,9 @@ class NavItem extends StatelessWidget {
     return FocusableWidget(
       onPressed: onTap,
       borderRadius: const BorderRadius.all(Radius.circular(10)),
+      // O item selecionado carrega o anel em degradê da marca
+      // permanentemente; o halo (glow) fica reservado ao foco.
+      showRing: isSelected,
       builder: (context, isFocused) {
         final isHighlighted = isSelected || isFocused;
 

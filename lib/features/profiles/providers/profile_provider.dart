@@ -6,7 +6,8 @@ import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 final activeProfileProvider = StateProvider<int>((ref) => 1);
 
 /// Lists all profiles from the database.
-final profilesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+final profilesProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final db = ref.read(databaseProvider);
   return db.profileDao.getAllProfiles();
 });

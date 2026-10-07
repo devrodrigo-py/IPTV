@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
 import 'package:media_kit/media_kit.dart' hide VideoTrack;
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:nebula_iptv/core/errors/app_failure.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/core/result/result.dart';
@@ -9,9 +11,11 @@ import 'package:nebula_iptv/domain/services/video_player_service.dart';
 /// Concrete implementation of [VideoPlayerService] using media_kit (spec §4.1).
 ///
 /// The presentation layer never imports this directly — it only
-/// depends on [VideoPlayerService].
+/// depends on [VideoPlayerService] and embeds the widget returned by
+/// [buildVideoSurface].
 class MediaKitPlayerService implements VideoPlayerService {
   Player? _player;
+  VideoController? _videoController;
 
   final _playbackStateController =
       StreamController<VideoPlaybackState>.broadcast();
@@ -20,6 +24,7 @@ class MediaKitPlayerService implements VideoPlayerService {
   final _audioTracksController = StreamController<List<VideoTrack>>.broadcast();
   final _subtitleTracksController =
       StreamController<List<VideoTrack>>.broadcast();
+  final _completedController = StreamController<void>.broadcast();
 
   VideoPlaybackState _currentState = const VideoPlaybackState();
   final List<StreamSubscription<dynamic>> _subscriptions = [];
@@ -37,21 +42,26 @@ class MediaKitPlayerService implements VideoPlayerService {
           logLevel: MPVLogLevel.warn,
         ),
       );
+      // The render surface is owned by the service so the presentation
+      // layer never touches media_kit types directly.
+      _videoController = VideoController(_player!);
       _setupListeners();
 
       // Configure hardware decoding and network reconnection
-      if (_player?.platform is dynamic) {
-        try {
-          final mpv = _player!.platform as dynamic;
-          await mpv.setProperty('hwdec', 'auto-safe');
-          await mpv.setProperty(
-            'stream-lavf-o',
-            'reconnect=1,reconnect_streamed=1,reconnect_delay_max=5',
-          );
-        } catch (_) {}
+      try {
+        final mpv = _player!.platform as dynamic;
+        await mpv.setProperty('hwdec', 'auto-safe');
+        await mpv.setProperty(
+          'stream-lavf-o',
+          'reconnect=1,reconnect_streamed=1,reconnect_delay_max=5',
+        );
+      } catch (e) {
+        // Propriedades são opcionais (dependem da plataforma/build do mpv).
+        appLogger.d('[Player] mpv config opcional indisponível: $e');
       }
 
-      appLogger.i('MediaKit player initialized with hardware decoding and resilient reconnection');
+      appLogger.i(
+          'MediaKit player initialized with hardware decoding and resilient reconnection');
       return const Success(null);
     } catch (e) {
       return Failure(
@@ -74,12 +84,15 @@ class MediaKitPlayerService implements VideoPlayerService {
       _updateState(_currentState.copyWith(status: PlaybackStatus.buffering));
 
       // Dynamic buffer: 2s for live zapping, 15s for VOD
-      final isLive = url.contains('/live/') || url.contains('.m3u8') || url.endsWith('.ts');
-      if (_player?.platform is dynamic) {
-        try {
-          final mpv = _player!.platform as dynamic;
-          await mpv.setProperty('demuxer-readahead-secs', isLive ? '2' : '15');
-        } catch (_) {}
+      final isLive = url.contains('/live/') ||
+          url.contains('.m3u8') ||
+          url.endsWith('.ts');
+      try {
+        final mpv = _player!.platform as dynamic;
+        await mpv.setProperty('demuxer-readahead-secs', isLive ? '2' : '15');
+      } catch (e) {
+        // Propriedade opcional; falha não deve interromper a reprodução.
+        appLogger.d('[Player] Buffer dinâmico (mpv) indisponível: $e');
       }
 
       // For live streams, use .m3u8 extension (HLS) instead of .ts
@@ -188,10 +201,23 @@ class MediaKitPlayerService implements VideoPlayerService {
   Future<Result<void>> selectAudioTrack(String trackId) async {
     try {
       final tracks = _player?.state.tracks.audio ?? [];
-      final track = tracks.firstWhere(
-        (t) => t.id == trackId,
-        orElse: () => tracks.first,
-      );
+      AudioTrack? track;
+      for (final t in tracks) {
+        if (t.id == trackId) {
+          track = t;
+          break;
+        }
+      }
+      if (track == null) {
+        // Não fabricar fallback silencioso: a faixa pedida não existe.
+        appLogger.w(
+          '[Player] Faixa de áudio "$trackId" não encontrada '
+          '(${tracks.length} faixas disponíveis).',
+        );
+        return const Failure(
+          StreamUnavailableFailure(message: 'Faixa de áudio não encontrada.'),
+        );
+      }
       await _player?.setAudioTrack(track);
       return const Success(null);
     } catch (e) {
@@ -208,10 +234,25 @@ class MediaKitPlayerService implements VideoPlayerService {
         await _player?.setSubtitleTrack(SubtitleTrack.no());
       } else {
         final tracks = _player?.state.tracks.subtitle ?? [];
-        final track = tracks.firstWhere(
-          (t) => t.id == trackId,
-          orElse: () => SubtitleTrack.no(),
-        );
+        SubtitleTrack? track;
+        for (final t in tracks) {
+          if (t.id == trackId) {
+            track = t;
+            break;
+          }
+        }
+        if (track == null) {
+          // Não fabricar fallback silencioso: a faixa pedida não existe.
+          appLogger.w(
+            '[Player] Faixa de legenda "$trackId" não encontrada '
+            '(${tracks.length} faixas disponíveis).',
+          );
+          return const Failure(
+            StreamUnavailableFailure(
+              message: 'Faixa de legenda não encontrada.',
+            ),
+          );
+        }
         await _player?.setSubtitleTrack(track);
       }
       return const Success(null);
@@ -261,6 +302,21 @@ class MediaKitPlayerService implements VideoPlayerService {
       _subtitleTracksController.stream;
 
   @override
+  Stream<void> get completed => _completedController.stream;
+
+  @override
+  Widget? buildVideoSurface() {
+    final controller = _videoController;
+    if (controller == null) return null;
+    return Video(controller: controller);
+  }
+
+  @override
+  VideoPlayerService createIndependentPlayer() {
+    return MediaKitPlayerService();
+  }
+
+  @override
   Future<void> dispose() async {
     for (final sub in _subscriptions) {
       await sub.cancel();
@@ -268,11 +324,13 @@ class MediaKitPlayerService implements VideoPlayerService {
     _subscriptions.clear();
     await _player?.dispose();
     _player = null;
+    _videoController = null;
     await _playbackStateController.close();
     await _bufferStateController.close();
     await _errorController.close();
     await _audioTracksController.close();
     await _subtitleTracksController.close();
+    await _completedController.close();
   }
 
   void _setupListeners() {
@@ -299,7 +357,8 @@ class MediaKitPlayerService implements VideoPlayerService {
           final isPlaying = player.state.playing;
           _updateState(
             _currentState.copyWith(
-              status: isPlaying ? PlaybackStatus.playing : PlaybackStatus.paused,
+              status:
+                  isPlaying ? PlaybackStatus.playing : PlaybackStatus.paused,
             ),
           );
         }
@@ -308,11 +367,14 @@ class MediaKitPlayerService implements VideoPlayerService {
 
     _subscriptions.add(
       player.stream.position.listen((position) {
-        if (_currentState.status == PlaybackStatus.buffering && position > Duration.zero) {
+        if (_currentState.status == PlaybackStatus.buffering &&
+            position > Duration.zero) {
           _updateState(
             _currentState.copyWith(
               position: position,
-              status: player.state.playing ? PlaybackStatus.playing : PlaybackStatus.paused,
+              status: player.state.playing
+                  ? PlaybackStatus.playing
+                  : PlaybackStatus.paused,
             ),
           );
         } else {
@@ -324,6 +386,14 @@ class MediaKitPlayerService implements VideoPlayerService {
     _subscriptions.add(
       player.stream.duration.listen((duration) {
         _updateState(_currentState.copyWith(duration: duration));
+      }),
+    );
+
+    _subscriptions.add(
+      player.stream.completed.listen((completed) {
+        if (completed) {
+          _completedController.add(null);
+        }
       }),
     );
 

@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nebula_iptv/core/logging/app_logger.dart';
+import 'package:nebula_iptv/domain/providers/health_check_providers.dart';
 import 'package:nebula_iptv/domain/providers/watch_providers.dart';
 import 'package:nebula_iptv/domain/services/stream_reconnection_service.dart';
 import 'package:nebula_iptv/domain/services/video_player_service.dart';
 import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
-import 'package:nebula_iptv/core/logging/app_logger.dart';
-import 'package:nebula_iptv/data/datasources/player/media_kit_player_service.dart';
 
 /// State for the player screen.
 class PlayerState {
@@ -76,14 +76,15 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
         if (mounted) {
           state = state.copyWith(playbackState: playback);
 
-          // Update watch tracking with progress (on every state change while playing)
+          // Update watch tracking with progress (on every state change while
+          // playing). media_kit forwards position updates through this stream.
           if (_contentInfo != null &&
               playback.status == PlaybackStatus.playing &&
               playback.position > Duration.zero) {
             _ref.read(watchTrackingServiceProvider).updateProgress(
-              position: playback.position,
-              duration: playback.duration,
-            );
+                  position: playback.position,
+                  duration: playback.duration,
+                );
           }
 
           // Trigger reconnection on error
@@ -105,23 +106,10 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     // Start watch tracking
     if (_contentInfo != null) {
       _ref.read(watchTrackingServiceProvider).startTracking(_contentInfo!);
-
-      // Listen to position directly from native player for accurate tracking
-      final service = _ref.read(videoPlayerServiceProvider);
-      if (service is MediaKitPlayerService && service.player != null) {
-        _subscriptions.add(
-          service.player!.stream.position.listen((position) {
-            final duration = service.player!.state.duration;
-            if (position > Duration.zero) {
-              _ref.read(watchTrackingServiceProvider).updateProgress(
-                position: position,
-                duration: duration,
-              );
-            }
-          }),
-        );
-      }
     }
+
+    // Background health checks pause during playback
+    _ref.read(healthCheckServiceProvider).pause();
 
     await player.play(url);
 
@@ -129,23 +117,22 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     if (seekToMs != null && seekToMs > 0) {
       final targetMs = seekToMs; // Capture for closure
       appLogger.d('[Player] Will seek to ${targetMs}ms once stream is playing');
-      // Wait for the video to actually start playing, then seek
-      final service = _ref.read(videoPlayerServiceProvider);
-      if (service is MediaKitPlayerService && service.player != null) {
-        late final StreamSubscription<Duration> seekSub;
-        seekSub = service.player!.stream.position.listen((pos) {
-          // Once we get a real position (video is playing), do the seek
-          if (pos.inMilliseconds > 100) {
-            seekSub.cancel();
-            appLogger.d('[Player] Stream playing at ${pos.inMilliseconds}ms, seeking to ${targetMs}ms');
-            service.player!.seek(Duration(milliseconds: targetMs));
-          }
-        });
-        // Safety timeout: cancel listener after 15s if video never starts
-        Future.delayed(const Duration(seconds: 15), () {
+      // Once a real position arrives (video is playing), do the seek
+      late final StreamSubscription<VideoPlaybackState> seekSub;
+      seekSub = player.playbackState.listen((playback) {
+        if (playback.position.inMilliseconds > 100) {
           seekSub.cancel();
-        });
-      }
+          appLogger.d(
+            '[Player] Stream playing at ${playback.position.inMilliseconds}ms, '
+            'seeking to ${targetMs}ms',
+          );
+          player.seek(Duration(milliseconds: targetMs));
+        }
+      });
+      // Safety timeout: cancel listener after 15s if video never starts
+      Future.delayed(const Duration(seconds: 15), () {
+        seekSub.cancel();
+      });
     }
   }
 
@@ -165,6 +152,8 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     // Stop watch tracking
     await _ref.read(watchTrackingServiceProvider).stopTracking();
     await _ref.read(videoPlayerServiceProvider).stop();
+    // Health checks may resume when nothing is playing
+    _ref.read(healthCheckServiceProvider).resume();
   }
 
   /// Sets volume (0.0 - 1.0).
@@ -193,12 +182,13 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
   }
 
   /// Injects an external subtitle (.srt, .vtt).
-  Future<void> addExternalSubtitle(String uri, {String? title, String? language}) async {
+  Future<void> addExternalSubtitle(String uri,
+      {String? title, String? language}) async {
     await _ref.read(videoPlayerServiceProvider).addExternalSubtitle(
-      uri,
-      title: title,
-      language: language,
-    );
+          uri,
+          title: title,
+          language: language,
+        );
   }
 
   /// Manual retry after reconnection exhausted.
@@ -240,12 +230,15 @@ class PlayerNotifier extends StateNotifier<PlayerState> {
     // Stop watch tracking (fire-and-forget in dispose)
     try {
       _ref.read(watchTrackingServiceProvider).stopTracking();
-    } catch (_) {}
+    } catch (e) {
+      appLogger.d('[Player] Falha ao parar tracking no dispose: $e');
+    }
     // Stop playback when leaving the player screen (safe to call even if already stopped)
     try {
       _ref.read(videoPlayerServiceProvider).stop();
-    } catch (_) {
-      // Player may already be disposed — ignore
+    } catch (e) {
+      // Player may already be disposed — ignore, but keep it observable
+      appLogger.d('[Player] Falha ao parar playback no dispose: $e');
     }
     for (final sub in _subscriptions) {
       sub.cancel();

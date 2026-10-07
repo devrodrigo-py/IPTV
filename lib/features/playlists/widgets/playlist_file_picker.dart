@@ -43,10 +43,12 @@ class PlaylistFilePicker {
         );
       }
 
-      return Success(FilePickResult(
-        content: content,
-        fileName: file.name,
-      ));
+      return Success(
+        FilePickResult(
+          content: content,
+          fileName: file.name,
+        ),
+      );
     } catch (e) {
       return Failure(
         PlaylistParseFailure(

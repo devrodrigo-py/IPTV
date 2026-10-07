@@ -19,6 +19,27 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
         .get();
   }
 
+  /// Returns all channels for a playlist, including inactive ones.
+  ///
+  /// Reconciliation needs inactive rows so channels that reappear in the
+  /// source are reactivated instead of inserted as duplicates (spec §19).
+  Future<List<Channel>> getAllChannelsByPlaylist(int playlistId) {
+    return (select(channels)..where((c) => c.playlistId.equals(playlistId)))
+        .get();
+  }
+
+  /// Returns all channels of a playlist with the given source type,
+  /// including inactive ones.
+  Future<List<Channel>> getAllChannelsByPlaylistAndType(
+    int playlistId,
+    ChannelSourceType sourceType,
+  ) {
+    return (select(channels)
+          ..where((c) => c.playlistId.equals(playlistId))
+          ..where((c) => c.sourceType.equalsValue(sourceType)))
+        .get();
+  }
+
   /// Returns all active channels across all playlists.
   Future<List<Channel>> getAllActiveChannels() {
     return (select(channels)
@@ -120,5 +141,38 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
           ..where((c) => c.isActive.equals(true))
           ..orderBy([(c) => OrderingTerm.asc(c.name)]))
         .watch();
+  }
+
+  /// Returns the most recently inserted active VOD/series rows with art
+  /// (Home "Adicionados recentemente").
+  Future<List<Channel>> getRecentlyAdded(int limit) {
+    return (select(channels)
+          ..where((c) => c.isActive.equals(true))
+          ..where(
+            (c) =>
+                c.sourceType.equalsValue(ChannelSourceType.vod) |
+                c.sourceType.equalsValue(ChannelSourceType.series),
+          )
+          ..where((c) => c.logoUrl.isNotNull() & c.logoUrl.equals('').not())
+          ..orderBy([(c) => OrderingTerm.desc(c.id)])
+          ..limit(limit))
+        .get();
+  }
+
+  /// Returns one random active channel among the given source types
+  /// (Home "Surpreenda-me"). Null when there is nothing to pick.
+  Future<Channel?> getRandomBySourceTypes(
+    List<ChannelSourceType> sourceTypes,
+  ) {
+    return (select(channels)
+          ..where((c) => c.isActive.equals(true))
+          ..where(
+            (c) => Expression.or(
+              sourceTypes.map((t) => c.sourceType.equalsValue(t)).toList(),
+            ),
+          )
+          ..orderBy([(c) => OrderingTerm.random()])
+          ..limit(1))
+        .getSingleOrNull();
   }
 }

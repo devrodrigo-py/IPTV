@@ -4,6 +4,7 @@ import 'package:nebula_iptv/core/errors/app_failure.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/core/result/result.dart';
 import 'package:nebula_iptv/data/database/app_database.dart';
+import 'package:nebula_iptv/data/database/tables/channels_table.dart';
 import 'package:nebula_iptv/data/datasources/xtream/xtream_datasource.dart';
 import 'package:nebula_iptv/data/datasources/xtream/xtream_models.dart';
 
@@ -80,7 +81,13 @@ class SeriesImportRepository {
     );
     final userPass = credResult.when(
       success: (val) => val,
-      failure: (_) => null,
+      failure: (f) {
+        appLogger.w(
+          'Series import (playlist $playlistId): falha ao ler credenciais: '
+          '${f.message}',
+        );
+        return null;
+      },
     );
 
     if (userPass == null || userPass.isEmpty) {
@@ -148,7 +155,13 @@ class SeriesImportRepository {
     );
     final userPass = credResult.when(
       success: (val) => val,
-      failure: (_) => null,
+      failure: (f) {
+        appLogger.w(
+          'Series details (playlist $playlistId): falha ao ler credenciais: '
+          '${f.message}',
+        );
+        return null;
+      },
     );
 
     if (userPass == null || userPass.isEmpty) {
@@ -193,19 +206,30 @@ class SeriesImportRepository {
               categoryMap[cat.categoryId] = cat.categoryName;
             }
           },
-          failure: (_) {},
+          failure: (f) => appLogger.w(
+            'Series import (playlist $playlistId): falha ao buscar categorias: '
+            '${f.message}',
+          ),
         );
-      } catch (_) {}
+      } catch (e) {
+        appLogger.w(
+          'Series import (playlist $playlistId): erro ao buscar categorias: $e',
+        );
+      }
 
-      final existing = await _db.seriesDao.getSeriesByPlaylist(playlistId);
+      // Reconcile against the full set including deactivated rows, so a
+      // series that left the source and came back reactivates (never
+      // duplicates).
+      final existing = await _db.seriesDao.getAllSeriesByPlaylist(playlistId);
       final existingBySourceId = <String, SeriesItem>{};
       for (final s in existing) {
         existingBySourceId[s.sourceId] = s;
       }
 
+      final toInsert = <SeriesItemsCompanion>[];
+      final toUpdate = <int, SeriesItemsCompanion>{};
+      final toActivate = <int>[];
       final matchedIds = <int>{};
-      var added = 0;
-      var updated = 0;
 
       for (final series in seriesList) {
         final sourceId = series.seriesId.toString();
@@ -213,47 +237,34 @@ class SeriesImportRepository {
 
         if (existingSeries != null) {
           matchedIds.add(existingSeries.id);
-          // Update if changed
           if (existingSeries.name != series.name ||
               existingSeries.coverUrl != series.cover ||
               existingSeries.rating != series.rating) {
-            await (_db.update(_db.seriesItems)
-                  ..where((s) => s.id.equals(existingSeries.id)))
-                .write(
-              SeriesItemsCompanion(
-                name: Value(series.name),
-                coverUrl: Value(series.cover),
-                plot: Value(series.plot),
-                cast: Value(series.cast),
-                director: Value(series.director),
-                genre: Value(series.genre),
-                rating: Value(series.rating),
-                year: Value(series.year),
-                backdropUrl: Value(series.backdropPath),
-                isActive: const Value(true),
-                updatedAt: Value(DateTime.now()),
-              ),
+            toUpdate[existingSeries.id] = SeriesItemsCompanion(
+              name: Value(series.name),
+              coverUrl: Value(series.cover),
+              plot: Value(series.plot),
+              cast: Value(series.cast),
+              director: Value(series.director),
+              genre: Value(series.genre),
+              rating: Value(series.rating),
+              year: Value(series.year),
+              backdropUrl: Value(series.backdropPath),
+              isActive: const Value(true),
+              updatedAt: Value(DateTime.now()),
             );
-            updated++;
           } else if (!existingSeries.isActive) {
-            await (_db.update(_db.seriesItems)
-                  ..where((s) => s.id.equals(existingSeries.id)))
-                .write(
-              SeriesItemsCompanion(
-                isActive: const Value(true),
-                updatedAt: Value(DateTime.now()),
-              ),
-            );
-            updated++;
+            toActivate.add(existingSeries.id);
           }
         } else {
-          await _db.seriesDao.insertSeries(
+          toInsert.add(
             SeriesItemsCompanion.insert(
               playlistId: playlistId,
               sourceId: sourceId,
               name: series.name,
               coverUrl: Value(series.cover),
-              categoryName: Value(categoryMap[series.categoryId] ?? series.categoryId),
+              categoryName:
+                  Value(categoryMap[series.categoryId] ?? series.categoryId),
               plot: Value(series.plot),
               cast: Value(series.cast),
               director: Value(series.director),
@@ -263,25 +274,56 @@ class SeriesImportRepository {
               backdropUrl: Value(series.backdropPath),
             ),
           );
-          added++;
         }
       }
 
-      // Deactivate series no longer in the source
-      var deactivated = 0;
-      for (final s in existing) {
-        if (!matchedIds.contains(s.id)) {
-          await (_db.update(_db.seriesItems)
-                ..where((si) => si.id.equals(s.id)))
-              .write(
-            SeriesItemsCompanion(
-              isActive: const Value(false),
-              updatedAt: Value(DateTime.now()),
-            ),
-          );
-          deactivated++;
-        }
-      }
+      final toDeactivate = existing
+          .where((s) => s.isActive && !matchedIds.contains(s.id))
+          .map((s) => s.id)
+          .toList();
+
+      final added = toInsert.length;
+      final updated = toUpdate.length + toActivate.length;
+      final deactivated = toDeactivate.length;
+
+      // Single atomic pass: series_items + the channels-table mirror rows,
+      // both reconciled as batch operations inside one transaction.
+      await _db.transaction(() async {
+        await _db.batch((b) {
+          if (toInsert.isNotEmpty) {
+            b.insertAll(_db.seriesItems, toInsert);
+          }
+          toUpdate.forEach((id, companion) {
+            b.update(_db.seriesItems, companion, where: (s) => s.id.equals(id));
+          });
+          if (toActivate.isNotEmpty) {
+            b.update(
+              _db.seriesItems,
+              SeriesItemsCompanion(
+                isActive: const Value(true),
+                updatedAt: Value(DateTime.now()),
+              ),
+              where: (s) => s.id.isIn(toActivate),
+            );
+          }
+          if (toDeactivate.isNotEmpty) {
+            b.update(
+              _db.seriesItems,
+              SeriesItemsCompanion(
+                isActive: const Value(false),
+                updatedAt: Value(DateTime.now()),
+              ),
+              where: (s) => s.id.isIn(toDeactivate),
+            );
+          }
+        });
+
+        await _reconcileChannelRows(
+          playlistId: playlistId,
+          categoryMap: categoryMap,
+          seriesList: seriesList,
+        );
+      });
 
       appLogger.i(
         'Series import for playlist $playlistId: '
@@ -304,6 +346,101 @@ class SeriesImportRepository {
         ),
       );
     }
+  }
+
+  /// Reconciles the `channels` rows backed by series (search/home read from
+  /// the channels table). Diff by sourceId, single batch.
+  Future<void> _reconcileChannelRows({
+    required int playlistId,
+    required Map<String, String> categoryMap,
+    required List<XtreamSeries> seriesList,
+  }) async {
+    final existingRows = await _db.channelsDao.getAllChannelsByPlaylistAndType(
+      playlistId,
+      ChannelSourceType.series,
+    );
+
+    final bySourceId = <String, Channel>{};
+    for (final row in existingRows) {
+      if (row.sourceId != null) {
+        bySourceId[row.sourceId!] = row;
+      }
+    }
+
+    final toInsert = <ChannelsCompanion>[];
+    final toUpdate = <int, ChannelsCompanion>{};
+    final toActivate = <int>[];
+    final matchedIds = <int>{};
+
+    for (final series in seriesList) {
+      final sourceId = series.seriesId.toString();
+      final row = bySourceId[sourceId];
+
+      if (row != null) {
+        matchedIds.add(row.id);
+        if (row.name != series.name || row.logoUrl != series.cover) {
+          toUpdate[row.id] = ChannelsCompanion(
+            name: Value(series.name),
+            logoUrl: Value(series.cover),
+            groupName: Value(
+              categoryMap[series.categoryId] ?? series.categoryId,
+            ),
+            isActive: const Value(true),
+            updatedAt: Value(DateTime.now()),
+          );
+        } else if (!row.isActive) {
+          toActivate.add(row.id);
+        }
+      } else {
+        toInsert.add(
+          ChannelsCompanion.insert(
+            playlistId: playlistId,
+            name: series.name,
+            streamUrl: '',
+            sourceType: ChannelSourceType.series,
+            sourceId: Value(sourceId),
+            logoUrl: Value(series.cover),
+            groupName: Value(
+              categoryMap[series.categoryId] ?? series.categoryId,
+            ),
+          ),
+        );
+      }
+    }
+
+    final toDeactivate = existingRows
+        .where((row) => !matchedIds.contains(row.id))
+        .map((row) => row.id)
+        .toList();
+
+    await _db.batch((b) {
+      if (toInsert.isNotEmpty) {
+        b.insertAll(_db.channels, toInsert);
+      }
+      toUpdate.forEach((id, companion) {
+        b.update(_db.channels, companion, where: (c) => c.id.equals(id));
+      });
+      if (toActivate.isNotEmpty) {
+        b.update(
+          _db.channels,
+          ChannelsCompanion(
+            isActive: const Value(true),
+            updatedAt: Value(DateTime.now()),
+          ),
+          where: (c) => c.id.isIn(toActivate),
+        );
+      }
+      if (toDeactivate.isNotEmpty) {
+        b.update(
+          _db.channels,
+          ChannelsCompanion(
+            isActive: const Value(false),
+            updatedAt: Value(DateTime.now()),
+          ),
+          where: (c) => c.id.isIn(toDeactivate),
+        );
+      }
+    });
   }
 
   Future<Result<void>> _persistSeriesDetails({
@@ -391,8 +528,7 @@ class SeriesImportRepository {
               episodeNumber: episode.episodeNum,
               title: episode.title,
               streamUrl: streamUrl,
-              containerExtension:
-                  Value(episode.containerExtension ?? 'mp4'),
+              containerExtension: Value(episode.containerExtension ?? 'mp4'),
               plot: Value(episode.plot),
               duration: Value(episode.durationSecs),
               coverUrl: Value(episode.coverBig),
@@ -403,8 +539,8 @@ class SeriesImportRepository {
         }
       }
 
-      final totalEpisodes = info.episodes.values
-          .fold<int>(0, (sum, list) => sum + list.length);
+      final totalEpisodes =
+          info.episodes.values.fold<int>(0, (sum, list) => sum + list.length);
 
       appLogger.i(
         'Series details for $seriesDbId: '

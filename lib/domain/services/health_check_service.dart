@@ -55,8 +55,7 @@ class SingleCheckResult {
   });
 
   @override
-  String toString() =>
-      'SingleCheckResult(ch=$channelId, online=$isOnline, '
+  String toString() => 'SingleCheckResult(ch=$channelId, online=$isOnline, '
       'latency=${latencyMs}ms${error != null ? ', err=$error' : ''})';
 }
 
@@ -131,7 +130,8 @@ class ChannelHealthCheckService {
         continue;
       }
 
-      appLogger.d('[HealthCheck] Checking batch of ${channelIds.length} channels');
+      appLogger
+          .d('[HealthCheck] Checking batch of ${channelIds.length} channels');
 
       // Process in concurrent batches
       int checked = 0;
@@ -302,8 +302,7 @@ class ChannelHealthCheckService {
           );
 
       // Status 200 or 206 (partial content) means the stream is available
-      final isOnline =
-          response.statusCode == 200 || response.statusCode == 206;
+      final isOnline = response.statusCode == 200 || response.statusCode == 206;
       stopwatch.stop();
 
       // Drain response to free resources (don't download content)

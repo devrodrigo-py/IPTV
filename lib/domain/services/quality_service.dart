@@ -1,7 +1,8 @@
 import 'dart:io';
+
 import 'package:drift/drift.dart';
-import 'package:nebula_iptv/data/database/app_database.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
+import 'package:nebula_iptv/data/database/app_database.dart';
 
 /// Represents a quality variant for a channel.
 class QualityVariant {
@@ -53,27 +54,37 @@ class QualityService {
 
     if (groupMembers.length <= 1) return [];
 
-    return groupMembers.map((row) {
-      final qualityTag = row.data['quality_tag'] as String? ?? _inferQuality(row.data['name'] as String? ?? '');
-      return QualityVariant(
-        name: qualityTag,
-        streamUrl: row.data['stream_url'] as String? ?? '',
-        channelId: row.data['channel_id'] as int,
-        priority: row.data['priority'] as int? ?? 0,
-      );
-    }).where((v) => v.streamUrl.isNotEmpty).toList();
+    return groupMembers
+        .map((row) {
+          final qualityTag = row.data['quality_tag'] as String? ??
+              _inferQuality(row.data['name'] as String? ?? '');
+          return QualityVariant(
+            name: qualityTag,
+            streamUrl: row.data['stream_url'] as String? ?? '',
+            channelId: row.data['channel_id'] as int,
+            priority: row.data['priority'] as int? ?? 0,
+          );
+        })
+        .where((v) => v.streamUrl.isNotEmpty)
+        .toList();
   }
 
   /// Infer quality from channel name (e.g., "HBO [FHD]", "CNN HD").
   String _inferQuality(String name) {
     final upper = name.toUpperCase();
-    if (upper.contains('FHD') || upper.contains('1080') || upper.contains('FULL HD')) {
+    if (upper.contains('FHD') ||
+        upper.contains('1080') ||
+        upper.contains('FULL HD')) {
       return 'FHD';
     }
-    if (upper.contains(' HD') || upper.contains('[HD]') || upper.contains('720')) {
+    if (upper.contains(' HD') ||
+        upper.contains('[HD]') ||
+        upper.contains('720')) {
       return 'HD';
     }
-    if (upper.contains(' SD') || upper.contains('[SD]') || upper.contains('480')) {
+    if (upper.contains(' SD') ||
+        upper.contains('[SD]') ||
+        upper.contains('480')) {
       return 'SD';
     }
     return 'Auto';
@@ -111,7 +122,8 @@ class QualityService {
 
       // Calculate Mbps
       final mbps = (bytesRead * 8) / (stopwatch.elapsedMilliseconds * 1000);
-      appLogger.d('[Quality] Bandwidth test: ${bytesRead}B in ${stopwatch.elapsedMilliseconds}ms = ${mbps.toStringAsFixed(1)} Mbps');
+      appLogger.d(
+          '[Quality] Bandwidth test: ${bytesRead}B in ${stopwatch.elapsedMilliseconds}ms = ${mbps.toStringAsFixed(1)} Mbps');
       return mbps;
     } catch (e) {
       appLogger.w('[Quality] Bandwidth test failed: $e');

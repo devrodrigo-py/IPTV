@@ -19,6 +19,18 @@ class SeriesDao extends DatabaseAccessor<AppDatabase> {
         .get();
   }
 
+  /// Returns every series of a playlist, including deactivated rows.
+  ///
+  /// Reconciliation must diff against the full set — a series that left the
+  /// source in an earlier refresh and came back must be reactivated, not
+  /// duplicated.
+  Future<List<SeriesItem>> getAllSeriesByPlaylist(int playlistId) {
+    return (select(attachedDatabase.seriesItems)
+          ..where((s) => s.playlistId.equals(playlistId))
+          ..orderBy([(s) => OrderingTerm.asc(s.name)]))
+        .get();
+  }
+
   /// Returns all active series across all playlists.
   Future<List<SeriesItem>> getAllActiveSeries() {
     return (select(attachedDatabase.seriesItems)
@@ -49,8 +61,7 @@ class SeriesDao extends DatabaseAccessor<AppDatabase> {
 
   /// Returns a single series by ID.
   Future<SeriesItem?> getSeriesById(int id) {
-    return (select(attachedDatabase.seriesItems)
-          ..where((s) => s.id.equals(id)))
+    return (select(attachedDatabase.seriesItems)..where((s) => s.id.equals(id)))
         .getSingleOrNull();
   }
 
@@ -62,11 +73,6 @@ class SeriesDao extends DatabaseAccessor<AppDatabase> {
                 s.playlistId.equals(playlistId) & s.sourceId.equals(sourceId),
           ))
         .getSingleOrNull();
-  }
-
-  /// Inserts a series and returns its ID.
-  Future<int> insertSeries(SeriesItemsCompanion entry) {
-    return into(attachedDatabase.seriesItems).insert(entry);
   }
 
   /// Batch-inserts multiple series.

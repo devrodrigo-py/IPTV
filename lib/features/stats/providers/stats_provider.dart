@@ -1,8 +1,8 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nebula_iptv/data/database/app_database.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/features/profiles/providers/profile_provider.dart';
-import 'package:nebula_iptv/data/database/app_database.dart';
 
 /// All stats data bundled together.
 class StatsData {
@@ -46,15 +46,19 @@ final statsProvider = FutureProvider.autoDispose<StatsData>((ref) async {
   final db = ref.read(databaseProvider);
 
   // Total watch time
-  final totalRows = await db.customSelect(
-    'SELECT COALESCE(SUM(total_watch_ms), 0) as total FROM watch_stats_daily',
-  ).get();
+  final totalRows = await db
+      .customSelect(
+        'SELECT COALESCE(SUM(total_watch_ms), 0) as total FROM watch_stats_daily',
+      )
+      .get();
   final totalWatchMs = (totalRows.first.data['total'] as int?) ?? 0;
 
   // Total sessions
-  final sessionsRows = await db.customSelect(
-    'SELECT COALESCE(SUM(session_count), 0) as total FROM watch_stats_daily',
-  ).get();
+  final sessionsRows = await db
+      .customSelect(
+        'SELECT COALESCE(SUM(session_count), 0) as total FROM watch_stats_daily',
+      )
+      .get();
   final totalSessions = (sessionsRows.first.data['total'] as int?) ?? 0;
 
   // Daily watch (last 7 days)
@@ -129,7 +133,6 @@ Future<int> _calculateStreak(AppDatabase db) async {
 
   int streak = 1;
   final today = DateTime.now();
-  final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
 
   // If today or yesterday isn't in the list, streak is 0
   final firstDate = dates.first;
@@ -148,7 +151,8 @@ Future<int> _calculateStreak(AppDatabase db) async {
   return streak;
 }
 
-Future<List<Map<String, dynamic>>> _getTopByType(AppDatabase db, String contentType) async {
+Future<List<Map<String, dynamic>>> _getTopByType(
+    AppDatabase db, String contentType) async {
   final rows = await db.customSelect(
     '''
     SELECT
@@ -172,7 +176,8 @@ Future<List<Map<String, dynamic>>> _getTopByType(AppDatabase db, String contentT
   return rows.map((r) => r.data).toList();
 }
 
-Future<List<Map<String, dynamic>>> _getCategoryDistribution(AppDatabase db) async {
+Future<List<Map<String, dynamic>>> _getCategoryDistribution(
+    AppDatabase db) async {
   final rows = await db.customSelect(
     '''
     SELECT

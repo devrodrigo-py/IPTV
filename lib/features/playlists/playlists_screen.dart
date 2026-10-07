@@ -93,9 +93,8 @@ class PlaylistsScreen extends ConsumerWidget {
                     child: Text(
                       state.statusMessage!,
                       style: AppTypography.body.copyWith(
-                        color: state.isError
-                            ? AppColors.error
-                            : AppColors.success,
+                        color:
+                            state.isError ? AppColors.error : AppColors.success,
                       ),
                     ),
                   ),
@@ -168,19 +167,23 @@ class PlaylistsScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => _AddPlaylistDialog(
-        onImportUrl: (name, url) {
+        onImportUrl: (name, url, allowInsecureTls) {
           Navigator.of(ctx).pop();
-          ref
-              .read(playlistManagementProvider.notifier)
-              .importFromUrl(name: name, url: url);
+          ref.read(playlistManagementProvider.notifier).importFromUrl(
+                name: name,
+                url: url,
+                allowInsecureTls: allowInsecureTls,
+              );
         },
-        onImportXtream: (name, serverUrl, username, password) {
+        onImportXtream:
+            (name, serverUrl, username, password, allowInsecureTls) {
           Navigator.of(ctx).pop();
           ref.read(playlistManagementProvider.notifier).importFromXtream(
                 name: name,
                 serverUrl: serverUrl,
                 username: username,
                 password: password,
+                allowInsecureTls: allowInsecureTls,
               );
         },
         onImportFile: () {
@@ -193,8 +196,15 @@ class PlaylistsScreen extends ConsumerWidget {
 }
 
 class _AddPlaylistDialog extends StatefulWidget {
-  final void Function(String name, String url) onImportUrl;
-  final void Function(String name, String serverUrl, String username, String password) onImportXtream;
+  final void Function(String name, String url, bool allowInsecureTls)
+      onImportUrl;
+  final void Function(
+    String name,
+    String serverUrl,
+    String username,
+    String password,
+    bool allowInsecureTls,
+  ) onImportXtream;
   final VoidCallback onImportFile;
 
   const _AddPlaylistDialog({
@@ -230,13 +240,16 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
   final _cancelButtonFocus = FocusNode(debugLabel: 'cancelButton');
   final _importButtonFocus = FocusNode(debugLabel: 'importButton');
 
+  bool _allowInsecureXtream = false;
+  bool _allowInsecureM3u = false;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
 
-    _xtreamNameFocus.onKeyEvent = (node, event) =>
-        _handleFieldKeyEvent(_serverUrlFocus, null, event);
+    _xtreamNameFocus.onKeyEvent =
+        (node, event) => _handleFieldKeyEvent(_serverUrlFocus, null, event);
     _serverUrlFocus.onKeyEvent = (node, event) =>
         _handleFieldKeyEvent(_usernameFocus, _xtreamNameFocus, event);
     _usernameFocus.onKeyEvent = (node, event) =>
@@ -244,15 +257,16 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
     _passwordFocus.onKeyEvent = (node, event) =>
         _handleFieldKeyEvent(_importButtonFocus, _usernameFocus, event);
 
-    _m3uNameFocus.onKeyEvent = (node, event) =>
-        _handleFieldKeyEvent(_urlFocus, null, event);
+    _m3uNameFocus.onKeyEvent =
+        (node, event) => _handleFieldKeyEvent(_urlFocus, null, event);
     _urlFocus.onKeyEvent = (node, event) =>
         _handleFieldKeyEvent(_fileButtonFocus, _m3uNameFocus, event);
     _fileButtonFocus.onKeyEvent = (node, event) =>
         _handleFieldKeyEvent(_importButtonFocus, _urlFocus, event);
   }
 
-  KeyEventResult _handleFieldKeyEvent(FocusNode nextFocus, FocusNode? prevFocus, KeyEvent event) {
+  KeyEventResult _handleFieldKeyEvent(
+      FocusNode nextFocus, FocusNode? prevFocus, KeyEvent event) {
     if (event is KeyDownEvent) {
       if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
         nextFocus.requestFocus();
@@ -296,15 +310,25 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
       final serverUrl = _serverUrlController.text.trim();
       final username = _usernameController.text.trim();
       final password = _passwordController.text.trim();
-      if (name.isEmpty || serverUrl.isEmpty ||
-          username.isEmpty || password.isEmpty) return;
-      widget.onImportXtream(name, serverUrl, username, password);
+      if (name.isEmpty ||
+          serverUrl.isEmpty ||
+          username.isEmpty ||
+          password.isEmpty) {
+        return;
+      }
+      widget.onImportXtream(
+        name,
+        serverUrl,
+        username,
+        password,
+        _allowInsecureXtream,
+      );
     } else {
       // M3U
       final name = _nameController.text.trim();
       final url = _urlController.text.trim();
       if (name.isEmpty || url.isEmpty) return;
-      widget.onImportUrl(name, url);
+      widget.onImportUrl(name, url, _allowInsecureM3u);
     }
   }
 
@@ -383,6 +407,12 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
                             labelText: 'Senha',
                           ),
                         ),
+                        const SizedBox(height: 8),
+                        _InsecureTlsCheckbox(
+                          value: _allowInsecureXtream,
+                          onChanged: (v) =>
+                              setState(() => _allowInsecureXtream = v),
+                        ),
                       ],
                     ),
                   ),
@@ -420,6 +450,12 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
                           icon: const Icon(Icons.file_open_rounded),
                           label: const Text('Importar de arquivo'),
                         ),
+                        const SizedBox(height: 8),
+                        _InsecureTlsCheckbox(
+                          value: _allowInsecureM3u,
+                          onChanged: (v) =>
+                              setState(() => _allowInsecureM3u = v),
+                        ),
                       ],
                     ),
                   ),
@@ -441,6 +477,39 @@ class _AddPlaylistDialogState extends State<_AddPlaylistDialog>
           child: const Text('Importar'),
         ),
       ],
+    );
+  }
+}
+
+/// Opt-in checkbox to accept invalid/self-signed certificates from a
+/// specific source (ADR-005) with a visible security warning.
+class _InsecureTlsCheckbox extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _InsecureTlsCheckbox({
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CheckboxListTile(
+      value: value,
+      onChanged: (v) => onChanged(v ?? false),
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      controlAffinity: ListTileControlAffinity.leading,
+      activeColor: AppColors.error,
+      title: const Text(
+        'Aceitar certificado inválido (self-signed)',
+        style: TextStyle(fontSize: 13),
+      ),
+      subtitle: const Text(
+        '⚠️ Inseguro: apenas se você confia neste servidor. '
+        'Seus dados podem ser interceptados.',
+        style: TextStyle(fontSize: 11, color: AppColors.error),
+      ),
     );
   }
 }
@@ -486,7 +555,7 @@ class _PlaylistTile extends StatelessWidget {
                 Text(
                   lastSync != null
                       ? 'Atualizado: ${_formatDate(lastSync!)}'
-                      : url,
+                      : _sourceSubtitle(url),
                   style: AppTypography.caption,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -517,5 +586,12 @@ class _PlaylistTile extends StatelessWidget {
         '${local.month.toString().padLeft(2, '0')} '
         '${local.hour.toString().padLeft(2, '0')}:'
         '${local.minute.toString().padLeft(2, '0')}';
+  }
+
+  /// File imports store the M3U content in the `url` column (the repository
+  /// re-reads it on refresh) — never render megabytes of playlist here.
+  String _sourceSubtitle(String url) {
+    final isRemote = url.startsWith('http://') || url.startsWith('https://');
+    return isRemote ? url : 'Arquivo local';
   }
 }

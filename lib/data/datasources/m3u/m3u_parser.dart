@@ -1,3 +1,4 @@
+import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/data/datasources/m3u/m3u_entry.dart';
 
 /// Result of parsing an M3U playlist.
@@ -190,7 +191,10 @@ class M3uParser {
       if (segments.isNotEmpty) {
         return segments.last.replaceAll(RegExp(r'\.\w+$'), '');
       }
-    } catch (_) {}
+    } catch (e) {
+      // Derivação best-effort de nome; cai para "Canal desconhecido".
+      appLogger.d('[M3U] Falha ao derivar nome da URL: $e');
+    }
     return 'Canal desconhecido';
   }
 

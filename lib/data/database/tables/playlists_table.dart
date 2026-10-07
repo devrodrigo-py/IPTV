@@ -31,4 +31,10 @@ class Playlists extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+
+  /// Per-source opt-in to accept invalid/self-signed TLS certificates
+  /// from this playlist's host (ADR-005). Never enabled globally.
+  BoolColumn get allowInsecureTls => boolean().withDefault(
+        const Constant(false),
+      )();
 }

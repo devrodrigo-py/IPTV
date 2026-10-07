@@ -40,7 +40,7 @@ class ShortcutDao extends DatabaseAccessor<AppDatabase> {
     ).get();
     final nextPos = (posRows.first.data['max_pos'] as int) + 1;
 
-    return await customInsert(
+    return customInsert(
       'INSERT INTO user_shortcuts (profile_id, channel_id, position) VALUES (?, ?, ?)',
       variables: [
         Variable.withInt(profileId),

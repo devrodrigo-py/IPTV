@@ -1,26 +1,25 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:media_kit_video/media_kit_video.dart';
+import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/live_indicator.dart';
-import 'package:nebula_iptv/data/database/app_database.dart' hide Channel;
-import 'package:nebula_iptv/data/datasources/player/media_kit_player_service.dart';
+import 'package:nebula_iptv/domain/services/quality_service.dart';
 import 'package:nebula_iptv/domain/services/video_player_service.dart';
-import 'package:nebula_iptv/features/player/providers/player_provider.dart';
 import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
-import 'package:nebula_iptv/features/player/widgets/player_controls.dart';
+import 'package:nebula_iptv/features/player/providers/player_provider.dart';
 import 'package:nebula_iptv/features/player/widgets/nebula_buffering_indicator.dart';
+import 'package:nebula_iptv/features/player/widgets/player_controls.dart';
 import 'package:nebula_iptv/features/player/widgets/player_error_overlay.dart';
 import 'package:nebula_iptv/features/player/widgets/quality_selector.dart';
 import 'package:nebula_iptv/features/player/widgets/quick_channel_drawer.dart';
 import 'package:nebula_iptv/features/player/widgets/track_selector_modal.dart';
-import 'package:nebula_iptv/features/series/providers/series_provider.dart' show EpisodeItem;
-import 'package:nebula_iptv/domain/services/quality_service.dart';
+import 'package:nebula_iptv/features/series/providers/series_provider.dart'
+    show EpisodeItem;
 
 /// Full-screen player screen.
 ///
@@ -53,7 +52,7 @@ class PlayerScreen extends ConsumerStatefulWidget {
 class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   bool _showControls = true;
   bool _showQuickDrawer = false;
-  VideoController? _videoController;
+  bool _surfaceReady = false;
   List<QualityVariant> _qualityVariants = [];
   String _currentQuality = 'Auto';
   double _currentSpeed = 1.0;
@@ -63,52 +62,49 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
 
   late String _currentChannelName;
   late String _currentStreamUrl;
-  String? _currentLogoUrl;
   WatchContentInfo? _currentContentInfo;
   int? _currentEpisodeIndex;
   List<EpisodeItem>? _episodePlaylist;
   Timer? _zapDebounceTimer;
   Timer? _hideControlsTimer;
 
-  bool get _isLive => _currentContentInfo?.contentType != 'vod' && _currentContentInfo?.contentType != 'series';
-  bool get _hasPrevEpisode => _episodePlaylist != null && _currentEpisodeIndex != null && _currentEpisodeIndex! > 0;
-  bool get _hasNextEpisode => _episodePlaylist != null && _currentEpisodeIndex != null && (_currentEpisodeIndex! + 1) < _episodePlaylist!.length;
+  bool get _isLive =>
+      _currentContentInfo?.contentType != 'vod' &&
+      _currentContentInfo?.contentType != 'series';
+  bool get _hasPrevEpisode =>
+      _episodePlaylist != null &&
+      _currentEpisodeIndex != null &&
+      _currentEpisodeIndex! > 0;
+  bool get _hasNextEpisode =>
+      _episodePlaylist != null &&
+      _currentEpisodeIndex != null &&
+      (_currentEpisodeIndex! + 1) < _episodePlaylist!.length;
 
   @override
   void initState() {
     super.initState();
     _currentChannelName = widget.channelName;
     _currentStreamUrl = widget.streamUrl;
-    _currentLogoUrl = widget.logoUrl;
     _currentContentInfo = widget.contentInfo;
     _currentEpisodeIndex = widget.currentEpisodeIndex;
     _episodePlaylist = widget.episodePlaylist;
 
-    // Create VideoController for media_kit on native platforms
-    if (!kIsWeb) {
-      final playerService = ref.read(videoPlayerServiceProvider);
-      if (playerService is MediaKitPlayerService) {
-        if (playerService.player != null) {
-          _videoController = VideoController(playerService.player!);
-        } else {
-          playerService.initialize().then((_) {
-            if (mounted && playerService.player != null) {
-              setState(() {
-                _videoController = VideoController(playerService.player!);
-              });
-            }
-          });
-        }
+    // Ensure the player is initialized so the render surface is available.
+    // The surface widget itself comes from the VideoPlayerService abstraction.
+    final playerService = ref.read(videoPlayerServiceProvider);
+    playerService.initialize().then((_) {
+      if (mounted) {
+        setState(() => _surfaceReady = true);
       }
-    }
+    });
 
     // Start playback
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(playerProvider.notifier).playStream(
-        _currentStreamUrl,
-        contentInfo: _currentContentInfo,
-        seekToMs: widget.seekToMs,
-      );
+            _currentStreamUrl,
+            contentInfo: _currentContentInfo,
+            seekToMs: widget.seekToMs,
+          );
     });
 
     _resetHideControlsTimer();
@@ -116,13 +112,17 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   }
 
   void _switchEpisode(int newIndex) {
-    if (_episodePlaylist == null || newIndex < 0 || newIndex >= _episodePlaylist!.length) return;
+    if (_episodePlaylist == null ||
+        newIndex < 0 ||
+        newIndex >= _episodePlaylist!.length) {
+      return;
+    }
     final nextEp = _episodePlaylist![newIndex];
     setState(() {
       _currentEpisodeIndex = newIndex;
-      _currentChannelName = '${widget.contentInfo?.name ?? 'Série'} - ${nextEp.title}';
+      _currentChannelName =
+          '${widget.contentInfo?.name ?? 'Série'} - ${nextEp.title}';
       _currentStreamUrl = nextEp.streamUrl;
-      _currentLogoUrl = nextEp.coverUrl ?? widget.logoUrl;
       _currentContentInfo = WatchContentInfo(
         channelId: widget.contentInfo?.channelId ?? nextEp.seriesId,
         name: widget.contentInfo?.name ?? 'Série',
@@ -139,9 +139,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
 
     ref.read(playerProvider.notifier).stop().then((_) {
       ref.read(playerProvider.notifier).playStream(
-        _currentStreamUrl,
-        contentInfo: _currentContentInfo,
-      );
+            _currentStreamUrl,
+            contentInfo: _currentContentInfo,
+          );
       _resetHideControlsTimer();
     });
   }
@@ -166,10 +166,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         onAddExternalSubtitle: (uri) {
           setState(() => _selectedSubtitleTrackId = 'external');
           ref.read(playerProvider.notifier).addExternalSubtitle(
-            uri,
-            title: 'Português (Online/Externo)',
-            language: 'pt-BR',
-          );
+                uri,
+                title: 'Português (Online/Externo)',
+                language: 'pt-BR',
+              );
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Legenda carregada com sucesso!')),
           );
@@ -197,7 +197,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       currentIndex = channels.indexWhere((c) => c.id == currentId);
     }
     if (currentIndex == -1) {
-      currentIndex = channels.indexWhere((c) => c.streamUrl == _currentStreamUrl);
+      currentIndex =
+          channels.indexWhere((c) => c.streamUrl == _currentStreamUrl);
     }
     if (currentIndex == -1) currentIndex = 0;
 
@@ -212,7 +213,6 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     setState(() {
       _currentChannelName = targetChannel.name;
       _currentStreamUrl = targetChannel.streamUrl;
-      _currentLogoUrl = targetChannel.logoUrl;
       _currentContentInfo = WatchContentInfo(
         channelId: targetChannel.id,
         name: targetChannel.name,
@@ -225,9 +225,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     _zapDebounceTimer?.cancel();
     _zapDebounceTimer = Timer(const Duration(milliseconds: 300), () {
       ref.read(playerProvider.notifier).playStream(
-        _currentStreamUrl,
-        contentInfo: _currentContentInfo,
-      );
+            _currentStreamUrl,
+            contentInfo: _currentContentInfo,
+          );
       _loadQualityVariants();
     });
 
@@ -238,7 +238,6 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   void dispose() {
     _zapDebounceTimer?.cancel();
     _hideControlsTimer?.cancel();
-    _videoController = null;
     super.dispose();
   }
 
@@ -252,14 +251,20 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       if (mounted && variants.isNotEmpty) {
         setState(() => _qualityVariants = variants);
       }
-    } catch (_) {}
+    } catch (e) {
+      // Variantes de qualidade são opcionais; sem elas o seletor fica
+      // oculto (distinguível), mas a falha deve ficar registrada.
+      appLogger.w('[Player] Falha ao carregar variantes de qualidade: $e');
+    }
   }
 
   Future<void> _switchQuality(QualityVariant? variant) async {
     final url = variant?.streamUrl ?? _currentStreamUrl;
     setState(() => _currentQuality = variant?.name ?? 'Auto');
     await ref.read(playerProvider.notifier).stop();
-    await ref.read(playerProvider.notifier).playStream(url, contentInfo: _currentContentInfo);
+    await ref
+        .read(playerProvider.notifier)
+        .playStream(url, contentInfo: _currentContentInfo);
   }
 
   /// Safely stop playback and navigate back.
@@ -269,9 +274,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     if (_isExiting) return;
     _isExiting = true;
 
-    // 1. Remove video widget from tree by nulling controller
+    // 1. Remove video widget from tree
     setState(() {
-      _videoController = null;
+      _surfaceReady = false;
     });
 
     // 2. Give the native surface time to release
@@ -299,15 +304,22 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           onTap: () => setState(() => _showControls = !_showControls),
           child: Stack(
             children: [
-              // Video surface
-              if (_videoController != null)
-                Center(
-                  child: Video(
-                    controller: _videoController!,
-                  ),
-                )
-              else
-                const SizedBox.expand(child: ColoredBox(color: Colors.black)),
+              // Video surface — provided by the VideoPlayerService abstraction
+              Builder(
+                builder: (context) {
+                  final surface = _surfaceReady
+                      ? ref
+                          .watch(videoPlayerServiceProvider)
+                          .buildVideoSurface()
+                      : null;
+                  if (surface != null) {
+                    return Center(child: surface);
+                  }
+                  return const SizedBox.expand(
+                    child: ColoredBox(color: Colors.black),
+                  );
+                },
+              ),
 
               // Buffering — indicador da marca (triângulo de play pulsante)
               // com grace period de 2s: não pisca em streams que conectam
@@ -427,8 +439,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                       final pos = state.playbackState.position;
                       final target = pos - const Duration(seconds: 10);
                       ref.read(playerProvider.notifier).seek(
-                        target < Duration.zero ? Duration.zero : target,
-                      );
+                            target < Duration.zero ? Duration.zero : target,
+                          );
                     },
                     onForward10: () {
                       final pos = state.playbackState.position;
@@ -460,12 +472,14 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                   _hasNextEpisode &&
                   state.playbackState.duration > const Duration(minutes: 1) &&
                   state.playbackState.position >=
-                      state.playbackState.duration - const Duration(seconds: 15)) ...[
+                      state.playbackState.duration -
+                          const Duration(seconds: 15)) ...[
                 Positioned(
                   bottom: 90,
                   right: 24,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.92),
                       borderRadius: BorderRadius.circular(14),
@@ -481,7 +495,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.skip_next_rounded, color: AppColors.primary, size: 24),
+                        const Icon(Icons.skip_next_rounded,
+                            color: AppColors.primary, size: 24),
                         const SizedBox(width: 10),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -496,7 +511,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                               ),
                             ),
                             Text(
-                              _episodePlaylist![_currentEpisodeIndex! + 1].title,
+                              _episodePlaylist![_currentEpisodeIndex! + 1]
+                                  .title,
                               style: const TextStyle(
                                 color: Colors.white70,
                                 fontSize: 11,
@@ -508,19 +524,25 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 8),
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
-                          onPressed: () => _switchEpisode(_currentEpisodeIndex! + 1),
-                          child: const Text('Assistir Agora', style: TextStyle(color: Colors.white, fontSize: 12)),
+                          onPressed: () =>
+                              _switchEpisode(_currentEpisodeIndex! + 1),
+                          child: const Text('Assistir Agora',
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 12)),
                         ),
                         const SizedBox(width: 8),
                         IconButton(
-                          icon: const Icon(Icons.close_rounded, color: Colors.white60, size: 18),
+                          icon: const Icon(Icons.close_rounded,
+                              color: Colors.white60, size: 18),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
-                          onPressed: () => setState(() => _dismissedAutoPlay = true),
+                          onPressed: () =>
+                              setState(() => _dismissedAutoPlay = true),
                         ),
                       ],
                     ),
@@ -540,7 +562,6 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                       setState(() {
                         _currentChannelName = channel.name;
                         _currentStreamUrl = channel.streamUrl;
-                        _currentLogoUrl = channel.logoUrl;
                         _currentContentInfo = WatchContentInfo(
                           channelId: channel.id,
                           name: channel.name,
@@ -550,9 +571,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                         _showQuickDrawer = false;
                       });
                       ref.read(playerProvider.notifier).playStream(
-                        _currentStreamUrl,
-                        contentInfo: _currentContentInfo,
-                      );
+                            _currentStreamUrl,
+                            contentInfo: _currentContentInfo,
+                          );
                       _loadQualityVariants();
                       _resetHideControlsTimer();
                     },
@@ -626,20 +647,18 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           setState(() => _showQuickDrawer = !_showQuickDrawer);
         } else {
           // Seek -10s on VOD
-          final service = ref.read(videoPlayerServiceProvider);
-          if (service is MediaKitPlayerService && service.player != null) {
-            final pos = service.player!.state.position;
-            final target = pos - const Duration(seconds: 10);
-            service.player!.seek(target < Duration.zero ? Duration.zero : target);
-          }
+          final pos = ref.read(playerProvider).playbackState.position;
+          final target = pos - const Duration(seconds: 10);
+          ref.read(playerProvider.notifier).seek(
+                target < Duration.zero ? Duration.zero : target,
+              );
         }
       case LogicalKeyboardKey.arrowRight:
         // Seek +10s on VOD
-        final service = ref.read(videoPlayerServiceProvider);
-        if (service is MediaKitPlayerService && service.player != null) {
-          final pos = service.player!.state.position;
-          service.player!.seek(pos + const Duration(seconds: 10));
-        }
+        final pos = ref.read(playerProvider).playbackState.position;
+        ref
+            .read(playerProvider.notifier)
+            .seek(pos + const Duration(seconds: 10));
       case LogicalKeyboardKey.keyM:
         // Mute toggle
         final currentVol = ref.read(playerProvider).playbackState.volume;

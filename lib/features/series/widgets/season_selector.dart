@@ -39,23 +39,18 @@ class SeasonSelector extends StatelessWidget {
                 vertical: 10,
               ),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.primary
-                    : AppColors.surfaceElevated,
+                color:
+                    isSelected ? AppColors.primary : AppColors.surfaceElevated,
                 borderRadius: BorderRadius.circular(10),
-                border: isSelected
-                    ? null
-                    : Border.all(color: AppColors.divider),
+                border:
+                    isSelected ? null : Border.all(color: AppColors.divider),
               ),
               child: Center(
                 child: Text(
                   label,
                   style: AppTypography.label.copyWith(
-                    color: isSelected
-                        ? Colors.white
-                        : AppColors.textSecondary,
-                    fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.w400,
+                    color: isSelected ? Colors.white : AppColors.textSecondary,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                   ),
                 ),
               ),

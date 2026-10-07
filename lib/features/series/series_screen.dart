@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nebula_iptv/features/shared/widgets/shortcut_context_menu.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/empty_view.dart';
 import 'package:nebula_iptv/core/widgets/error_view.dart';
 import 'package:nebula_iptv/core/widgets/loading_view.dart';
-import 'package:nebula_iptv/features/shared/widgets/content_row.dart';
-import 'package:nebula_iptv/features/shared/widgets/hero_banner.dart';
 import 'package:nebula_iptv/features/series/providers/series_provider.dart';
-import 'package:nebula_iptv/features/shell/providers/shell_navigation_provider.dart';
 import 'package:nebula_iptv/features/series/series_detail_screen.dart';
 import 'package:nebula_iptv/features/series/widgets/series_card.dart';
+import 'package:nebula_iptv/features/shared/widgets/content_row.dart';
+import 'package:nebula_iptv/features/shared/widgets/hero_banner.dart';
+import 'package:nebula_iptv/features/shared/widgets/shortcut_context_menu.dart';
+import 'package:nebula_iptv/features/shell/providers/shell_navigation_provider.dart';
 import 'package:nebula_iptv/features/vod/widgets/vod_category_chips.dart';
 
 /// Series browsing screen — Netflix-style layout.
@@ -52,7 +52,9 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
     }
 
     // Show grid when searching, filtering by category, or "Ver todos"
-    if (_showGrid || state.searchQuery.isNotEmpty || state.selectedCategory != null) {
+    if (_showGrid ||
+        state.searchQuery.isNotEmpty ||
+        state.selectedCategory != null) {
       return _buildGridView(context, state);
     }
 
@@ -70,7 +72,8 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
       ..sort((a, b) => b.value.length.compareTo(a.value.length));
     final topCategories = sortedCategories.take(15).toList();
 
-    final totalItems = 2 + topCategories.length + 1; // Hero + Search + Categories + Spacing
+    final totalItems =
+        2 + topCategories.length + 1; // Hero + Search + Categories + Spacing
 
     return ListView.builder(
       padding: EdgeInsets.zero,
@@ -158,8 +161,8 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                 _gridCategory = seriesList.first.categoryName;
               });
               ref.read(seriesScreenProvider.notifier).filterByCategory(
-                seriesList.first.categoryName,
-              );
+                    seriesList.first.categoryName,
+                  );
             },
             onItemTap: (itemIdx) {
               _openDetail(context, displaySeries[itemIdx]);
@@ -167,7 +170,8 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
             onItemSecondaryTap: (itemIdx, position) {
               final series = displaySeries[itemIdx];
               showShortcutContextMenu(
-                context, ref,
+                context,
+                ref,
                 position: position,
                 channelId: series.id,
                 channelName: series.name,
@@ -189,14 +193,18 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
             children: [
               if (_showGrid)
                 IconButton(
-                  icon: const Icon(Icons.arrow_back_rounded,
-                      color: AppColors.textPrimary),
+                  icon: const Icon(
+                    Icons.arrow_back_rounded,
+                    color: AppColors.textPrimary,
+                  ),
                   onPressed: () {
                     setState(() {
                       _showGrid = false;
                       _gridCategory = null;
                     });
-                    ref.read(seriesScreenProvider.notifier).filterByCategory(null);
+                    ref
+                        .read(seriesScreenProvider.notifier)
+                        .filterByCategory(null);
                     ref.read(seriesScreenProvider.notifier).search('');
                   },
                 ),
@@ -240,7 +248,9 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
               categories: state.categories,
               selectedCategory: state.selectedCategory,
               onSelected: (category) {
-                ref.read(seriesScreenProvider.notifier).filterByCategory(category);
+                ref
+                    .read(seriesScreenProvider.notifier)
+                    .filterByCategory(category);
               },
             ),
           ),
@@ -274,8 +284,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                         _getCrossAxisCount(constraints.maxWidth);
                     return GridView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      gridDelegate:
-                          SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: crossAxisCount,
                         childAspectRatio: 0.55,
                         crossAxisSpacing: 12,
