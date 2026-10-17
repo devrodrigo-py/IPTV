@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
 
 /// Interactive 5-star rating widget with half-star support.
 class StarRating extends StatelessWidget {
@@ -22,7 +23,7 @@ class StarRating extends StatelessWidget {
     final starSize = compact ? 18.0 : 28.0;
     final spacing = compact ? 2.0 : 4.0;
 
-    return Row(
+    final stars = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         for (int i = 1; i <= 5; i++) ...[
@@ -61,6 +62,26 @@ class StarRating extends StatelessWidget {
           ),
         ],
       ],
+    );
+    if (onRatingChanged == null) return stars;
+    return FocusableWidget(
+      onPressed: () async {
+        final value = await showDialog<double>(
+            context: context,
+            builder: (context) =>
+                SimpleDialog(title: const Text('Sua avaliação'), children: [
+                  for (var half = 0; half <= 10; half++)
+                    ListTile(
+                      autofocus: half / 2 == rating,
+                      title: Text(half == 0
+                          ? 'Remover avaliação'
+                          : '${half / 2} estrelas'),
+                      onTap: () => Navigator.pop(context, half / 2),
+                    ),
+                ]));
+        if (value != null) onRatingChanged?.call(value);
+      },
+      builder: (context, focused) => stars,
     );
   }
 

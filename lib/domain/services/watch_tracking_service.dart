@@ -26,156 +26,93 @@ class WatchContentInfo {
   });
 }
 
-/// Service that tracks viewing sessions and persists watch data.
-///
-/// Uses a periodic timer (every 30s) to save progress incrementally.
-/// On stop, saves final progress to both watch_history and watch_stats_daily.
+/// Persists immutable snapshots, so an old save cannot erase a new session.
 class WatchTrackingService {
   final WatchStatsDao _statsDao;
-
-  Timer? _periodicTimer;
-  WatchContentInfo? _currentContent;
-  DateTime? _sessionStart;
-  int _accumulatedMs = 0;
-  double _lastProgress = 0.0;
-  int _lastTotalDurationMs = 0;
-
-  static const _saveInterval = Duration(seconds: 30);
-
+  final Stopwatch _elapsed = Stopwatch();
+  Timer? _timer;
+  WatchContentInfo? _content;
+  int _position = 0, _duration = 0, _savedMs = 0;
+  bool _sessionCounted = false;
+  Future<void> _writes = Future.value();
   WatchTrackingService({required WatchStatsDao statsDao})
       : _statsDao = statsDao;
-
-  /// Starts tracking a viewing session.
   void startTracking(WatchContentInfo content) {
-    // Stop any existing session first
-    stopTracking();
-
-    _currentContent = content;
-    _sessionStart = DateTime.now();
-    _accumulatedMs = 0;
-    _lastProgress = 0.0;
-    _lastTotalDurationMs = 0;
-
-    appLogger.d(
-        '[WatchTrack] Started tracking: ${content.name} (${content.contentType})');
-
-    // Start periodic save
-    _periodicTimer = Timer.periodic(_saveInterval, (_) => _periodicSave());
+    unawaited(stopTracking());
+    _content = content;
+    _position = _duration = _savedMs = 0;
+    _sessionCounted = false;
+    _elapsed.reset();
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) => _save());
   }
 
-  /// Updates the current playback progress (called by player state listener).
-  int _lastPositionMs = 0;
-
-  void updateProgress({
-    required Duration position,
-    required Duration duration,
-  }) {
-    if (_currentContent == null) return;
-
-    _lastPositionMs = position.inMilliseconds;
-    _lastTotalDurationMs = duration.inMilliseconds;
-
-    if (duration.inMilliseconds > 0) {
-      _lastProgress =
-          (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0);
-    } else if (position.inMilliseconds > 0) {
-      // Duration unknown — store position as "progress" for resume purposes
-      // We'll use total_duration_ms = 0 as signal that we only have position
-      _lastProgress = 0.0;
-    }
-
-    // Accumulate watch time
-    final now = DateTime.now();
-    if (_sessionStart != null) {
-      _accumulatedMs = now.difference(_sessionStart!).inMilliseconds;
+  void setPlaying(bool playing) {
+    if (_content == null) return;
+    if (playing) {
+      _elapsed.start();
+    } else {
+      _elapsed.stop();
     }
   }
 
-  /// Stops tracking and saves final data.
-  Future<void> stopTracking() async {
-    if (_currentContent == null) return;
-
-    _periodicTimer?.cancel();
-    _periodicTimer = null;
-
-    // Calculate final accumulated time
-    if (_sessionStart != null) {
-      _accumulatedMs = DateTime.now().difference(_sessionStart!).inMilliseconds;
-    }
-
-    // Final save
-    await _saveProgress();
-
-    appLogger.d(
-      '[WatchTrack] Stopped tracking: ${_currentContent!.name} '
-      '(${_accumulatedMs ~/ 1000}s, ${(_lastProgress * 100).toStringAsFixed(1)}%)',
-    );
-
-    _currentContent = null;
-    _sessionStart = null;
-    _accumulatedMs = 0;
-    _lastProgress = 0.0;
-    _lastTotalDurationMs = 0;
+  void updateProgress(
+      {required Duration position, required Duration duration}) {
+    if (_content == null) return;
+    _position = position.inMilliseconds;
+    _duration = duration.inMilliseconds;
   }
 
-  /// Periodic save (every 30s).
-  Future<void> _periodicSave() async {
-    if (_currentContent == null) return;
-    // Always recalculate accumulated time from session start
-    if (_sessionStart != null) {
-      _accumulatedMs = DateTime.now().difference(_sessionStart!).inMilliseconds;
-    }
-    await _saveProgress();
+  Future<void> stopTracking() {
+    _timer?.cancel();
+    _timer = null;
+    _elapsed.stop();
+    final saved = _save();
+    _content = null;
+    _elapsed.reset();
+    return saved;
   }
 
-  /// Persists current progress to the database.
-  Future<void> _saveProgress() async {
-    final content = _currentContent;
-    if (content == null || _accumulatedMs < 1000) return; // Skip if < 1s
-
-    // Save to enhanced watch history
-    try {
-      // If duration is unknown but we have position, store position for resume
-      final effectiveTotalDuration = _lastTotalDurationMs > 0
-          ? _lastTotalDurationMs
-          : _lastPositionMs * 2; // Estimate: assume we're halfway
-      final effectiveProgress = _lastTotalDurationMs > 0
-          ? _lastProgress
-          : (_lastPositionMs > 0 ? 0.5 : 0.0); // Assume ~50% for resume
-
-      await _statsDao.upsertWatchEntry(
-        channelId: content.channelId,
-        watchedDurationMs:
-            _lastPositionMs > 0 ? _lastPositionMs : _accumulatedMs,
-        progressPercent: effectiveProgress,
-        totalDurationMs: effectiveTotalDuration,
-        contentType: content.contentType,
-        contentName: content.name,
-        seriesId: content.seriesId,
-        seasonNumber: content.seasonNumber,
-        episodeNumber: content.episodeNumber,
-        episodeTitle: content.episodeTitle,
-        thumbnailUrl: content.thumbnailUrl,
-      );
-
-      // Save to daily stats
-      final today = DateTime.now().toIso8601String().substring(0, 10);
-      await _statsDao.upsertDailyStat(
-        date: today,
-        channelId: content.channelId,
-        contentType: content.contentType,
-        watchMs: _accumulatedMs,
-      );
-
-      appLogger.d(
-          '[WatchTrack] Saved: ${content.name} (${_accumulatedMs ~/ 1000}s)');
-    } catch (e) {
-      appLogger.w('[WatchTrack] Save failed: $e');
-    }
+  Future<void> _save() {
+    final content = _content;
+    final elapsed = _elapsed.elapsedMilliseconds;
+    if (content == null || elapsed < 1000) return _writes;
+    final position = _position;
+    final duration = _duration;
+    final delta = (elapsed - _savedMs).clamp(0, elapsed);
+    final countSession = !_sessionCounted;
+    _savedMs = elapsed;
+    _sessionCounted = true;
+    _writes = _writes.then((_) async {
+      try {
+        await _statsDao.upsertWatchEntry(
+            channelId: content.channelId,
+            watchedDurationMs: position,
+            progressPercent:
+                duration > 0 ? (position / duration).clamp(0, 1) : 0,
+            totalDurationMs: duration,
+            contentType: content.contentType,
+            contentName: content.name,
+            seriesId: content.seriesId,
+            seasonNumber: content.seasonNumber,
+            episodeNumber: content.episodeNumber,
+            episodeTitle: content.episodeTitle,
+            thumbnailUrl: content.thumbnailUrl);
+        if (delta > 0) {
+          await _statsDao.upsertDailyStat(
+              date: DateTime.now().toIso8601String().substring(0, 10),
+              channelId: content.channelId,
+              contentType: content.contentType,
+              watchMs: delta,
+              countSession: countSession);
+        }
+      } catch (_) {
+        appLogger.w('watch.progress.save_failed');
+      }
+    });
+    return _writes;
   }
 
-  /// Disposes the service and stops any active tracking.
   void dispose() {
-    stopTracking();
+    unawaited(stopTracking());
   }
 }

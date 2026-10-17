@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/core/utils/platform_detector.dart';
 import 'package:nebula_iptv/core/widgets/empty_view.dart';
 import 'package:nebula_iptv/core/widgets/error_view.dart';
 import 'package:nebula_iptv/core/widgets/loading_view.dart';
+import 'package:nebula_iptv/core/widgets/remote_grid_view.dart';
+import 'package:nebula_iptv/core/widgets/remote_text_field.dart';
 import 'package:nebula_iptv/features/shared/widgets/content_row.dart';
 import 'package:nebula_iptv/features/shared/widgets/hero_banner.dart';
 import 'package:nebula_iptv/features/shared/widgets/shortcut_context_menu.dart';
@@ -27,6 +31,7 @@ class VodScreen extends ConsumerStatefulWidget {
 
 class _VodScreenState extends ConsumerState<VodScreen> {
   bool _showGrid = false;
+  LocalHistoryEntry? _categoryHistory;
   String? _gridCategory;
 
   @override
@@ -61,6 +66,20 @@ class _VodScreenState extends ConsumerState<VodScreen> {
     return _buildNetflixView(context, state);
   }
 
+  void _rememberCategoryBack() {
+    if (_categoryHistory != null) return;
+    _categoryHistory = LocalHistoryEntry(onRemove: () {
+      _categoryHistory = null;
+      if (!mounted) return;
+      setState(() {
+        _showGrid = false;
+        _gridCategory = null;
+      });
+      ref.read(vodScreenProvider.notifier).filterByCategory(null);
+    });
+    ModalRoute.of(context)?.addLocalHistoryEntry(_categoryHistory!);
+  }
+
   String? _formatYear(String? date) {
     if (date == null || date.length < 4) return null;
     return date.substring(0, 4);
@@ -76,7 +95,7 @@ class _VodScreenState extends ConsumerState<VodScreen> {
         2 + topCategories.length + 1; // Hero + Search + Categories + Spacing
 
     return ListView.builder(
-      padding: EdgeInsets.zero,
+      scrollCacheExtent: ScrollCacheExtent.pixels(800), padding: EdgeInsets.zero,
       itemCount: totalItems,
       itemBuilder: (context, index) {
         if (index == 0) {
@@ -98,10 +117,11 @@ class _VodScreenState extends ConsumerState<VodScreen> {
         }
 
         if (index == 1) {
+          if (PlatformDetector.isTv(context)) return const SizedBox(height: 16);
           // Search bar
           return Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-            child: TextField(
+            child: RemoteTextField(
               onChanged: (query) {
                 ref.read(vodScreenProvider.notifier).search(query);
               },
@@ -156,6 +176,7 @@ class _VodScreenState extends ConsumerState<VodScreen> {
               );
             }).toList(),
             onSeeAll: () {
+              _rememberCategoryBack();
               setState(() {
                 _showGrid = true;
                 _gridCategory = movies.first.categoryName;
@@ -207,7 +228,7 @@ class _VodScreenState extends ConsumerState<VodScreen> {
                   },
                 ),
               Expanded(
-                child: TextField(
+                child: RemoteTextField(
                   onChanged: (query) {
                     ref.read(vodScreenProvider.notifier).search(query);
                   },
@@ -278,14 +299,9 @@ class _VodScreenState extends ConsumerState<VodScreen> {
                   builder: (context, constraints) {
                     final crossAxisCount =
                         _getCrossAxisCount(constraints.maxWidth);
-                    return GridView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: crossAxisCount,
-                        childAspectRatio: 0.6,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                      ),
+                    return RemoteGridView(
+                      columns: crossAxisCount,
+                      aspectRatio: 0.6,
                       itemCount: state.filteredMovies.length,
                       itemBuilder: (context, index) {
                         final movie = state.filteredMovies[index];

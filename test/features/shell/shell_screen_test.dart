@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nebula_iptv/core/theme/app_theme.dart';
+import 'package:nebula_iptv/core/utils/platform_detector.dart';
 import 'package:nebula_iptv/data/database/app_database.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart'
     show databaseProvider;
@@ -43,6 +44,8 @@ Future<void> pumpTestableWidget(WidgetTester tester, Widget child) async {
 
 void main() {
   group('ShellScreen', () {
+    setUp(() => PlatformDetector.overrideIsTv(false));
+    tearDown(() => PlatformDetector.overrideIsTv(null));
     testWidgets('renders sidebar on desktop layout', (tester) async {
       tester.view.physicalSize = const Size(1280, 800);
       tester.view.devicePixelRatio = 1.0;

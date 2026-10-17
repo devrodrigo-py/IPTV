@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
 
 /// Dialog for creating/editing a profile.
 class ProfileEditDialog extends StatefulWidget {
@@ -101,9 +102,9 @@ class _ProfileEditDialogState extends State<ProfileEditDialog> {
               children: _availableColors.map((hex) {
                 final color = _parseColor(hex);
                 final isSelected = hex == _selectedColor;
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedColor = hex),
-                  child: Container(
+                return FocusableWidget(
+                  onPressed: () => setState(() => _selectedColor = hex),
+                  builder: (context, focused) => Container(
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
@@ -135,9 +136,9 @@ class _ProfileEditDialogState extends State<ProfileEditDialog> {
                 final (name, icon) = entry;
                 final isSelected = name == _selectedIcon;
                 final color = _parseColor(_selectedColor);
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedIcon = name),
-                  child: Container(
+                return FocusableWidget(
+                  onPressed: () => setState(() => _selectedIcon = name),
+                  builder: (context, focused) => Container(
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(

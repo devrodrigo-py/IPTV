@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
 import 'package:nebula_iptv/features/series/providers/series_provider.dart';
 
 /// Season selector tabs — displays season buttons (T1, T2, T3...)
@@ -30,13 +31,14 @@ class SeasonSelector extends StatelessWidget {
           final isSelected = index == selectedIndex;
           final label = season.name ?? 'Temporada ${season.seasonNumber}';
 
-          return GestureDetector(
-            onTap: () => onSelected(index),
-            child: AnimatedContainer(
+          return FocusableWidget(
+            onPressed: () => onSelected(index),
+            autofocus: index == selectedIndex,
+            builder: (context, focused) => AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(
                 horizontal: 16,
-                vertical: 10,
+                vertical: 6,
               ),
               decoration: BoxDecoration(
                 color:

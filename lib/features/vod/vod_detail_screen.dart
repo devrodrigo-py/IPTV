@@ -251,11 +251,11 @@ class _VodDetailScreenState extends ConsumerState<VodDetailScreen> {
                   if (_synopsis != null && _synopsis!.isNotEmpty) ...[
                     Text('Sinopse', style: AppTypography.title),
                     const SizedBox(height: 8),
-                    GestureDetector(
-                      onTap: () => setState(
+                    FocusableWidget(
+                      onPressed: () => setState(
                         () => _synopsisExpanded = !_synopsisExpanded,
                       ),
-                      child: Column(
+                      builder: (context, focused) => Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
@@ -471,6 +471,7 @@ class _VodDetailScreenState extends ConsumerState<VodDetailScreen> {
 
   Widget _buildPlayButton() {
     return FocusableWidget(
+      autofocus: true,
       onPressed: () => _playMovie(context),
       borderRadius: BorderRadius.circular(12),
       builder: (context, isFocused) => Container(

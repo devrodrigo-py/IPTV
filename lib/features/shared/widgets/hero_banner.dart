@@ -1,311 +1,217 @@
 import 'dart:async';
-import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
 import 'package:nebula_iptv/core/widgets/nebula_cached_image.dart';
 
-/// Data model for a hero banner item.
 class HeroBannerItem {
   final String title;
-  final String? subtitle;
-  final String? imageUrl;
-  final VoidCallback? onPlay;
-  final VoidCallback? onDetails;
-
-  const HeroBannerItem({
-    required this.title,
-    this.subtitle,
-    this.imageUrl,
-    this.onPlay,
-    this.onDetails,
-  });
+  final String? subtitle, imageUrl, description, label;
+  final VoidCallback? onPlay, onDetails;
+  const HeroBannerItem(
+      {required this.title,
+      this.subtitle,
+      this.imageUrl,
+      this.description,
+      this.label,
+      this.onPlay,
+      this.onDetails});
 }
 
-/// Netflix-style hero banner with auto-advancing pages.
-///
-/// Full-width banner (~300px) with backdrop image, gradient overlay,
-/// title, subtitle, and action buttons.
-/// Auto-advances every 8 seconds when multiple items are provided.
+/// Actions participate in native traversal. The banner never consumes Back
+/// or directional keys; changing the featured title is an explicit action.
 class HeroBanner extends StatefulWidget {
   final List<HeroBannerItem> items;
   final double height;
-
-  const HeroBanner({
-    super.key,
-    required this.items,
-    this.height = 320,
-  });
-
+  const HeroBanner({super.key, required this.items, this.height = 380});
   @override
   State<HeroBanner> createState() => _HeroBannerState();
 }
 
 class _HeroBannerState extends State<HeroBanner> {
-  late final PageController _pageController;
-  int _currentPage = 0;
-  Timer? _autoAdvanceTimer;
-
+  int _index = 0;
+  bool _focused = false;
+  Timer? _timer;
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
-    if (widget.items.length > 1) {
-      _startAutoAdvance();
-    }
+    _timer = Timer.periodic(const Duration(seconds: 12), (_) {
+      if (!mounted ||
+          _focused ||
+          widget.items.length < 2 ||
+          MediaQuery.disableAnimationsOf(context) ||
+          ModalRoute.of(context)?.isCurrent != true) {
+        return;
+      }
+      setState(() => _index = (_index + 1) % widget.items.length);
+    });
+  }
+
+  @override
+  void didUpdateWidget(HeroBanner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_index >= widget.items.length) _index = 0;
   }
 
   @override
   void dispose() {
-    _autoAdvanceTimer?.cancel();
-    _pageController.dispose();
+    _timer?.cancel();
     super.dispose();
-  }
-
-  void _startAutoAdvance() {
-    _autoAdvanceTimer = Timer.periodic(const Duration(seconds: 8), (_) {
-      if (!mounted) return;
-      final nextPage = (_currentPage + 1) % widget.items.length;
-      _pageController.animateToPage(
-        nextPage,
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeInOutCubic,
-      );
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     if (widget.items.isEmpty) return const SizedBox.shrink();
-
-    return SizedBox(
-      height: widget.height,
-      child: Stack(
-        children: [
-          // Page view with banner items
-          PageView.builder(
-            controller: _pageController,
-            itemCount: widget.items.length,
-            onPageChanged: (page) {
-              setState(() => _currentPage = page);
-            },
-            itemBuilder: (context, index) {
-              return _HeroBannerPage(item: widget.items[index]);
-            },
-          ),
-
-          // Dot indicators (bottom center)
-          if (widget.items.length > 1)
-            Positioned(
-              bottom: 16,
-              left: 0,
-              right: 0,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  widget.items.length,
-                  (index) => AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: _currentPage == index ? 20 : 8,
-                    height: 4,
+    final item = widget.items[_index];
+    return Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onFocusChange: (value) => _focused = value,
+        child: SizedBox(
+            height: widget.height,
+            child: LayoutBuilder(builder: (context, constraints) {
+              final compact = constraints.maxWidth < 600;
+              return Stack(fit: StackFit.expand, children: [
+                Positioned.fill(
+                    left: compact ? 0 : constraints.maxWidth * .28,
+                    child: NebulaCachedImage(
+                        imageUrl: item.imageUrl,
+                        fit: BoxFit.cover,
+                        cacheWidth: 1280,
+                        placeholder:
+                            const ColoredBox(color: AppColors.surface))),
+                const DecoratedBox(
                     decoration: BoxDecoration(
-                      color: _currentPage == index
-                          ? AppColors.primary
-                          : AppColors.textSecondary.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
+                        gradient: LinearGradient(colors: [
+                  AppColors.background,
+                  Color(0xCC0A0A12),
+                  Color(0x220A0A12)
+                ], stops: [
+                  0,
+                  .45,
+                  1
+                ]))),
+                const DecoratedBox(
+                    decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                      Colors.transparent,
+                      Colors.transparent,
+                      AppColors.background
+                    ],
+                            stops: [
+                      0,
+                      .68,
+                      1
+                    ]))),
+                Padding(
+                    padding: EdgeInsets.fromLTRB(compact ? 24 : 32, 24, 24, 40),
+                    child: Align(
+                        alignment: Alignment.bottomLeft,
+                        child: SizedBox(
+                            width: compact
+                                ? constraints.maxWidth
+                                : constraints.maxWidth * .65,
+                            child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(item.label ?? 'EM DESTAQUE',
+                                      style: AppTypography.label.copyWith(
+                                          color: AppColors.primary,
+                                          letterSpacing: 2,
+                                          fontSize: 12)),
+                                  const SizedBox(height: 12),
+                                  Text(item.title,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppTypography.display.copyWith(
+                                          fontSize: compact ? 30 : 38,
+                                          height: 1.08)),
+                                  if (item.subtitle?.isNotEmpty == true) ...[
+                                    const SizedBox(height: 12),
+                                    Text(item.subtitle!,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: AppTypography.body
+                                            .copyWith(color: Colors.white70)),
+                                  ],
+                                  if (item.description?.isNotEmpty == true) ...[
+                                    const SizedBox(height: 10),
+                                    Text(item.description!,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: AppTypography.body.copyWith(
+                                            fontSize: 15,
+                                            color: Colors.white70)),
+                                  ],
+                                  const SizedBox(height: 20),
+                                  Wrap(spacing: 12, runSpacing: 8, children: [
+                                    if (item.onPlay != null)
+                                      _HeroAction(
+                                          label: 'Assistir',
+                                          icon: Icons.play_arrow_rounded,
+                                          primary: true,
+                                          onPressed: item.onPlay!),
+                                    if (item.onDetails != null)
+                                      _HeroAction(
+                                          label: 'Mais informações',
+                                          icon: Icons.info_outline_rounded,
+                                          onPressed: item.onDetails!),
+                                  ]),
+                                ])))),
+                if (widget.items.length > 1)
+                  Positioned(
+                      right: 24,
+                      bottom: 8,
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Text('${_index + 1} / ${widget.items.length}',
+                            style: AppTypography.caption),
+                        IconButton(
+                            tooltip: 'Destaque anterior',
+                            onPressed: () => setState(() => _index =
+                                (_index - 1 + widget.items.length) %
+                                    widget.items.length),
+                            icon: const Icon(Icons.chevron_left)),
+                        IconButton(
+                            tooltip: 'Próximo destaque',
+                            onPressed: () => setState(() =>
+                                _index = (_index + 1) % widget.items.length),
+                            icon: const Icon(Icons.chevron_right)),
+                      ])),
+              ]);
+            })));
   }
 }
 
-class _HeroBannerPage extends StatelessWidget {
-  final HeroBannerItem item;
-
-  const _HeroBannerPage({required this.item});
-
+class _HeroAction extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onPressed;
+  final bool primary;
+  const _HeroAction(
+      {required this.label,
+      required this.icon,
+      required this.onPressed,
+      this.primary = false});
   @override
-  Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // Background image or gradient
-        if (item.imageUrl != null && item.imageUrl!.isNotEmpty)
-          Stack(
-            fit: StackFit.expand,
-            children: [
-              // Blurred fill (handles any aspect ratio gracefully)
-              ImageFiltered(
-                imageFilter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                child: NebulaCachedImage(
-                  imageUrl: item.imageUrl,
-                  fit: BoxFit.cover,
-                  cacheWidth: 800,
-                  placeholder: _buildGradientBackground(),
-                ),
-              ),
-              // Sharp image centered
-              NebulaCachedImage(
-                imageUrl: item.imageUrl,
-                fit: BoxFit.contain,
-                cacheWidth: 800,
-                placeholder: const SizedBox.shrink(),
-              ),
-            ],
-          )
-        else
-          _buildGradientBackground(),
-
-        // Dark gradient overlay
-        Container(
+  Widget build(BuildContext context) => FocusableWidget(
+      onPressed: onPressed,
+      builder: (_, focused) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.transparent,
-                AppColors.background.withValues(alpha: 0.3),
-                AppColors.background.withValues(alpha: 0.8),
-                AppColors.background,
-              ],
-              stops: const [0.0, 0.4, 0.7, 1.0],
-            ),
-          ),
-        ),
-
-        // Left gradient for text readability
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: [
-                AppColors.background.withValues(alpha: 0.7),
-                Colors.transparent,
-              ],
-              stops: const [0.0, 0.6],
-            ),
-          ),
-        ),
-
-        // Content (title + buttons)
-        Positioned(
-          left: 32,
-          bottom: 48,
-          right: 200,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Title
-              Text(
-                item.title,
-                style: AppTypography.display.copyWith(
-                  fontSize: 28,
-                  height: 1.2,
-                  shadows: [
-                    Shadow(
-                      color: Colors.black.withValues(alpha: 0.8),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-
-              if (item.subtitle != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  item.subtitle!,
-                  style: AppTypography.body.copyWith(
-                    color: AppColors.textSecondary,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black.withValues(alpha: 0.6),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-
-              const SizedBox(height: 16),
-
-              // Action buttons
-              Row(
-                children: [
-                  // Play button
-                  if (item.onPlay != null)
-                    ElevatedButton.icon(
-                      onPressed: item.onPlay,
-                      icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                      label: const Text('Assistir'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-
-                  const SizedBox(width: 12),
-
-                  // Details button
-                  if (item.onDetails != null)
-                    OutlinedButton.icon(
-                      onPressed: item.onDetails,
-                      icon: const Icon(Icons.info_outline_rounded, size: 18),
-                      label: const Text('Detalhes'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.textPrimary,
-                        side: BorderSide(
-                          color: AppColors.textSecondary.withValues(alpha: 0.5),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildGradientBackground() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF1a1a2e),
-            Color(0xFF16213e),
-            Color(0xFF0f3460),
-          ],
-        ),
-      ),
-    );
-  }
+              color: primary ? Colors.white : const Color(0xFF292B34),
+              borderRadius: BorderRadius.circular(6)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(icon, color: primary ? Colors.black : Colors.white, size: 23),
+            const SizedBox(width: 8),
+            Text(label,
+                style: AppTypography.body.copyWith(
+                    color: primary ? Colors.black : Colors.white,
+                    fontWeight: FontWeight.w700)),
+          ])));
 }

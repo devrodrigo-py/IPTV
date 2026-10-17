@@ -3,116 +3,91 @@ import 'dart:math';
 
 import 'package:nebula_iptv/core/logging/app_logger.dart';
 
-/// Configuration for exponential backoff reconnection (spec §13.1).
 class ReconnectionConfig {
-  /// Initial delay before first retry.
-  final Duration initialDelay;
-
-  /// Maximum delay between retries.
-  final Duration maxDelay;
-
-  /// Maximum number of retry attempts.
+  final Duration initialDelay, maxDelay;
   final int maxAttempts;
-
-  /// Multiplier for each subsequent delay.
   final double multiplier;
-
-  const ReconnectionConfig({
-    this.initialDelay = const Duration(seconds: 1),
-    this.maxDelay = const Duration(seconds: 30),
-    this.maxAttempts = 5,
-    this.multiplier = 2.0,
-  });
+  const ReconnectionConfig(
+      {this.initialDelay = const Duration(seconds: 1),
+      this.maxDelay = const Duration(seconds: 30),
+      this.maxAttempts = 5,
+      this.multiplier = 2});
 }
 
-/// State of a reconnection attempt.
-enum ReconnectionStatus {
-  idle,
-  reconnecting,
-  exhausted,
-}
+enum ReconnectionStatus { idle, reconnecting, exhausted }
 
-/// Manages automatic stream reconnection with exponential backoff.
-///
-/// After [maxAttempts] are exhausted, reports [StreamUnavailableFailure]
-/// and the UI should offer a manual "Tentar novamente" button.
+/// A single retry chain. Cancellation invalidates even an in-flight callback.
 class StreamReconnectionService {
   final ReconnectionConfig config;
   final Future<bool> Function() onReconnect;
-
-  int _attempt = 0;
+  int _attempt = 0, _generation = 0;
+  bool _busy = false, _disposed = false;
   Timer? _timer;
   final _statusController = StreamController<ReconnectionStatus>.broadcast();
-
-  StreamReconnectionService({
-    required this.onReconnect,
-    this.config = const ReconnectionConfig(),
-  });
-
-  /// Stream of reconnection status changes.
+  StreamReconnectionService(
+      {required this.onReconnect, this.config = const ReconnectionConfig()});
   Stream<ReconnectionStatus> get status => _statusController.stream;
-
-  /// Current attempt number (0 = no attempts made).
   int get attempt => _attempt;
-
-  /// Whether retries are exhausted.
   bool get isExhausted => _attempt >= config.maxAttempts;
+  bool get isReconnecting => _busy;
+  void _emit(ReconnectionStatus status) {
+    if (!_disposed) _statusController.add(status);
+  }
 
-  /// Starts the reconnection process.
   void start() {
+    if (_disposed || _busy) return;
     if (isExhausted) {
-      _statusController.add(ReconnectionStatus.exhausted);
+      _emit(ReconnectionStatus.exhausted);
       return;
     }
-
+    _busy = true;
     _attempt++;
-    _statusController.add(ReconnectionStatus.reconnecting);
-
-    final delay = _calculateDelay();
-    appLogger.i(
-      'Reconnection attempt $_attempt/${config.maxAttempts} '
-      'in ${delay.inMilliseconds}ms',
-    );
-
-    _timer = Timer(delay, _executeReconnect);
+    _emit(ReconnectionStatus.reconnecting);
+    final delay = Duration(
+        milliseconds: min(
+            (config.initialDelay.inMilliseconds *
+                    pow(config.multiplier, _attempt - 1))
+                .toInt(),
+            config.maxDelay.inMilliseconds));
+    final generation = _generation;
+    _timer = Timer(delay, () => _execute(generation));
   }
 
-  /// Resets the reconnection state (e.g., after manual retry).
-  void reset() {
-    _timer?.cancel();
-    _attempt = 0;
-    _statusController.add(ReconnectionStatus.idle);
-  }
-
-  /// Cancels any pending reconnection.
-  void cancel() {
-    _timer?.cancel();
-    _statusController.add(ReconnectionStatus.idle);
-  }
-
-  /// Calculates delay with exponential backoff.
-  Duration _calculateDelay() {
-    final delayMs = config.initialDelay.inMilliseconds *
-        pow(config.multiplier, _attempt - 1);
-    final cappedMs = min(delayMs.toInt(), config.maxDelay.inMilliseconds);
-    return Duration(milliseconds: cappedMs);
-  }
-
-  Future<void> _executeReconnect() async {
-    final success = await onReconnect();
+  Future<void> _execute(int generation) async {
+    var success = false;
+    try {
+      success = await onReconnect();
+    } catch (_) {
+      appLogger.w('player.reconnect.failed');
+    }
+    if (_disposed || generation != _generation) return;
+    _busy = false;
     if (success) {
       reset();
-    } else if (!isExhausted) {
-      start(); // Try next attempt
+    } else if (isExhausted) {
+      _emit(ReconnectionStatus.exhausted);
     } else {
-      _statusController.add(ReconnectionStatus.exhausted);
-      appLogger
-          .w('Reconnection exhausted after ${config.maxAttempts} attempts');
+      start();
     }
   }
 
-  /// Disposes resources.
+  void reset() {
+    cancel();
+    _attempt = 0;
+  }
+
+  void cancel() {
+    _generation++;
+    _timer?.cancel();
+    _timer = null;
+    _busy = false;
+    _emit(ReconnectionStatus.idle);
+  }
+
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    _generation++;
     _timer?.cancel();
     _statusController.close();
   }

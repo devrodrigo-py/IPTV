@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
+import 'package:nebula_iptv/core/logging/crash_reporter.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -16,6 +18,8 @@ final crashLog = CrashLogService();
 /// boot) ou cópia manual em desktop. Rotação: mantém as últimas [maxLines]
 /// linhas; um crash nunca deve encher o disco.
 class CrashLogService {
+  CrashReporter? reporter;
+  CrashLogService({this.reporter});
   static const _fileName = 'crash_log.txt';
   static const _maxLines = 2000;
 
@@ -39,12 +43,14 @@ class CrashLogService {
 
   /// Anexa uma entrada com timestamp. Nunca lança — é o último recurso.
   void write(String message, {Object? error, StackTrace? stackTrace}) {
+    final sink = reporter;
+    if (sink != null) unawaited(_report(sink, message, error, stackTrace));
     if (_file == null || _failedOnce) return;
     try {
       final buffer = StringBuffer()
         ..writeln('=== ${DateTime.now().toIso8601String()} ===')
-        ..writeln(message);
-      if (error != null) buffer.writeln('error: $error');
+        ..writeln(sanitizeLogMessage(message));
+      if (error != null) buffer.writeln(sanitizeLogMessage(error));
       if (stackTrace != null) {
         buffer.writeln(
           stackTrace.toString().length > 4000
@@ -61,6 +67,14 @@ class CrashLogService {
       _failedOnce = true;
       debugPrint('[CrashLog] falhou e foi desativado: $e');
     }
+  }
+
+  Future<void> _report(CrashReporter sink, String message, Object? error, StackTrace? stack) async {
+    try {
+      await sink.report(message: sanitizeLogMessage(message),
+        error: error == null ? null : sanitizeLogMessage(error),
+        stackTrace: stack == null ? null : sanitizeLogMessage(stack));
+    } catch (_) { appLogger.w('crash_reporter.delivery_failed'); }
   }
 
   void _rotateIfLarge() {

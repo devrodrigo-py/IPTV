@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/core/logging/crash_log_service.dart';
+import 'package:nebula_iptv/core/utils/platform_detector.dart';
 import 'package:nebula_iptv/data/database/daos/app_settings_dao.dart';
 import 'package:nebula_iptv/data/database/database_provider.dart';
 import 'package:nebula_iptv/data/datasources/player/media_kit_player_service.dart';
@@ -15,12 +16,12 @@ import 'package:nebula_iptv/domain/providers/epg_providers.dart';
 import 'package:nebula_iptv/domain/providers/health_check_providers.dart';
 import 'package:nebula_iptv/domain/services/alias_repair_service.dart';
 import 'package:nebula_iptv/domain/services/content_matching_service.dart';
-import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/features/player/providers/player_provider.dart';
 
 /// Bootstraps the application.
 Future<ProviderContainer> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await PlatformDetector.initialize();
 
   // Edge-to-edge no Android: a barra de status (relógio/bateria/notificações)
   // não pode sobrepor o conteúdo. Immersive sticky esconde barras de status

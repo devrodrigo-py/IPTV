@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/constants/app_constants.dart';
+import 'package:nebula_iptv/core/utils/platform_detector.dart';
 import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
 import 'package:nebula_iptv/features/channels/channels_screen.dart';
 import 'package:nebula_iptv/features/epg/epg_screen.dart';
@@ -10,6 +11,7 @@ import 'package:nebula_iptv/features/history/history_screen.dart';
 import 'package:nebula_iptv/features/home/home_screen.dart';
 import 'package:nebula_iptv/features/library/library_screen.dart';
 import 'package:nebula_iptv/features/playlists/playlists_screen.dart';
+import 'package:nebula_iptv/features/search/search_screen.dart';
 import 'package:nebula_iptv/features/series/series_screen.dart';
 import 'package:nebula_iptv/features/settings/settings_screen.dart';
 import 'package:nebula_iptv/features/shell/providers/shell_navigation_provider.dart';
@@ -17,6 +19,7 @@ import 'package:nebula_iptv/features/shell/widgets/mobile_bottom_nav.dart';
 import 'package:nebula_iptv/features/shell/widgets/sidebar.dart';
 import 'package:nebula_iptv/features/shell/widgets/top_bar.dart';
 import 'package:nebula_iptv/features/stats/stats_screen.dart';
+import 'package:nebula_iptv/features/tv/tv_navigation_shell.dart';
 import 'package:nebula_iptv/features/vod/vod_screen.dart';
 import 'package:nebula_iptv/l10n/app_localizations.dart';
 
@@ -101,6 +104,30 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    if (PlatformDetector.isTv(context)) {
+      return Scaffold(
+          body: TvNavigationShell(
+        selectedIndex: _selectedIndex,
+        onSelected: (index) =>
+            ref.read(shellNavigationProvider.notifier).state = index,
+        onSearch: () => Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const SearchScreen())),
+        destinations: [
+          TvDestination(Icons.home_outlined, l10n.home),
+          TvDestination(Icons.live_tv_outlined, l10n.channels),
+          const TvDestination(Icons.movie_outlined, 'Filmes'),
+          const TvDestination(Icons.tv_outlined, 'Séries'),
+          TvDestination(Icons.favorite_border, l10n.favorites),
+          TvDestination(Icons.history, l10n.history),
+          TvDestination(Icons.playlist_play, l10n.playlists),
+          TvDestination(Icons.schedule, l10n.epg),
+          const TvDestination(Icons.bar_chart, 'Estatísticas'),
+          TvDestination(Icons.settings_outlined, l10n.settings),
+          const TvDestination(Icons.video_library_outlined, 'Biblioteca'),
+        ],
+        child: _getContent(),
+      ));
+    }
     final screenWidth = MediaQuery.sizeOf(context).width;
     final isMobile = screenWidth < AppConstants.mobileMaxWidth;
     final isTablet = screenWidth >= AppConstants.mobileMaxWidth &&

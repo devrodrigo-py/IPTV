@@ -30,3 +30,8 @@ final credentialStoreProvider = Provider<CredentialStore>((ref) {
 MemoryCredentialStore createMemoryCredentialStore() {
   return MemoryCredentialStore();
 }
+
+/// Root dependency overridden once during bootstrap.
+final databaseProvider = Provider<AppDatabase>((ref) {
+  throw UnimplementedError('databaseProvider must be overridden');
+});

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/core/utils/platform_detector.dart';
 import 'package:nebula_iptv/core/widgets/empty_view.dart';
 import 'package:nebula_iptv/core/widgets/error_view.dart';
 import 'package:nebula_iptv/core/widgets/loading_view.dart';
+import 'package:nebula_iptv/core/widgets/remote_grid_view.dart';
+import 'package:nebula_iptv/core/widgets/remote_text_field.dart';
 import 'package:nebula_iptv/features/series/providers/series_provider.dart';
 import 'package:nebula_iptv/features/series/series_detail_screen.dart';
 import 'package:nebula_iptv/features/series/widgets/series_card.dart';
@@ -27,6 +31,7 @@ class SeriesScreen extends ConsumerStatefulWidget {
 
 class _SeriesScreenState extends ConsumerState<SeriesScreen> {
   bool _showGrid = false;
+  LocalHistoryEntry? _categoryHistory;
   String? _gridCategory;
 
   @override
@@ -61,6 +66,20 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
     return _buildNetflixView(context, state);
   }
 
+  void _rememberCategoryBack() {
+    if (_categoryHistory != null) return;
+    _categoryHistory = LocalHistoryEntry(onRemove: () {
+      _categoryHistory = null;
+      if (!mounted) return;
+      setState(() {
+        _showGrid = false;
+        _gridCategory = null;
+      });
+      ref.read(seriesScreenProvider.notifier).filterByCategory(null);
+    });
+    ModalRoute.of(context)?.addLocalHistoryEntry(_categoryHistory!);
+  }
+
   String? _formatYear(String? date) {
     if (date == null || date.length < 4) return null;
     return date.substring(0, 4);
@@ -76,7 +95,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
         2 + topCategories.length + 1; // Hero + Search + Categories + Spacing
 
     return ListView.builder(
-      padding: EdgeInsets.zero,
+      scrollCacheExtent: ScrollCacheExtent.pixels(800), padding: EdgeInsets.zero,
       itemCount: totalItems,
       itemBuilder: (context, index) {
         if (index == 0) {
@@ -98,10 +117,11 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
         }
 
         if (index == 1) {
+          if (PlatformDetector.isTv(context)) return const SizedBox(height: 16);
           // Search bar
           return Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-            child: TextField(
+            child: RemoteTextField(
               onChanged: (query) {
                 ref.read(seriesScreenProvider.notifier).search(query);
               },
@@ -156,6 +176,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
               );
             }).toList(),
             onSeeAll: () {
+              _rememberCategoryBack();
               setState(() {
                 _showGrid = true;
                 _gridCategory = seriesList.first.categoryName;
@@ -209,7 +230,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                   },
                 ),
               Expanded(
-                child: TextField(
+                child: RemoteTextField(
                   onChanged: (query) {
                     ref.read(seriesScreenProvider.notifier).search(query);
                   },
@@ -282,14 +303,9 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                   builder: (context, constraints) {
                     final crossAxisCount =
                         _getCrossAxisCount(constraints.maxWidth);
-                    return GridView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: crossAxisCount,
-                        childAspectRatio: 0.55,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                      ),
+                    return RemoteGridView(
+                      columns: crossAxisCount,
+                      aspectRatio: 0.55,
                       itemCount: state.filteredSeries.length,
                       itemBuilder: (context, index) {
                         final series = state.filteredSeries[index];

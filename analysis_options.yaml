@@ -20,7 +20,6 @@ linter:
     - avoid_empty_else
     - avoid_print
     - avoid_relative_lib_imports
-    - avoid_slow_async_io
     - avoid_type_to_string
     - avoid_unnecessary_containers
     - avoid_web_libraries_in_flutter

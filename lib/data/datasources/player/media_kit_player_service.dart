@@ -38,7 +38,7 @@ class MediaKitPlayerService implements VideoPlayerService {
     try {
       _player = Player(
         configuration: const PlayerConfiguration(
-          bufferSize: 32 * 1024 * 1024,
+          bufferSize: 16 * 1024 * 1024,
           logLevel: MPVLogLevel.warn,
         ),
       );
@@ -81,7 +81,8 @@ class MediaKitPlayerService implements VideoPlayerService {
     }
 
     try {
-      _updateState(_currentState.copyWith(status: PlaybackStatus.buffering));
+      _updateState(VideoPlaybackState(
+          status: PlaybackStatus.buffering, volume: _currentState.volume));
 
       // Dynamic buffer: 2s for live zapping, 15s for VOD
       final isLive = url.contains('/live/') ||
@@ -95,13 +96,8 @@ class MediaKitPlayerService implements VideoPlayerService {
         appLogger.d('[Player] Buffer dinâmico (mpv) indisponível: $e');
       }
 
-      // For live streams, use .m3u8 extension (HLS) instead of .ts
-      // This enables proper live streaming behavior (no download-and-play)
-      var playUrl = url;
-      if (url.contains('/live/') && url.endsWith('.ts')) {
-        playUrl = '${url.substring(0, url.length - 3)}.m3u8';
-      }
-      await _player!.open(Media(playUrl));
+      // Provider URLs may be signed. Play exactly the supplied resource.
+      await _player!.open(Media(url));
       return const Success(null);
     } catch (e) {
       _emitError('PLAY_ERROR', 'Erro ao reproduzir stream.', e);
@@ -308,7 +304,11 @@ class MediaKitPlayerService implements VideoPlayerService {
   Widget? buildVideoSurface() {
     final controller = _videoController;
     if (controller == null) return null;
-    return Video(controller: controller);
+    // The app owns playback controls and remote input. media_kit's default
+    // controls install a second set of keyboard shortcuts and steal focus.
+    return ExcludeFocus(
+      child: Video(controller: controller, controls: NoVideoControls),
+    );
   }
 
   @override

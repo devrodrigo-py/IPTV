@@ -4,7 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/errors/app_failure.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/data/database/app_database.dart';
+import 'package:nebula_iptv/data/database/database_provider.dart';
 import 'package:nebula_iptv/data/database/tables/channels_table.dart';
+
+export 'package:nebula_iptv/data/database/database_provider.dart'
+    show databaseProvider;
 
 /// State for the channels screen.
 class ChannelsScreenState {
@@ -59,12 +63,6 @@ final channelsScreenProvider =
     StateNotifierProvider<ChannelsScreenNotifier, ChannelsScreenState>(
   (ref) => ChannelsScreenNotifier(ref),
 );
-
-/// Provider for the database instance.
-/// Must be overridden in the app bootstrap with the real database.
-final databaseProvider = Provider<AppDatabase>((ref) {
-  throw UnimplementedError('databaseProvider must be overridden');
-});
 
 /// Notifier that manages channel browsing state.
 class ChannelsScreenNotifier extends StateNotifier<ChannelsScreenState> {

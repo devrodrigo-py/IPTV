@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nebula_iptv/core/constants/tv_constants.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
+import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
 import 'package:nebula_iptv/core/widgets/nebula_focus_ring.dart';
 
 /// A card widget optimized for TV/10-foot viewing distance.
@@ -62,18 +63,18 @@ class _TvFocusableCardState extends State<TvFocusableCard>
     setState(() => _isFocused = hasFocus);
     if (hasFocus) {
       _controller.forward();
+      Scrollable.ensureVisible(context,
+          duration: const Duration(milliseconds: 120),
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd);
     } else {
       _controller.reverse();
     }
   }
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
-    if (event is KeyDownEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.enter ||
-          event.logicalKey == LogicalKeyboardKey.select) {
-        widget.onPressed?.call();
-        return KeyEventResult.handled;
-      }
+    if (RemoteKeys.isSelect(event.logicalKey)) {
+      if (event is KeyDownEvent) widget.onPressed?.call();
+      return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
   }

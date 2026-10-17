@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
 import 'package:nebula_iptv/core/widgets/nebula_cached_image.dart';
 import 'package:nebula_iptv/features/shared/widgets/content_row.dart';
 import 'package:nebula_iptv/features/stats/providers/stats_provider.dart';
@@ -80,13 +81,13 @@ class StatsScreen extends ConsumerWidget {
   }
 
   Widget _buildWrappedCard(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
+    return FocusableWidget(
+      onPressed: () {
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const WrappedScreen()),
         );
       },
-      child: Container(
+      builder: (context, focused) => Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: const LinearGradient(

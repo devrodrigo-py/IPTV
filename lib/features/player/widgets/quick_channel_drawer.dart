@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
 import 'package:nebula_iptv/core/widgets/cached_logo.dart';
+import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
+import 'package:nebula_iptv/core/widgets/remote_text_field.dart';
 import 'package:nebula_iptv/data/database/app_database.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/features/epg/providers/epg_provider.dart';
@@ -32,10 +34,13 @@ class _QuickChannelDrawerState extends ConsumerState<QuickChannelDrawer> {
   String? _selectedCategory;
   String _searchQuery = '';
   final _searchController = TextEditingController();
+  final _scope = FocusScopeNode(
+      directionalTraversalEdgeBehavior: TraversalEdgeBehavior.stop);
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scope.dispose();
     super.dispose();
   }
 
@@ -58,6 +63,7 @@ class _QuickChannelDrawerState extends ConsumerState<QuickChannelDrawer> {
     }
 
     return FocusScope(
+      node: _scope,
       child: Container(
         width: 360,
         height: double.infinity,
@@ -92,6 +98,7 @@ class _QuickChannelDrawerState extends ConsumerState<QuickChannelDrawer> {
                     ),
                     const Spacer(),
                     IconButton(
+                      autofocus: true,
                       icon: const Icon(Icons.close_rounded,
                           color: Colors.white70),
                       onPressed: widget.onClose,
@@ -105,7 +112,7 @@ class _QuickChannelDrawerState extends ConsumerState<QuickChannelDrawer> {
             // Search input
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              child: TextField(
+              child: RemoteTextField(
                 controller: _searchController,
                 onChanged: (val) => setState(() => _searchQuery = val),
                 style: const TextStyle(color: Colors.white, fontSize: 13),
@@ -242,12 +249,17 @@ class _ChannelDrawerTileState extends ConsumerState<_ChannelDrawerTile> {
     final currentProgram = epgAsync.valueOrNull;
 
     return Focus(
-      onFocusChange: (f) => setState(() => _isFocused = f),
+      onFocusChange: (f) {
+        setState(() => _isFocused = f);
+        if (f) {
+          Scrollable.ensureVisible(context,
+              duration: const Duration(milliseconds: 100),
+              alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd);
+        }
+      },
       onKeyEvent: (node, event) {
-        if (event is KeyDownEvent &&
-            (event.logicalKey == LogicalKeyboardKey.enter ||
-                event.logicalKey == LogicalKeyboardKey.select)) {
-          widget.onTap();
+        if (RemoteKeys.isSelect(event.logicalKey)) {
+          if (event is KeyDownEvent) widget.onTap();
           return KeyEventResult.handled;
         }
         return KeyEventResult.ignored;

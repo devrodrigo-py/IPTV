@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
 import 'package:nebula_iptv/core/widgets/nebula_brand.dart';
 import 'package:nebula_iptv/features/channels/providers/channels_provider.dart';
 import 'package:nebula_iptv/features/profiles/profile_edit_dialog.dart';
@@ -94,8 +95,9 @@ class _ProfileSelectionScreenState
     final color = _parseColor(colorHex);
     final icon = _parseIcon(iconName);
 
-    return GestureDetector(
-      onTap: () {
+    return FocusableWidget(
+      autofocus: profile['is_default'] == 1,
+      onPressed: () {
         if (_isManaging) {
           _editProfile(profile);
         } else {
@@ -103,7 +105,7 @@ class _ProfileSelectionScreenState
           widget.onProfileSelected();
         }
       },
-      child: MouseRegion(
+      builder: (context, focused) => MouseRegion(
         cursor: SystemMouseCursors.click,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -124,9 +126,9 @@ class _ProfileSelectionScreenState
                   Positioned(
                     top: -4,
                     right: -4,
-                    child: GestureDetector(
-                      onTap: () => _deleteProfile(id),
-                      child: Container(
+                    child: FocusableWidget(
+                      onPressed: () => _deleteProfile(id),
+                      builder: (context, focused) => Container(
                         width: 24,
                         height: 24,
                         decoration: const BoxDecoration(
@@ -173,9 +175,9 @@ class _ProfileSelectionScreenState
   }
 
   Widget _buildAddProfile() {
-    return GestureDetector(
-      onTap: _createProfile,
-      child: MouseRegion(
+    return FocusableWidget(
+      onPressed: _createProfile,
+      builder: (context, focused) => MouseRegion(
         cursor: SystemMouseCursors.click,
         child: Column(
           mainAxisSize: MainAxisSize.min,

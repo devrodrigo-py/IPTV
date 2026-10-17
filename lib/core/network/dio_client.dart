@@ -22,8 +22,11 @@ class DioClient {
   /// request that opted in, so unrelated sources are never affected.
   final Set<String> _insecureHosts = {};
 
-  DioClient({String? baseUrl}) {
-    _dio = Dio(
+  final int maxGetAttempts;
+  final Duration retryDelay;
+  DioClient({String? baseUrl, Dio? dio, this.maxGetAttempts = 3,
+    this.retryDelay = const Duration(milliseconds: 350)}) : assert(maxGetAttempts > 0) {
+    _dio = dio ?? Dio(
       BaseOptions(
         baseUrl: baseUrl ?? '',
         connectTimeout: const Duration(seconds: 45),
@@ -79,11 +82,7 @@ class DioClient {
     Options? options,
   }) async {
     try {
-      final response = await _dio.get<T>(
-        path,
-        queryParameters: queryParameters,
-        options: options,
-      );
+      final response = await _getWithRetry<T>(path, queryParameters, options);
       return Success(response);
     } on DioException catch (e) {
       return Failure(_mapDioException(e));
@@ -94,6 +93,19 @@ class DioClient {
           originalError: e,
         ),
       );
+    }
+  }
+
+  Future<Response<T>> _getWithRetry<T>(String path, Map<String, dynamic>? query, Options? options) async {
+    for (var attempt = 1; ; attempt++) {
+      try { return await _dio.get<T>(path, queryParameters: query, options: options); }
+      on DioException catch (error) {
+        final transient = error.type == DioExceptionType.connectionError ||
+          error.type == DioExceptionType.connectionTimeout || error.type == DioExceptionType.receiveTimeout ||
+          const {502, 503, 504}.contains(error.response?.statusCode);
+        if (!transient || attempt >= maxGetAttempts) rethrow;
+        await Future<void>.delayed(retryDelay * attempt);
+      }
     }
   }
 
@@ -168,17 +180,8 @@ class DioClient {
       _ => 'Erro de rede. Tente novamente.',
     };
 
-    // Diagnóstico sem credenciais: host + caminho, status e início do corpo.
-    if (exception.type == DioExceptionType.badResponse) {
-      final uri = exception.response?.requestOptions.uri;
-      final sanitized =
-          uri == null ? '<sem uri>' : '${uri.host}:${uri.port}${uri.path}';
-      final body = exception.response?.data?.toString() ?? '';
-      appLogger.w(
-        'HTTP ${statusCode ?? '?'} ← $sanitized '
-        '${body.length > 200 ? body.substring(0, 200) : body}',
-      );
-    }
+    // Response bodies and stream paths can include credentials.
+    appLogger.w('http.failure status=$statusCode');
 
     return NetworkFailure(
       message: message,
@@ -219,16 +222,5 @@ class _LoggingInterceptor extends Interceptor {
   }
 
   /// Removes query parameters that might contain credentials.
-  String _sanitizePath(String path) {
-    final uri = Uri.tryParse(path);
-    if (uri == null) return path;
-
-    // Remove sensitive query params
-    const sensitiveParams = {'username', 'password', 'token', 'key'};
-    if (uri.queryParameters.keys
-        .any((k) => sensitiveParams.contains(k.toLowerCase()))) {
-      return uri.replace(query: '[REDACTED]').toString();
-    }
-    return path;
-  }
+  String _sanitizePath(String path) => Uri.tryParse(path)?.host ?? '[invalid URL]';
 }

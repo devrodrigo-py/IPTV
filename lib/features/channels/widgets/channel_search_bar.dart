@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/core/widgets/remote_text_field.dart';
 import 'package:nebula_iptv/l10n/app_localizations.dart';
 
 /// Search bar for the channel browser.
@@ -18,7 +19,7 @@ class ChannelSearchBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    return TextField(
+    return RemoteTextField(
       onChanged: onChanged,
       style: AppTypography.body,
       decoration: InputDecoration(

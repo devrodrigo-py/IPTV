@@ -13,17 +13,18 @@ class WatchStatsDao extends DatabaseAccessor<AppDatabase> {
     required int channelId,
     required String contentType,
     required int watchMs,
+    bool countSession = true,
   }) async {
     await customStatement(
       '''
       INSERT INTO watch_stats_daily (date, channel_id, content_type, total_watch_ms, session_count)
-      VALUES (?, ?, ?, ?, 1)
+      VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(date, channel_id)
       DO UPDATE SET
         total_watch_ms = total_watch_ms + excluded.total_watch_ms,
-        session_count = session_count + 1
+        session_count = session_count + excluded.session_count
       ''',
-      [date, channelId, contentType, watchMs],
+      [date, channelId, contentType, watchMs, countSession ? 1 : 0],
     );
   }
 
@@ -204,11 +205,6 @@ class WatchStatsDao extends DatabaseAccessor<AppDatabase> {
 
     if (existing.isNotEmpty) {
       final existingId = existing.first.read<int>('id');
-      final existingDuration = existing.first.read<int>('watched_duration_ms');
-      // Use the greater value: either the new position or the previously stored one
-      final effectiveDuration = watchedDurationMs > existingDuration
-          ? watchedDurationMs
-          : existingDuration;
       await customStatement(
         '''
         UPDATE watch_history_entries SET
@@ -226,7 +222,7 @@ class WatchStatsDao extends DatabaseAccessor<AppDatabase> {
         WHERE id = ?
         ''',
         [
-          effectiveDuration,
+          watchedDurationMs,
           progressPercent,
           totalDurationMs,
           contentType,
@@ -263,5 +259,6 @@ class WatchStatsDao extends DatabaseAccessor<AppDatabase> {
         ],
       );
     }
+    db.notifyUpdates({TableUpdate.onTable(db.watchHistoryEntries)});
   }
 }

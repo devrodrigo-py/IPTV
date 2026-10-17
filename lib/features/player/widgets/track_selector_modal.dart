@@ -112,6 +112,7 @@ class _TrackSelectorModalState extends ConsumerState<TrackSelectorModal>
                     style: AppTypography.title.copyWith(fontSize: 18)),
                 const Spacer(),
                 IconButton(
+                  autofocus: true,
                   icon: const Icon(Icons.close_rounded, color: Colors.white70),
                   onPressed: () => Navigator.of(context).pop(),
                 ),

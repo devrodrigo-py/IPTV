@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/core/widgets/empty_view.dart';
+import 'package:nebula_iptv/core/widgets/loading_view.dart';
+import 'package:nebula_iptv/core/widgets/remote_text_field.dart';
 import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
 import 'package:nebula_iptv/features/player/player_screen.dart';
 import 'package:nebula_iptv/features/search/providers/search_provider.dart';
@@ -27,7 +31,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     super.initState();
     // Auto-focus the search field
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusNode.requestFocus();
+      if (mounted) _focusNode.requestFocus();
     });
   }
 
@@ -52,7 +56,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               color: AppColors.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: TextField(
+        title: RemoteTextField(
           controller: _controller,
           focusNode: _focusNode,
           style: AppTypography.body,
@@ -104,12 +108,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       );
     }
 
-    if (searchState.isSearching) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      );
+    if (searchState.isSearching) return const LoadingView();
+    if (searchState.errorMessage != null) {
+      return EmptyView(
+      message: searchState.errorMessage!, isError: true, actionLabel: 'Tentar novamente',
+      onAction: () => ref.read(searchProvider.notifier).updateQuery(searchState.query));
     }
-
     final results = searchState.results;
     if (results == null || results.isEmpty) {
       return Center(
@@ -132,43 +136,18 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 32),
-      children: [
-        // Channels section
-        if (results.channels.isNotEmpty) ...[
-          _buildSectionHeader('Canais', results.channels.length),
-          ...results.channels.map(
-            (item) => SearchResultTile(
-              item: item,
-              onTap: () => _openItem(item),
-            ),
-          ),
-        ],
-
-        // Films section
-        if (results.vod.isNotEmpty) ...[
-          _buildSectionHeader('Filmes', results.vod.length),
-          ...results.vod.map(
-            (item) => SearchResultTile(
-              item: item,
-              onTap: () => _openItem(item),
-            ),
-          ),
-        ],
-
-        // Series section
-        if (results.series.isNotEmpty) ...[
-          _buildSectionHeader('Séries', results.series.length),
-          ...results.series.map(
-            (item) => SearchResultTile(
-              item: item,
-              onTap: () => _openItem(item),
-            ),
-          ),
-        ],
-      ],
-    );
+    final entries = <({String? heading, int count, SearchResultItem? item})>[];
+    for (final group in [(title: 'Canais', items: results.channels), (title: 'Filmes', items: results.vod), (title: 'Séries', items: results.series)]) {
+      if (group.items.isEmpty) continue;
+      entries.add((heading: group.title, count: group.items.length, item: null));
+      entries.addAll(group.items.map((item) => (heading: null, count: 0, item: item)));
+    }
+    return ListView.builder(scrollCacheExtent: ScrollCacheExtent.pixels(500), padding: const EdgeInsets.only(bottom: 32),
+      itemCount: entries.length, itemBuilder: (context, index) {
+        final entry = entries[index];
+        if (entry.heading != null) return _buildSectionHeader(entry.heading!, entry.count);
+        return SearchResultTile(item: entry.item!, onTap: () => _openItem(entry.item!));
+      });
   }
 
   Widget _buildSectionHeader(String title, int count) {

@@ -1,31 +1,29 @@
+import 'dart:convert';
 import 'package:logger/logger.dart';
 
-/// Application-wide logger instance.
-///
-/// Uses the `logger` package with a filter that disables verbose logs
-/// in release builds.
-final appLogger = Logger(
-  filter: _AppLogFilter(),
-  printer: PrettyPrinter(
-    methodCount: 0,
-    errorMethodCount: 5,
-    lineLength: 80,
-    colors: true,
-    printEmojis: true,
-    dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
-  ),
-);
+/// URLs may embed provider credentials in their path as well as their query.
+String sanitizeLogMessage(Object? value) => value.toString()
+    .replaceAll(RegExp(r'https?://[^\s\)\]\}]+'), '[url redacted]')
+    .replaceAll(RegExp(r'(password|username|token|authorization)\s*[:=]\s*[^\s,;]+',
+      caseSensitive: false), '[credential redacted]');
 
-/// Custom log filter: in release mode, only warnings and above are shown.
+final appLogger = Logger(filter: _AppLogFilter(), printer: StructuredLogPrinter());
+
+class StructuredLogPrinter extends LogPrinter {
+  @override
+  List<String> log(LogEvent event) => [jsonEncode({
+    'timestamp': event.time.toUtc().toIso8601String(),
+    'level': event.level.name,
+    'message': sanitizeLogMessage(event.message),
+    if (event.error != null) 'error': sanitizeLogMessage(event.error),
+    if (event.stackTrace != null) 'stack': sanitizeLogMessage(event.stackTrace),
+  })];
+}
+
 class _AppLogFilter extends LogFilter {
   @override
   bool shouldLog(LogEvent event) {
-    // In debug mode, show all logs.
-    // In release mode, show only warning and above.
-    const isRelease = bool.fromEnvironment('dart.vm.product');
-    if (isRelease) {
-      return event.level.index >= Level.warning.index;
-    }
-    return true;
+    const release = bool.fromEnvironment('dart.vm.product');
+    return !release || event.level.index >= Level.warning.index;
   }
 }

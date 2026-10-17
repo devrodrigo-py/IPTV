@@ -1,8 +1,6 @@
 import 'package:go_router/go_router.dart';
-import 'package:nebula_iptv/core/utils/platform_detector.dart';
 import 'package:nebula_iptv/features/profiles/profile_gate_screen.dart';
 import 'package:nebula_iptv/features/shell/shell_screen.dart';
-import 'package:nebula_iptv/features/tv/tv_shell.dart';
 
 /// Application route paths.
 abstract final class AppRoutes {
@@ -23,9 +21,6 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/app',
       builder: (context, state) {
-        if (PlatformDetector.isTv(context)) {
-          return const TvShell();
-        }
         return const ShellScreen();
       },
     ),

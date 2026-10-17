@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/logging/app_logger.dart';
 import 'package:nebula_iptv/domain/providers/health_check_providers.dart';
 import 'package:nebula_iptv/domain/providers/watch_providers.dart';
+import 'package:nebula_iptv/domain/services/health_check_service.dart';
 import 'package:nebula_iptv/domain/services/stream_reconnection_service.dart';
 import 'package:nebula_iptv/domain/services/video_player_service.dart';
 import 'package:nebula_iptv/domain/services/watch_tracking_service.dart';
@@ -49,201 +50,231 @@ final playerProvider =
   (ref) => PlayerNotifier(ref),
 );
 
-/// Manages player state, playback, reconnection, and watch tracking.
+/// Owns a playback session. Opens are serialized; superseded sessions cannot
+/// seek, reconnect or publish state into the next channel.
 class PlayerNotifier extends StateNotifier<PlayerState> {
   final Ref _ref;
   StreamReconnectionService? _reconnectionService;
+  StreamSubscription<ReconnectionStatus>? _reconnectionSubscription;
   final List<StreamSubscription<dynamic>> _subscriptions = [];
+  VideoPlayerService? _service;
+  WatchTrackingService? _tracking;
+  ChannelHealthCheckService? _health;
+  Future<void> _queue = Future.value();
+  Timer? _bufferWatchdog;
+  int _session = 0;
+  int? _pendingSeekMs;
   String? _currentUrl;
   WatchContentInfo? _contentInfo;
-
   PlayerNotifier(this._ref) : super(const PlayerState());
 
-  /// Starts playing a stream URL with optional content info for tracking.
-  Future<void> playStream(
-    String url, {
-    WatchContentInfo? contentInfo,
-    int? seekToMs,
-  }) async {
+  bool _current(int session) => mounted && session == _session;
+  Future<T> _serial<T>(Future<T> Function() operation) {
+    final next = _queue.then((_) => operation());
+    _queue = next.then<void>((_) {}, onError: (Object error, StackTrace stack) {
+      appLogger.w('player.operation.failed');
+    });
+    return next;
+  }
+
+  Future<void> _unsubscribe() async {
+    final subscriptions = [..._subscriptions];
+    _subscriptions.clear();
+    for (final sub in subscriptions) {
+      await sub.cancel();
+    }
+  }
+
+  void _cancelRecovery() {
+    _bufferWatchdog?.cancel();
+    _bufferWatchdog = null;
+    _reconnectionSubscription?.cancel();
+    _reconnectionSubscription = null;
+    _reconnectionService?.dispose();
+    _reconnectionService = null;
+  }
+
+  Future<void> playStream(String url,
+      {WatchContentInfo? contentInfo, int? seekToMs}) {
+    final session = ++_session;
+    _cancelRecovery();
     _currentUrl = url;
     _contentInfo = contentInfo;
-
-    final player = _ref.read(videoPlayerServiceProvider);
-
-    // Listen to player streams
-    _subscriptions.add(
-      player.playbackState.listen((playback) {
-        if (mounted) {
-          state = state.copyWith(playbackState: playback);
-
-          // Update watch tracking with progress (on every state change while
-          // playing). media_kit forwards position updates through this stream.
-          if (_contentInfo != null &&
-              playback.status == PlaybackStatus.playing &&
-              playback.position > Duration.zero) {
-            _ref.read(watchTrackingServiceProvider).updateProgress(
-                  position: playback.position,
-                  duration: playback.duration,
-                );
-          }
-
-          // Trigger reconnection on error
-          if (playback.status == PlaybackStatus.error) {
-            _startReconnection();
-          }
-        }
-      }),
-    );
-
-    _subscriptions.add(
-      player.bufferState.listen((buffer) {
-        if (mounted) {
-          state = state.copyWith(bufferState: buffer);
-        }
-      }),
-    );
-
-    // Start watch tracking
-    if (_contentInfo != null) {
-      _ref.read(watchTrackingServiceProvider).startTracking(_contentInfo!);
-    }
-
-    // Background health checks pause during playback
-    _ref.read(healthCheckServiceProvider).pause();
-
-    await player.play(url);
-
-    // Seek to saved position if resuming
-    if (seekToMs != null && seekToMs > 0) {
-      final targetMs = seekToMs; // Capture for closure
-      appLogger.d('[Player] Will seek to ${targetMs}ms once stream is playing');
-      // Once a real position arrives (video is playing), do the seek
-      late final StreamSubscription<VideoPlaybackState> seekSub;
-      seekSub = player.playbackState.listen((playback) {
-        if (playback.position.inMilliseconds > 100) {
-          seekSub.cancel();
-          appLogger.d(
-            '[Player] Stream playing at ${playback.position.inMilliseconds}ms, '
-            'seeking to ${targetMs}ms',
-          );
-          player.seek(Duration(milliseconds: targetMs));
-        }
-      });
-      // Safety timeout: cancel listener after 15s if video never starts
-      Future.delayed(const Duration(seconds: 15), () {
-        seekSub.cancel();
-      });
-    }
-  }
-
-  /// Pauses playback.
-  Future<void> pause() async {
-    await _ref.read(videoPlayerServiceProvider).pause();
-  }
-
-  /// Resumes playback.
-  Future<void> resume() async {
-    await _ref.read(videoPlayerServiceProvider).resume();
-  }
-
-  /// Stops playback.
-  Future<void> stop() async {
-    _reconnectionService?.cancel();
-    // Stop watch tracking
-    await _ref.read(watchTrackingServiceProvider).stopTracking();
-    await _ref.read(videoPlayerServiceProvider).stop();
-    // Health checks may resume when nothing is playing
-    _ref.read(healthCheckServiceProvider).resume();
-  }
-
-  /// Sets volume (0.0 - 1.0).
-  Future<void> setVolume(double volume) async {
-    await _ref.read(videoPlayerServiceProvider).setVolume(volume);
-  }
-
-  /// Seeks to a specific target duration.
-  Future<void> seek(Duration target) async {
-    await _ref.read(videoPlayerServiceProvider).seek(target);
-  }
-
-  /// Sets playback speed rate (e.g. 0.5, 1.0, 1.25, 1.5, 2.0).
-  Future<void> setPlaybackSpeed(double speed) async {
-    await _ref.read(videoPlayerServiceProvider).setPlaybackSpeed(speed);
-  }
-
-  /// Selects an audio track by ID.
-  Future<void> selectAudioTrack(String trackId) async {
-    await _ref.read(videoPlayerServiceProvider).selectAudioTrack(trackId);
-  }
-
-  /// Selects a subtitle track by ID (pass null to disable).
-  Future<void> selectSubtitleTrack(String? trackId) async {
-    await _ref.read(videoPlayerServiceProvider).selectSubtitleTrack(trackId);
-  }
-
-  /// Injects an external subtitle (.srt, .vtt).
-  Future<void> addExternalSubtitle(String uri,
-      {String? title, String? language}) async {
-    await _ref.read(videoPlayerServiceProvider).addExternalSubtitle(
-          uri,
-          title: title,
-          language: language,
-        );
-  }
-
-  /// Manual retry after reconnection exhausted.
-  Future<void> retry(String url) async {
-    _reconnectionService?.reset();
-    state = state.copyWith(
-      reconnectionStatus: ReconnectionStatus.idle,
-      reconnectionAttempt: 0,
-    );
-    await playStream(url, contentInfo: _contentInfo);
-  }
-
-  void _startReconnection() {
-    if (_currentUrl == null) return;
-
-    _reconnectionService?.dispose();
-    _reconnectionService = StreamReconnectionService(
-      onReconnect: () async {
-        final result =
-            await _ref.read(videoPlayerServiceProvider).play(_currentUrl!);
-        return result.isSuccess;
-      },
-    );
-
-    _reconnectionService!.status.listen((status) {
-      if (mounted) {
-        state = state.copyWith(
-          reconnectionStatus: status,
-          reconnectionAttempt: _reconnectionService!.attempt,
-        );
+    _service ??= _ref.read(videoPlayerServiceProvider);
+    _tracking ??= _ref.read(watchTrackingServiceProvider);
+    _health ??= _ref.read(healthCheckServiceProvider);
+    state = const PlayerState(
+        playbackState: VideoPlaybackState(status: PlaybackStatus.buffering));
+    return _serial(() async {
+      if (!_current(session)) return;
+      await _unsubscribe();
+      await _tracking!.stopTracking();
+      if (!_current(session)) return;
+      _pendingSeekMs = seekToMs;
+      _listen(session);
+      if (contentInfo != null) _tracking!.startTracking(contentInfo);
+      _health!.pause();
+      _armWatchdog(session);
+      try {
+        final result = await _service!.play(url);
+        if (_current(session) && result.isFailure) _failed(session);
+      } catch (_) {
+        if (_current(session)) _failed(session);
       }
     });
+  }
 
+  void _listen(int session) {
+    _subscriptions.add(_service!.playbackState.listen((playback) {
+      if (!_current(session)) return;
+      state = state.copyWith(playbackState: playback);
+      _tracking?.setPlaying(playback.status == PlaybackStatus.playing);
+      if (playback.status == PlaybackStatus.playing &&
+          playback.position > Duration.zero) {
+        _bufferWatchdog?.cancel();
+        _bufferWatchdog = null;
+        if (_pendingSeekMs case final int target when target > 0) {
+          _pendingSeekMs = null;
+          _service!.seek(Duration(milliseconds: target));
+        }
+        if (_contentInfo != null) {
+          _tracking!.updateProgress(
+              position: playback.position, duration: playback.duration);
+        }
+      } else if (playback.status == PlaybackStatus.error) {
+        _startReconnection(session);
+      } else if (playback.status == PlaybackStatus.buffering) {
+        _armWatchdog(session);
+      }
+    }));
+    _subscriptions.add(_service!.bufferState.listen((buffer) {
+      if (!_current(session)) return;
+      state = state.copyWith(bufferState: buffer);
+      if (buffer.isBuffering) _armWatchdog(session);
+    }));
+  }
+
+  void _armWatchdog(int session) {
+    if (_bufferWatchdog != null || _reconnectionService?.isReconnecting == true) {
+      return;
+    }
+    _bufferWatchdog = Timer(const Duration(seconds: 20), () {
+      _bufferWatchdog = null;
+      if (_current(session)) _failed(session);
+    });
+  }
+
+  void _failed(int session) {
+    state = state.copyWith(
+        playbackState:
+            state.playbackState.copyWith(status: PlaybackStatus.error));
+    _startReconnection(session);
+  }
+
+  void _startReconnection(int session) {
+    if (!_current(session) || _currentUrl == null) return;
+    _bufferWatchdog?.cancel();
+    _bufferWatchdog = null;
+    if (_reconnectionService == null) {
+      final url = _currentUrl!;
+      _reconnectionService = StreamReconnectionService(
+          onReconnect: () => _serial(() async {
+                if (!_current(session)) return false;
+                final ready = Completer<bool>();
+                final listener = _service!.playbackState.listen((playback) {
+                  if (ready.isCompleted) return;
+                  if (playback.status == PlaybackStatus.playing &&
+                      playback.position > Duration.zero) {
+                    ready.complete(true);
+                  } else if (playback.status == PlaybackStatus.error) {
+                    ready.complete(false);
+                  }
+                });
+                try {
+                  if (_contentInfo?.contentType != 'live') {
+                    _pendingSeekMs =
+                        state.playbackState.position.inMilliseconds;
+                  }
+                  final opened = await _service!.play(url);
+                  if (!_current(session) || opened.isFailure) return false;
+                  return await ready.future.timeout(const Duration(seconds: 15),
+                      onTimeout: () => false);
+                } finally {
+                  await listener.cancel();
+                }
+              }));
+      _reconnectionSubscription = _reconnectionService!.status.listen((status) {
+        if (_current(session)) {
+          state = state.copyWith(
+              reconnectionStatus: status,
+              reconnectionAttempt: _reconnectionService!.attempt);
+        }
+      });
+    }
     _reconnectionService!.start();
   }
 
+  Future<void> pause() async {
+    await _service?.pause();
+  }
+
+  Future<void> resume() async {
+    await _service?.resume();
+  }
+
+  Future<void> stop() {
+    ++_session;
+    _cancelRecovery();
+    _currentUrl = null;
+    return _serial(() async {
+      await _unsubscribe();
+      await _tracking?.stopTracking();
+      await _service?.stop();
+      _health?.resume();
+    });
+  }
+
+  Future<void> setVolume(double value) async {
+    await _service?.setVolume(value);
+  }
+
+  Future<void> seek(Duration target) async {
+    await _service?.seek(target);
+  }
+
+  Future<void> setPlaybackSpeed(double speed) async {
+    await _service?.setPlaybackSpeed(speed);
+  }
+
+  Future<void> selectAudioTrack(String trackId) async {
+    await _service?.selectAudioTrack(trackId);
+  }
+
+  Future<void> selectSubtitleTrack(String? trackId) async {
+    await _service?.selectSubtitleTrack(trackId);
+  }
+
+  Future<void> addExternalSubtitle(String uri,
+      {String? title, String? language}) async {
+    await _service?.addExternalSubtitle(uri, title: title, language: language);
+  }
+
+  Future<void> retry(String url) => playStream(url,
+      contentInfo: _contentInfo,
+      seekToMs: state.playbackState.position.inMilliseconds);
+
   @override
   void dispose() {
-    // Stop watch tracking (fire-and-forget in dispose)
-    try {
-      _ref.read(watchTrackingServiceProvider).stopTracking();
-    } catch (e) {
-      appLogger.d('[Player] Falha ao parar tracking no dispose: $e');
-    }
-    // Stop playback when leaving the player screen (safe to call even if already stopped)
-    try {
-      _ref.read(videoPlayerServiceProvider).stop();
-    } catch (e) {
-      // Player may already be disposed — ignore, but keep it observable
-      appLogger.d('[Player] Falha ao parar playback no dispose: $e');
-    }
-    for (final sub in _subscriptions) {
-      sub.cancel();
-    }
-    _reconnectionService?.dispose();
+    ++_session;
+    _cancelRecovery();
+    unawaited(_unsubscribe());
+    final service = _service;
+    final tracking = _tracking;
+    unawaited(_serial(() async {
+      await tracking?.stopTracking();
+      await service?.stop();
+      _health?.resume();
+    }));
     super.dispose();
   }
 }

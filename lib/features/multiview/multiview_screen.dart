@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nebula_iptv/core/theme/app_colors.dart';
 import 'package:nebula_iptv/core/theme/app_typography.dart';
+import 'package:nebula_iptv/core/widgets/focusable_widget.dart';
 import 'package:nebula_iptv/features/multiview/providers/multiview_provider.dart';
 
 /// Full-screen multiview displaying 2-4 channels simultaneously.
@@ -19,6 +20,16 @@ class MultiviewScreen extends ConsumerStatefulWidget {
 }
 
 class _MultiviewScreenState extends ConsumerState<MultiviewScreen> {
+  final _focus = FocusNode(debugLabel: 'Multiview');
+  bool _exiting = false;
+  bool _allowPop = false;
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -37,69 +48,82 @@ class _MultiviewScreenState extends ConsumerState<MultiviewScreen> {
   }
 
   Future<void> _goBack() async {
+    if (_exiting) return;
+    _exiting = true;
     await ref.read(multiviewProvider.notifier).disposeAll();
-    if (mounted) Navigator.of(context).pop();
+    if (mounted) {
+      setState(() => _allowPop = true);
+      await WidgetsBinding.instance.endOfFrame;
+      if (mounted) Navigator.of(context).pop();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(multiviewProvider);
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: KeyboardListener(
-        focusNode: FocusNode()..requestFocus(),
-        onKeyEvent: (event) {
-          if (event is KeyDownEvent &&
-              event.logicalKey == LogicalKeyboardKey.escape) {
-            _goBack();
-          }
-        },
-        child: Stack(
-          children: [
-            // Video grid
-            _buildGrid(state.slots),
+    return PopScope(
+      canPop: _allowPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _goBack();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Focus(
+          focusNode: _focus,
+          onKeyEvent: (node, event) {
+            if (RemoteKeys.isBack(event.logicalKey)) {
+              if (event is KeyDownEvent) _goBack();
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
+          child: Stack(
+            children: [
+              // Video grid
+              _buildGrid(state.slots),
 
-            // Top overlay with back button
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.black54, Colors.transparent],
+              // Top overlay with back button
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
                   ),
-                ),
-                child: SafeArea(
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(
-                          Icons.arrow_back_rounded,
-                          color: Colors.white,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.black54, Colors.transparent],
+                    ),
+                  ),
+                  child: SafeArea(
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back_rounded,
+                            color: Colors.white,
+                          ),
+                          onPressed: _goBack,
                         ),
-                        onPressed: _goBack,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Multiview (${state.slots.length} canais)',
-                        style: AppTypography.title.copyWith(
-                          color: Colors.white,
+                        const SizedBox(width: 12),
+                        Text(
+                          'Multiview (${state.slots.length} canais)',
+                          style: AppTypography.title.copyWith(
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -173,11 +197,12 @@ class _MultiviewScreenState extends ConsumerState<MultiviewScreen> {
   }
 
   Widget _buildSlotCell(MultiviewSlot slot, int index) {
-    return GestureDetector(
-      onTap: () {
+    return FocusableWidget(
+      autofocus: index == 0,
+      onPressed: () {
         ref.read(multiviewProvider.notifier).setActiveAudio(index);
       },
-      child: Container(
+      builder: (context, focused) => Container(
         decoration: BoxDecoration(
           border: slot.isAudioActive
               ? Border.all(color: AppColors.primary, width: 3)
