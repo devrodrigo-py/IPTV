@@ -1,56 +1,61 @@
-# Nebula IPTV
+# Nebula IPTV (Web / React)
 
-Player IPTV multiplataforma (Windows, Android TV/Fire TV, tablet, web) com
-M3U + Xtream Codes API, EPG XMLTV, VOD/séries, deduplicação de canais,
-metadados TMDB/TVMaze e perfil parental.
+Nebula IPTV é uma plataforma moderna e elegante para reprodução e gerenciamento de transmissões IPTV (Live TV, VOD e Séries), reescrita em **React + TypeScript + Vite + Tailwind CSS**.
 
-> **Fonte da verdade de produto**: [`docs/spec.md`](docs/spec.md) (v2.1) e
-> [`docs/decisions/`](docs/decisions/) (ADRs). Não há outro documento de
-> design vigente.
+## ✨ Principais Funcionalidades
 
-## Plataformas suportadas
+- **Canais Ao Vivo (Live TV)**:
+  - Grade e lista com logotipos, resolução (4K, FHD, HD) e status ao vivo.
+  - Sintonizador com Hls.js (.m3u8) e fallback nativo.
+  - Indicador dinâmico de programa atual e barra de progresso EPG.
+  - Gaveta de canais rápidos (Quick Channel Drawer) dentro do player.
+  - Ajuste de proporção (16:9, 4:3, Fill, Fit), qualidade de stream e Picture-in-Picture (PiP).
 
-| Plataforma | Estado |
-|---|---|
-| Windows | ✅ primária |
-| Android (TV/Fire TV/tablet) | ✅ primária — APKs split por ABI |
-| Web | ⚠️ experimental — credenciais em memória, player degradado |
+- **Multiview Wall**:
+  - Reprodução simultânea de 2, 4 (2x2) ou 9 (3x3) transmissões.
+  - Controle de foco de áudio dinâmico por tile.
+  - Adição e troca rápida de canais por slot.
 
-## Desenvolvimento
+- **Filmes sob Demanda (VOD) & Séries**:
+  - Catálogo categorizado com capas, sinopse, elenco, nota e ano.
+  - Navegação de séries por temporadas e lista de episódios.
+
+- **Guia Eletrônico de Programação (EPG)**:
+  - Linha do tempo de canais sincronizada em UTC e adaptada ao fuso local.
+  - Importação de arquivos XMLTV (.xml/.xmltv).
+
+- **Gerenciamento de Listas (Playlists)**:
+  - Suporte a links M3U / M3U8 web.
+  - Upload direto de arquivo local M3U / M3U8 com parser tolerante.
+  - Integração com servidores Xtream Codes API.
+  - Ativação/desativação individual e recarga de listas.
+
+- **Perfis de Usuário & Proteção Parental**:
+  - Suporte a múltiplos perfis (ex: Principal, Cinema, Kids).
+  - Bloqueio por senha/PIN de 4 dígitos.
+  - Modo Kids com filtragem automática de canais adultos.
+
+- **Modo TV (10-Foot UI)**:
+  - Navegação adaptada para controle remoto e teclas direcionais do teclado (D-Pad).
+  - Anéis de foco luminosos com gradiente Nebula.
+  - Overlay de controle remoto virtual na tela.
+
+- **Nebula Wrapped & Estatísticas**:
+  - Métricas de horas assistidas, dias ativos e ranking de canais mais sintonizados.
+  - Retrospectiva interativa no estilo Wrapped com cartões de estatísticas e personalidade.
+
+- **Persistência & Backups**:
+  - Armazenamento em `localStorage` com exportação e importação completa em JSON.
+
+## 🚀 Como Executar
 
 ```bash
-flutter pub get
-dart run build_runner build --delete-conflicting-outputs   # Drift codegen
-flutter analyze                                            # 0 issues esperado
-flutter test                                               # ~223 testes
-flutter run -d windows                                     # desktop
+# Instalar dependências
+npm install
+
+# Iniciar servidor de desenvolvimento (porta 3000)
+npm run dev
+
+# Gerar build de produção
+npm run build
 ```
-
-## Release (Android)
-
-Assinatura: `android/nebula-release.jks` + `android/key.properties`
-(**fora do git** — ver `.gitignore`). Sem o arquivo, o build cai para a
-chave de debug (só útil em dev).
-
-```bash
-flutter build apk --release --split-per-abi   # armeabi-v7a / arm64-v8a / x86_64
-```
-
-O keystore é a identidade do app: **perder impede updates por cima**.
-Backup seguro do `.jks` e das senhas é obrigatório.
-
-Release checklist (resumo — detalhes no relatório de produção na conversa):
-versão bumpada no `pubspec.yaml`, `flutter analyze` zerado, suíte verde,
-APK testado em dispositivo real, changelog da mensagem de commit.
-
-## Arquitetura (30 segundos)
-
-- **UI** (features/*) → **providers** (Riverpod puro) → **repositories**
-  (Result tipado) → **datasources** (Dio/Drift/isolates) → **SQLite** (Drift,
-  migrações incrementais em `app_database.dart`).
-- Parse pesado (M3U/Xtream/XMLTV) roda em isolates.
-- Credenciais de painéis: cofre seguro por plataforma (`CredentialStore`),
-  nunca em texto no banco; logs sanitizados.
-- TLS: reject por padrão, opt-in por fonte com aviso (ADR-005).
-- Erros: handlers globais em `main.dart` + log de crash em arquivo
-  (`CrashLogService`).

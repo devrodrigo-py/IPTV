@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --void-950: #07070F;
+    --void-800: #16162A;
+    --void-600: #2A2A45;
+    --surface-elevated: #1E1E38;
+    --nebula-violet: #6B4FE0;
+    --nebula-violet-deep: #2A1D6B;
+    --aurora-teal: #1FCFAE;
+    --solar-coral: #FF6F91;
+    --text-primary: #F5F3FF;
+    --text-secondary: #A8A6C0;
+  }
+
+  body {
+    background-color: #07070F;
+    color: #F5F3FF;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0B0B18;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2A2A45;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6B4FE0;
+}
+
+/* TV Focus Ring */
+.tv-focused {
+  outline: 3px solid #6B4FE0 !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 20px rgba(107, 79, 224, 0.6) !important;
+  transform: scale(1.03);
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 20;
+}
+
+/* Smooth gradient overlays */
+.gradient-mask-b {
+  mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+}
+
+.gradient-mask-r {
+  mask-image: linear-gradient(to right, black 75%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black 75%, transparent 100%);
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Nebula IPTV",
+  "description": "A modern, responsive IPTV streaming platform featuring Live TV, VOD movies, TV series, multi-view grid, EPG timeline, playlist management (M3U & Xtream Codes), profiles, and remote/TV navigation.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
