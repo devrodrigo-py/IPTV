@@ -73,8 +73,9 @@ export const Sidebar: React.FC = () => {
           return (
             <button
               key={item.id}
+              data-tv-title={`Menu: ${item.label}`}
               onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-xs transition-all cursor-pointer group ${
+              className={`tv-card w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-xs transition-all cursor-pointer group focus:outline-none ${
                 isActive
                   ? 'bg-[#16162A] text-white font-semibold shadow-inner border border-[#6B4FE0]/30'
                   : 'text-[#A8A6C0] hover:text-[#F5F3FF] hover:bg-[#16162A]/50'
@@ -116,8 +117,13 @@ export const Sidebar: React.FC = () => {
       {/* Nebula Wrapped Promotional Card in Footer */}
       <div className="p-4 border-t border-[#2A2A45]/40">
         <div
+          tabIndex={0}
+          data-tv-title="Especial: Nebula Wrapped 2026"
           onClick={() => setIsWrappedOpen(true)}
-          className="p-3.5 rounded-2xl bg-gradient-to-br from-[#16162A] via-[#1E1E38] to-[#2A1D6B]/40 border border-[#6B4FE0]/30 hover:border-[#6B4FE0]/70 transition-all cursor-pointer group shadow-lg"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') setIsWrappedOpen(true);
+          }}
+          className="tv-card p-3.5 rounded-2xl bg-gradient-to-br from-[#16162A] via-[#1E1E38] to-[#2A1D6B]/40 border border-[#6B4FE0]/30 hover:border-[#6B4FE0]/70 transition-all cursor-pointer group shadow-lg focus:outline-none"
         >
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="w-4 h-4 text-[#FF6F91] group-hover:rotate-12 transition-transform" />

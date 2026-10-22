@@ -59,8 +59,10 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({ series, on
           {series.seasons.map((season, idx) => (
             <button
               key={season.seasonNumber}
+              tabIndex={0}
+              data-tv-title={`Temporada: ${season.title}`}
               onClick={() => setSelectedSeasonIdx(idx)}
-              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              className={`tv-card px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap focus:outline-none ${
                 selectedSeasonIdx === idx
                   ? 'bg-[#6B4FE0] text-white shadow-md shadow-[#6B4FE0]/30'
                   : 'bg-[#16162A] text-[#A8A6C0] hover:text-white border border-[#2A2A45]'
@@ -76,8 +78,13 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({ series, on
           {activeSeason.episodes.map((ep) => (
             <div
               key={ep.id}
+              tabIndex={0}
+              data-tv-title={`Episódio ${ep.episodeNumber}: ${ep.title}`}
               onClick={() => playEpisode(series, activeSeason.seasonNumber, ep)}
-              className="p-3.5 rounded-2xl bg-[#07070F]/80 hover:bg-[#1E1E38] border border-[#2A2A45] hover:border-[#6B4FE0] transition-all cursor-pointer flex items-center justify-between group"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') playEpisode(series, activeSeason.seasonNumber, ep);
+              }}
+              className="tv-card p-3.5 rounded-2xl bg-[#07070F]/80 hover:bg-[#1E1E38] border border-[#2A2A45] hover:border-[#6B4FE0] transition-all cursor-pointer flex items-center justify-between group focus:outline-none"
             >
               <div className="flex items-center gap-4 min-w-0 flex-1">
                 {/* Thumbnail */}

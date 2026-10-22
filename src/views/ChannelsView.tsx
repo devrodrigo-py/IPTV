@@ -20,7 +20,10 @@ export const ChannelsView: React.FC = () => {
   const [localSearch, setLocalSearch] = useState('');
 
   const displayChannels = filteredChannels.filter((c) => {
-    if (selectedCategory !== 'all' && c.groupTitle !== selectedCategory) return false;
+    if (selectedCategory !== 'all') {
+      const g = (c.groupTitle || 'Geral').trim().toLowerCase();
+      if (g !== selectedCategory.trim().toLowerCase()) return false;
+    }
     if (localSearch.trim()) {
       const q = localSearch.toLowerCase();
       const matchName = c.name.toLowerCase().includes(q);
@@ -31,7 +34,7 @@ export const ChannelsView: React.FC = () => {
   });
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 select-none">
+    <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
       {/* Top Header & Layout Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#2A2A45]">
         <div>

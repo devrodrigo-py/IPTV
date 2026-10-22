@@ -9,7 +9,7 @@ export const FavoritesView: React.FC = () => {
   const favoriteChannels = filteredChannels.filter((c) => favorites.includes(c.id));
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 select-none">
+    <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-[#2A2A45]">
         <div>

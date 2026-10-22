@@ -6,7 +6,7 @@ export const HistoryView: React.FC = () => {
   const { history, clearHistory, filteredChannels, vodItems, playChannel, playVod } = useApp();
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 select-none">
+    <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-[#2A2A45]">
         <div>
@@ -35,6 +35,8 @@ export const HistoryView: React.FC = () => {
           {history.map((item) => (
             <div
               key={item.id}
+              tabIndex={0}
+              data-tv-title={`Histórico: ${item.title}`}
               onClick={() => {
                 const ch = filteredChannels.find((c) => c.id === item.contentId);
                 if (ch) playChannel(ch);
@@ -43,7 +45,17 @@ export const HistoryView: React.FC = () => {
                   if (vod) playVod(vod);
                 }
               }}
-              className="p-4 rounded-2xl bg-[#16162A] hover:bg-[#1E1E38] border border-[#2A2A45] hover:border-[#6B4FE0] flex items-center justify-between cursor-pointer transition-all shadow-sm group"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const ch = filteredChannels.find((c) => c.id === item.contentId);
+                  if (ch) playChannel(ch);
+                  else if (item.contentType === 'vod') {
+                    const vod = vodItems.find((v) => v.id === item.contentId);
+                    if (vod) playVod(vod);
+                  }
+                }
+              }}
+              className="tv-card p-4 rounded-2xl bg-[#16162A] hover:bg-[#1E1E38] border border-[#2A2A45] hover:border-[#6B4FE0] flex items-center justify-between cursor-pointer transition-all shadow-sm group focus:outline-none"
             >
               <div className="flex items-center gap-4 min-w-0 flex-1">
                 <div className="w-14 h-14 rounded-xl bg-black/40 overflow-hidden relative shrink-0 flex items-center justify-center border border-white/5">

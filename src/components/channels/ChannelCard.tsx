@@ -29,22 +29,23 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({ channel, index }) => {
     <div
       onClick={() => playChannel(channel)}
       tabIndex={0}
+      data-tv-title={`Canal: ${channel.name}`}
       onKeyDown={(e) => {
         if (e.key === 'Enter') playChannel(channel);
       }}
-      className="tv-card group relative bg-[#16162A] hover:bg-[#1E1E38] rounded-2xl border border-[#2A2A45]/70 hover:border-[#6B4FE0]/60 p-4 transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden shadow-md hover:shadow-xl hover:shadow-[#6B4FE0]/10"
+      className="tv-card group relative bg-[#16162A] hover:bg-[#1E1E38] rounded-2xl border border-[#2A2A45]/70 hover:border-[#6B4FE0]/60 p-4 transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden shadow-md hover:shadow-xl hover:shadow-[#6B4FE0]/10 focus:outline-none"
     >
       {/* Top row: Number, Resolution, Favorite */}
       <div className="flex items-center justify-between mb-3 z-10">
         <div className="flex items-center gap-2">
           {index !== undefined && (
-            <span className="text-[11px] font-mono font-bold text-[#A8A6C0]/70 bg-black/30 px-2 py-0.5 rounded-md">
+            <span className="text-xs font-mono font-bold text-[#A8A6C0] bg-black/40 px-2 py-0.5 rounded-md border border-white/5">
               {(index + 1).toString().padStart(2, '0')}
             </span>
           )}
           {channel.resolution && (
             <span
-              className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+              className={`text-xs font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
                 channel.resolution === '4K'
                   ? 'bg-[#FF6F91]/20 text-[#FF6F91] border border-[#FF6F91]/40'
                   : 'bg-[#1FCFAE]/20 text-[#1FCFAE] border border-[#1FCFAE]/40'
@@ -60,6 +61,7 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({ channel, index }) => {
             e.stopPropagation();
             toggleFavorite(channel.id);
           }}
+          tabIndex={-1}
           className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
             isFav
               ? 'bg-[#FF6F91]/20 text-[#FF6F91]'
@@ -71,8 +73,8 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({ channel, index }) => {
         </button>
       </div>
 
-      {/* Center: Logo with hover play overlay */}
-      <div className="relative my-2 h-24 flex items-center justify-center rounded-xl bg-black/25 p-2 overflow-hidden border border-white/5">
+      {/* Center: Standardized Logo Canvas with matte neutral background and drop shadow */}
+      <div className="relative my-2.5 h-24 flex items-center justify-center rounded-2xl bg-[#0B0B18] p-2.5 overflow-hidden border border-white/10 shadow-inner">
         {channel.logoUrl ? (
           <img
             src={channel.logoUrl}
@@ -96,13 +98,13 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({ channel, index }) => {
 
       {/* Bottom: Info & EPG progress */}
       <div className="z-10 mt-2">
-        <h3 className="font-bold text-sm text-white truncate group-hover:text-[#F5F3FF] transition-colors">
+        <h3 className="font-bold text-base md:text-lg text-white line-clamp-2 leading-snug group-hover:text-[#F5F3FF] transition-colors h-11">
           {channel.name}
         </h3>
 
         {currentProgram ? (
           <div className="mt-1">
-            <p className="text-xs text-[#1FCFAE] font-medium truncate flex items-center gap-1.5">
+            <p className="text-xs text-[#1FCFAE] font-semibold truncate flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-[#1FCFAE] animate-pulse" />
               {currentProgram.title}
             </p>

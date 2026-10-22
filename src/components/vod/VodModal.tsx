@@ -17,7 +17,9 @@ export const VodModal: React.FC<VodModalProps> = ({ vod, onClose }) => {
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center cursor-pointer transition-colors"
+          tabIndex={0}
+          data-tv-title="Fechar Detalhes do Filme"
+          className="tv-card absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center cursor-pointer transition-colors focus:outline-none"
         >
           <X className="w-5 h-5" />
         </button>
@@ -34,7 +36,10 @@ export const VodModal: React.FC<VodModalProps> = ({ vod, onClose }) => {
           {/* Quick Play Floating Button */}
           <button
             onClick={() => playVod(vod)}
-            className="absolute bottom-6 left-6 px-6 py-3 rounded-2xl bg-[#6B4FE0] hover:bg-[#6B4FE0]/80 text-white font-bold text-sm flex items-center gap-2.5 shadow-xl shadow-[#6B4FE0]/40 transition-transform active:scale-95 cursor-pointer"
+            tabIndex={0}
+            autoFocus
+            data-tv-title={`Assistir ${vod.title}`}
+            className="tv-card absolute bottom-6 left-6 px-6 py-3 rounded-2xl bg-[#6B4FE0] hover:bg-[#6B4FE0]/80 text-white font-bold text-sm flex items-center gap-2.5 shadow-xl shadow-[#6B4FE0]/40 transition-transform active:scale-95 cursor-pointer focus:outline-none"
           >
             <Play className="w-5 h-5 fill-current" />
             Assistir Filme Agora

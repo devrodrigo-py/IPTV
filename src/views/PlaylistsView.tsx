@@ -14,12 +14,15 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { PlaylistModal } from '../components/playlists/PlaylistModal';
+import { ConfirmModal } from '../components/common/ConfirmModal';
+import { Playlist } from '../types';
 
 export const PlaylistsView: React.FC = () => {
   const { playlists, deletePlaylist, togglePlaylist, refreshPlaylist, channels } = useApp();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
+  const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(null);
 
   const handleRefresh = async (id: string) => {
     setRefreshingId(id);
@@ -28,7 +31,7 @@ export const PlaylistsView: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#2A2A45]">
         <div>
@@ -145,7 +148,7 @@ export const PlaylistsView: React.FC = () => {
                 </button>
 
                 <button
-                  onClick={() => deletePlaylist(pl.id)}
+                  onClick={() => setPlaylistToDelete(pl)}
                   className="flex items-center gap-1.5 text-xs text-[#FF5468] hover:text-[#FF5468]/80 font-semibold cursor-pointer transition-colors"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -158,6 +161,23 @@ export const PlaylistsView: React.FC = () => {
       </div>
 
       {isAddModalOpen && <PlaylistModal onClose={() => setIsAddModalOpen(false)} />}
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={playlistToDelete !== null}
+        title="Remover Playlist?"
+        message={`Deseja realmente remover a playlist "${playlistToDelete?.name}"? Todos os canais associados a esta fonte serão removidos da sua grade.`}
+        confirmLabel="Excluir Playlist"
+        cancelLabel="Cancelar"
+        isDestructive={true}
+        onConfirm={() => {
+          if (playlistToDelete) {
+            deletePlaylist(playlistToDelete.id);
+            setPlaylistToDelete(null);
+          }
+        }}
+        onCancel={() => setPlaylistToDelete(null)}
+      />
     </div>
   );
 };

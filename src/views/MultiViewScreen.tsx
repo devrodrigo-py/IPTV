@@ -7,10 +7,10 @@ import {
   Maximize2,
   Tv,
   X,
-  RefreshCw,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Channel } from '../types';
+import { MultiViewTile } from '../components/multiview/MultiViewTile';
 
 export const MultiViewScreen: React.FC = () => {
   const { filteredChannels } = useApp();
@@ -57,7 +57,7 @@ export const MultiViewScreen: React.FC = () => {
   };
 
   return (
-    <div className="p-6 h-[calc(100vh-4rem)] flex flex-col">
+    <div className="px-6 md:px-12 py-8 h-[calc(100vh-4rem)] flex flex-col select-none">
       {/* Header Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#2A2A45]">
         <div>
@@ -118,82 +118,36 @@ export const MultiViewScreen: React.FC = () => {
         {slots.map((channel, idx) => {
           const isAudible = activeAudioSlot === idx;
 
+          if (channel) {
+            return (
+              <MultiViewTile
+                key={idx}
+                index={idx}
+                channel={channel}
+                isAudible={isAudible}
+                onToggleAudio={() => setActiveAudioSlot(isAudible ? -1 : idx)}
+                onChangeChannel={() => setPickingSlotIndex(idx)}
+                onRemoveChannel={() => removeSlotChannel(idx)}
+              />
+            );
+          }
+
           return (
             <div
               key={idx}
-              className={`relative bg-[#07070F] rounded-2xl border overflow-hidden flex items-center justify-center group ${
-                isAudible ? 'border-[#1FCFAE] shadow-lg shadow-[#1FCFAE]/20' : 'border-[#2A2A45]'
-              }`}
+              className="relative bg-[#07070F] rounded-2xl border border-[#2A2A45] overflow-hidden flex items-center justify-center group"
             >
-              {channel ? (
-                <>
-                  <video
-                    src={channel.streamUrl}
-                    autoPlay
-                    muted={!isAudible}
-                    playsInline
-                    loop
-                    className="w-full h-full object-cover"
-                  />
-
-                  {/* Tile Top Overlay */}
-                  <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between opacity-80 group-hover:opacity-100 transition-opacity">
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-md bg-[#6B4FE0] text-white text-[10px] font-bold flex items-center justify-center">
-                        {idx + 1}
-                      </span>
-                      <span className="text-xs font-bold text-white truncate max-w-[140px] drop-shadow">
-                        {channel.name}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      {/* Audio Focus Toggle */}
-                      <button
-                        onClick={() => setActiveAudioSlot(isAudible ? -1 : idx)}
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer transition-colors ${
-                          isAudible
-                            ? 'bg-[#1FCFAE] text-black shadow-md'
-                            : 'bg-black/50 text-[#A8A6C0] hover:text-white'
-                        }`}
-                        title={isAudible ? 'Mutar Áudio' : 'Ouvir este canal'}
-                      >
-                        {isAudible ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-                      </button>
-
-                      {/* Change Channel */}
-                      <button
-                        onClick={() => setPickingSlotIndex(idx)}
-                        className="w-7 h-7 rounded-lg bg-black/50 hover:bg-black/80 text-[#A8A6C0] hover:text-white flex items-center justify-center cursor-pointer"
-                        title="Trocar Canal"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                      </button>
-
-                      {/* Remove Channel */}
-                      <button
-                        onClick={() => removeSlotChannel(idx)}
-                        className="w-7 h-7 rounded-lg bg-black/50 hover:bg-[#FF5468]/80 text-[#A8A6C0] hover:text-white flex items-center justify-center cursor-pointer"
-                        title="Remover Canal"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                /* Empty Slot */
-                <button
-                  onClick={() => setPickingSlotIndex(idx)}
-                  className="flex flex-col items-center justify-center p-6 text-center hover:scale-105 transition-transform cursor-pointer"
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-[#16162A] border border-[#2A2A45] flex items-center justify-center text-[#6B4FE0] mb-3 group-hover:bg-[#6B4FE0] group-hover:text-white transition-colors">
-                    <Plus className="w-6 h-6" />
-                  </div>
-                  <span className="text-xs font-bold text-white">Adicionar Canal ao Slot {idx + 1}</span>
-                  <span className="text-[11px] text-[#A8A6C0] mt-0.5">Clique para selecionar</span>
-                </button>
-              )}
+              {/* Empty Slot */}
+              <button
+                onClick={() => setPickingSlotIndex(idx)}
+                className="flex flex-col items-center justify-center p-6 text-center hover:scale-105 transition-transform cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-[#16162A] border border-[#2A2A45] flex items-center justify-center text-[#6B4FE0] mb-3 group-hover:bg-[#6B4FE0] group-hover:text-white transition-colors">
+                  <Plus className="w-6 h-6" />
+                </div>
+                <span className="text-xs font-bold text-white">Adicionar Canal ao Slot {idx + 1}</span>
+                <span className="text-[11px] text-[#A8A6C0] mt-0.5">Clique para selecionar</span>
+              </button>
             </div>
           );
         })}

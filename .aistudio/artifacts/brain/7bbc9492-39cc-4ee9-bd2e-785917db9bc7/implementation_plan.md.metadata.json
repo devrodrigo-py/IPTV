@@ -1,0 +1,6 @@
+{
+  "summary":  "Plano de Auditoria E2E Completa e Correções Imediatas de Produção para o Nebula IPTV, abrangendo os 12 módulos funcionais, resolução de bugs em Multiview (suporte a HLS nos tiles), atalhos de teclado no Player, substituição de window.confirm nativo por modal in-app, sanitização e prevenção de race conditions, e polimento de UI/UX.",
+  "updatedAt":  "2026-10-22T12:59:16.325475218Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}

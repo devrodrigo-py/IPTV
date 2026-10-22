@@ -80,7 +80,7 @@ export const EpgView: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#2A2A45]">
         <div>
@@ -95,7 +95,9 @@ export const EpgView: React.FC = () => {
 
         <button
           onClick={() => setIsImportModalOpen(true)}
-          className="px-4 py-2 rounded-xl bg-[#16162A] hover:bg-[#1E1E38] border border-[#2A2A45] hover:border-[#6B4FE0] text-xs font-semibold text-white flex items-center gap-2 transition-all cursor-pointer shadow-sm"
+          tabIndex={0}
+          data-tv-title="Importar Guia XMLTV"
+          className="tv-card px-4 py-2 rounded-xl bg-[#16162A] hover:bg-[#1E1E38] border border-[#2A2A45] hover:border-[#6B4FE0] text-xs font-semibold text-white flex items-center gap-2 transition-all cursor-pointer shadow-sm focus:outline-none"
         >
           <Upload className="w-4 h-4 text-[#1FCFAE]" />
           Importar XMLTV (.xml)
@@ -113,28 +115,32 @@ export const EpgView: React.FC = () => {
               className="bg-[#16162A]/60 rounded-2xl border border-[#2A2A45]/60 p-4 transition-all hover:border-[#6B4FE0]/40"
             >
               <div className="flex flex-col md:flex-row md:items-center gap-4">
-                {/* Channel Header */}
+                {/* Channel Header (TV Focusable) */}
                 <div
                   onClick={() => playChannel(channel)}
-                  className="w-full md:w-56 shrink-0 flex items-center gap-3 cursor-pointer group"
+                  tabIndex={0}
+                  data-tv-title={`EPG: Sintonizar ${channel.name}`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') playChannel(channel);
+                  }}
+                  className="tv-card w-full md:w-56 shrink-0 flex items-center gap-3 cursor-pointer group p-2 rounded-xl border border-transparent hover:border-[#6B4FE0]/30 focus:outline-none"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-black/40 p-1 flex items-center justify-center border border-white/5">
+                  <div className="w-10 h-10 rounded-xl bg-[#0B0B18] p-1.5 flex items-center justify-center border border-white/10 shrink-0">
                     {channel.logoUrl ? (
                       <img
                         src={channel.logoUrl}
                         alt={channel.name}
-                        className="max-h-7 max-w-full object-contain"
-                        onError={(e) => ((e.target as HTMLElement).style.display = 'none')}
+                        className="max-h-7 max-w-full object-contain filter drop-shadow"
                       />
                     ) : (
                       <Tv className="w-5 h-5 text-[#6B4FE0]" />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-bold text-xs text-white truncate group-hover:text-[#1FCFAE] transition-colors">
+                    <h3 className="font-bold text-sm text-white truncate group-hover:text-[#1FCFAE] transition-colors">
                       {channel.name}
                     </h3>
-                    <p className="text-[10px] text-[#A8A6C0]">{channel.groupTitle || 'Geral'}</p>
+                    <p className="text-[11px] text-[#A8A6C0] truncate">{channel.groupTitle || 'Geral'}</p>
                   </div>
                 </div>
 
@@ -146,8 +152,13 @@ export const EpgView: React.FC = () => {
                       return (
                         <div
                           key={prog.id}
+                          tabIndex={0}
+                          data-tv-title={`EPG: ${channel.name} - ${prog.title}`}
                           onClick={() => setSelectedProgram({ program: prog, channel })}
-                          className={`min-w-[200px] max-w-[240px] p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between shrink-0 ${
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') setSelectedProgram({ program: prog, channel });
+                          }}
+                          className={`tv-card min-w-[200px] max-w-[240px] p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between shrink-0 focus:outline-none ${
                             active
                               ? 'bg-[#6B4FE0]/20 border-[#6B4FE0] text-white shadow-md shadow-[#6B4FE0]/20'
                               : 'bg-[#07070F]/60 hover:bg-[#1E1E38] border-[#2A2A45] text-[#A8A6C0] hover:text-white'
@@ -238,7 +249,9 @@ export const EpgView: React.FC = () => {
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#2A2A45]">
               <button
                 onClick={() => setSelectedProgram(null)}
-                className="px-4 py-2 rounded-xl bg-[#1E1E38] hover:bg-[#2A2A45] text-xs font-semibold text-[#A8A6C0] cursor-pointer"
+                tabIndex={0}
+                data-tv-title="Fechar Detalhes EPG"
+                className="tv-card px-4 py-2 rounded-xl bg-[#1E1E38] hover:bg-[#2A2A45] text-xs font-semibold text-[#A8A6C0] cursor-pointer focus:outline-none"
               >
                 Fechar
               </button>
@@ -247,9 +260,12 @@ export const EpgView: React.FC = () => {
                   playChannel(selectedProgram.channel);
                   setSelectedProgram(null);
                 }}
-                className="px-5 py-2 rounded-xl bg-[#6B4FE0] hover:bg-[#6B4FE0]/80 text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-lg shadow-[#6B4FE0]/40"
+                tabIndex={0}
+                autoFocus
+                data-tv-title={`Sintonizar ${selectedProgram.channel.name}`}
+                className="tv-card px-5 py-2 rounded-xl bg-[#6B4FE0] hover:bg-[#6B4FE0]/80 text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-lg shadow-[#6B4FE0]/40 focus:outline-none"
               >
-                <Play className="w-4 h-4 fill-current" />
+                <Play className="w-3.5 h-3.5 fill-current" />
                 Assistir Canal Agora
               </button>
             </div>

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { exportNebulaData, importNebulaData } from '../data/storage';
+import { ConfirmModal } from '../components/common/ConfirmModal';
 
 export const SettingsView: React.FC = () => {
   const { settings, updateSettings, tvMode, toggleTvMode } = useApp();
@@ -21,6 +22,7 @@ export const SettingsView: React.FC = () => {
   const [pinInput, setPinInput] = useState(settings.masterPin);
   const [pinSavedFeedback, setPinSavedFeedback] = useState(false);
   const [backupFeedback, setBackupFeedback] = useState<string | null>(null);
+  const [showClearCacheModal, setShowClearCacheModal] = useState(false);
 
   const handleSavePin = () => {
     if (pinInput.trim().length >= 4) {
@@ -63,16 +65,15 @@ export const SettingsView: React.FC = () => {
     }
   };
 
-  const handleClearCache = () => {
-    if (confirm('Deseja realmente limpar o cache de imagens e buffers locais?')) {
-      localStorage.removeItem('nebula_epg');
-      setBackupFeedback('Cache limpo com sucesso.');
-      setTimeout(() => setBackupFeedback(null), 2500);
-    }
+  const handleClearCacheConfirm = () => {
+    localStorage.removeItem('nebula_epg');
+    setShowClearCacheModal(false);
+    setBackupFeedback('Cache limpo com sucesso.');
+    setTimeout(() => setBackupFeedback(null), 2500);
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-8 select-none">
+    <div className="px-6 md:px-12 py-8 max-w-5xl mx-auto space-y-8 select-none">
       {/* Header */}
       <div className="pb-4 border-b border-[#2A2A45]">
         <div className="flex items-center gap-2">
@@ -237,7 +238,7 @@ export const SettingsView: React.FC = () => {
           </label>
 
           <button
-            onClick={handleClearCache}
+            onClick={() => setShowClearCacheModal(true)}
             className="p-3.5 rounded-2xl bg-[#07070F] hover:bg-[#1E1E38] border border-[#2A2A45] hover:border-[#FF5468] text-white flex flex-col items-center justify-center gap-2 cursor-pointer transition-all"
           >
             <RefreshCw className="w-5 h-5 text-[#FF5468]" />
@@ -245,6 +246,18 @@ export const SettingsView: React.FC = () => {
           </button>
         </div>
       </section>
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showClearCacheModal}
+        title="Limpar Cache Local?"
+        message="Esta ação irá redefinir os dados em cache de EPG e buffers temporários. Suas listas e favoritos não serão perdidos."
+        confirmLabel="Limpar Cache"
+        cancelLabel="Cancelar"
+        isDestructive={true}
+        onConfirm={handleClearCacheConfirm}
+        onCancel={() => setShowClearCacheModal(false)}
+      />
     </div>
   );
 };

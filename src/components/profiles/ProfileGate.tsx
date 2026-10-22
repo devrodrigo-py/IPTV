@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { UserProfile } from '../../types';
 
 export const ProfileGate: React.FC = () => {
-  const { profiles, selectProfile, createProfile, deleteProfile } = useApp();
+  const { profiles, activeProfile, selectProfile, createProfile, deleteProfile } = useApp();
 
   const [selectedProfileForPin, setSelectedProfileForPin] = useState<UserProfile | null>(null);
   const [pinAttempt, setPinAttempt] = useState('');
@@ -66,7 +66,17 @@ export const ProfileGate: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#07070F] flex flex-col items-center justify-center p-6 select-none">
+    <div className="fixed inset-0 z-50 bg-[#07070F] flex flex-col items-center justify-center p-6 select-none relative">
+      {/* Return button if already logged into a profile */}
+      {activeProfile && !activeProfile.pin && (
+        <button
+          onClick={() => selectProfile(activeProfile)}
+          className="absolute top-6 right-6 px-4 py-2 rounded-xl bg-[#16162A] hover:bg-[#1E1E38] text-xs font-semibold text-[#A8A6C0] hover:text-white border border-[#2A2A45] cursor-pointer transition-colors"
+        >
+          Voltar ao App
+        </button>
+      )}
+
       {/* Brand Icon Header */}
       <div className="flex flex-col items-center mb-10">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#6B4FE0] via-[#2A1D6B] to-[#1FCFAE] p-2 flex items-center justify-center shadow-xl shadow-[#6B4FE0]/30 mb-3">
@@ -92,8 +102,13 @@ export const ProfileGate: React.FC = () => {
         {profiles.map((profile) => (
           <div
             key={profile.id}
+            tabIndex={0}
+            data-tv-title={`Perfil: ${profile.name}`}
             onClick={() => handleProfileClick(profile)}
-            className="group flex flex-col items-center cursor-pointer"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleProfileClick(profile);
+            }}
+            className="tv-card group flex flex-col items-center cursor-pointer focus:outline-none"
           >
             <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-3xl overflow-hidden border-2 border-transparent group-hover:border-[#6B4FE0] group-hover:scale-105 group-hover:shadow-2xl group-hover:shadow-[#6B4FE0]/40 transition-all duration-300 bg-[#16162A]">
               <img
@@ -125,8 +140,13 @@ export const ProfileGate: React.FC = () => {
 
         {/* Add Profile Tile */}
         <div
+          tabIndex={0}
+          data-tv-title="Adicionar Novo Perfil"
           onClick={() => setIsAddingProfile(true)}
-          className="group flex flex-col items-center cursor-pointer"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') setIsAddingProfile(true);
+          }}
+          className="tv-card group flex flex-col items-center cursor-pointer focus:outline-none"
         >
           <div className="w-28 h-28 md:w-32 md:h-32 rounded-3xl border-2 border-dashed border-[#2A2A45] group-hover:border-[#1FCFAE] group-hover:scale-105 transition-all flex items-center justify-center bg-[#16162A]/30">
             <Plus className="w-10 h-10 text-[#A8A6C0] group-hover:text-[#1FCFAE] transition-colors" />

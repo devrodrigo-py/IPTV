@@ -9,11 +9,13 @@ import {
   LogOut,
   Maximize2,
   Lock,
+  X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export const Navbar: React.FC = () => {
   const {
+    activeTab,
     activeProfile,
     lockToProfileGate,
     searchQuery,
@@ -25,6 +27,8 @@ export const Navbar: React.FC = () => {
   } = useApp();
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [previousTab, setPreviousTab] = useState<string>('home');
+  const [avatarError, setAvatarError] = useState(false);
 
   return (
     <header className="h-16 border-b border-[#2A2A45]/50 bg-[#07070F]/80 backdrop-blur-xl px-6 flex items-center justify-between sticky top-0 z-30">
@@ -37,18 +41,35 @@ export const Navbar: React.FC = () => {
             placeholder="Buscar canais, filmes, séries e programas..."
             value={searchQuery}
             onChange={(e) => {
-              setSearchQuery(e.target.value);
-              if (e.target.value.trim().length > 0) {
+              const val = e.target.value;
+              setSearchQuery(val);
+              if (val.trim().length > 0) {
                 setActiveTab('search');
+              } else {
+                setActiveTab(previousTab as any);
               }
             }}
             onFocus={() => {
+              if (activeTab !== 'search') {
+                setPreviousTab(activeTab);
+              }
               if (searchQuery.trim().length > 0) {
                 setActiveTab('search');
               }
             }}
-            className="w-full bg-[#16162A] hover:bg-[#1E1E38] focus:bg-[#1E1E38] text-sm text-[#F5F3FF] placeholder-[#A8A6C0]/60 pl-10 pr-4 py-2 rounded-xl border border-[#2A2A45] focus:border-[#6B4FE0] outline-none transition-all shadow-inner"
+            className="w-full bg-[#16162A] hover:bg-[#1E1E38] focus:bg-[#1E1E38] text-sm text-[#F5F3FF] placeholder-[#A8A6C0]/60 pl-10 pr-9 py-2 rounded-xl border border-[#2A2A45] focus:border-[#6B4FE0] outline-none transition-all shadow-inner"
           />
+          {searchQuery && (
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setActiveTab(previousTab as any);
+              }}
+              className="absolute right-3 text-[#A8A6C0] hover:text-white cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -63,20 +84,6 @@ export const Navbar: React.FC = () => {
           <span>Nebula Wrapped</span>
         </button>
 
-        {/* TV Mode Toggle (10-foot Couch UI) */}
-        <button
-          onClick={toggleTvMode}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-            tvMode
-              ? 'bg-[#6B4FE0] text-white border-[#6B4FE0] shadow-lg shadow-[#6B4FE0]/40'
-              : 'bg-[#16162A] text-[#A8A6C0] hover:text-white border-[#2A2A45]'
-          }`}
-          title="Modo TV / Navegação por Controle"
-        >
-          <Tv className="w-4 h-4" />
-          <span className="hidden md:inline">{tvMode ? 'Modo TV: Ativo' : 'Modo TV'}</span>
-        </button>
-
         {/* Profile Avatar / Switcher */}
         <div className="relative">
           <button
@@ -84,14 +91,18 @@ export const Navbar: React.FC = () => {
             className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-[#16162A] border border-transparent hover:border-[#2A2A45] transition-all cursor-pointer"
           >
             <div className="relative">
-              <img
-                src={activeProfile?.avatar}
-                alt={activeProfile?.name}
-                className="w-8 h-8 rounded-lg object-cover border border-[#6B4FE0]/50"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
-              />
+              {!avatarError && activeProfile?.avatar ? (
+                <img
+                  src={activeProfile.avatar}
+                  alt={activeProfile.name}
+                  className="w-8 h-8 rounded-lg object-cover border border-[#6B4FE0]/50"
+                  onError={() => setAvatarError(true)}
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#6B4FE0] to-[#1FCFAE] flex items-center justify-center text-white font-bold text-xs">
+                  {activeProfile?.name?.charAt(0) || 'U'}
+                </div>
+              )}
               {activeProfile?.isKids && (
                 <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-[#FF6F91] rounded-full border-2 border-[#07070F] flex items-center justify-center text-[8px] font-bold">
                   K

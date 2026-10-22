@@ -209,13 +209,58 @@ export function exportNebulaData(): string {
 export function importNebulaData(jsonString: string): boolean {
   try {
     const parsed = JSON.parse(jsonString);
-    if (parsed.profiles) saveProfiles(parsed.profiles);
-    if (parsed.playlists) savePlaylists(parsed.playlists);
-    if (parsed.channels) saveChannels(parsed.channels);
-    if (parsed.favorites) saveFavorites(parsed.favorites);
-    if (parsed.history) saveHistory(parsed.history);
-    if (parsed.settings) saveSettings(parsed.settings);
-    if (parsed.stats) saveStats(parsed.stats);
+    if (!parsed || typeof parsed !== 'object') return false;
+
+    // Validate profiles
+    if (Array.isArray(parsed.profiles) && parsed.profiles.length > 0) {
+      const validProfiles = parsed.profiles.filter(
+        (p: any) => p && typeof p.id === 'string' && typeof p.name === 'string'
+      );
+      if (validProfiles.length > 0) saveProfiles(validProfiles);
+    }
+
+    // Validate playlists
+    if (Array.isArray(parsed.playlists)) {
+      const validPlaylists = parsed.playlists.filter(
+        (pl: any) => pl && typeof pl.id === 'string' && typeof pl.name === 'string'
+      );
+      savePlaylists(validPlaylists);
+    }
+
+    // Validate channels
+    if (Array.isArray(parsed.channels)) {
+      const validChannels = parsed.channels.filter(
+        (c: any) => c && typeof c.id === 'string' && typeof c.streamUrl === 'string'
+      );
+      saveChannels(validChannels);
+    }
+
+    // Validate favorites
+    if (Array.isArray(parsed.favorites)) {
+      const validFavs = parsed.favorites.filter((f: any) => typeof f === 'string');
+      saveFavorites(validFavs);
+    }
+
+    // Validate history
+    if (Array.isArray(parsed.history)) {
+      const validHistory = parsed.history.filter(
+        (h: any) => h && typeof h.id === 'string' && typeof h.streamUrl === 'string'
+      );
+      saveHistory(validHistory);
+    }
+
+    // Validate settings
+    if (parsed.settings && typeof parsed.settings === 'object') {
+      const current = loadSettings();
+      saveSettings({ ...current, ...parsed.settings });
+    }
+
+    // Validate stats
+    if (parsed.stats && typeof parsed.stats === 'object') {
+      const currentStats = loadStats();
+      saveStats({ ...currentStats, ...parsed.stats });
+    }
+
     return true;
   } catch (e) {
     console.error('Error importing backup:', e);

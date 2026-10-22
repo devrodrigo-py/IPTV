@@ -47,7 +47,7 @@ export const SearchView: React.FC = () => {
   });
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 select-none">
+    <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
       {/* Header and Search input */}
       <div className="space-y-4 pb-4 border-b border-[#2A2A45]">
         <div className="flex items-center gap-2">
@@ -135,8 +135,13 @@ export const SearchView: React.FC = () => {
             {matchedVod.map((vod) => (
               <div
                 key={vod.id}
+                tabIndex={0}
+                data-tv-title={`Filme: ${vod.title}`}
                 onClick={() => setSelectedVodModal(vod)}
-                className="group bg-[#16162A] rounded-2xl border border-[#2A2A45] hover:border-[#6B4FE0] overflow-hidden cursor-pointer transition-all"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') setSelectedVodModal(vod);
+                }}
+                className="tv-card group bg-[#16162A] rounded-2xl border border-[#2A2A45] hover:border-[#6B4FE0] overflow-hidden cursor-pointer transition-all focus:outline-none"
               >
                 <div className="relative aspect-[2/3] w-full bg-black/40 overflow-hidden">
                   <img
@@ -167,8 +172,13 @@ export const SearchView: React.FC = () => {
             {matchedSeries.map((series) => (
               <div
                 key={series.id}
+                tabIndex={0}
+                data-tv-title={`Série: ${series.title}`}
                 onClick={() => setSelectedSeriesModal(series)}
-                className="group bg-[#16162A] rounded-2xl border border-[#2A2A45] hover:border-[#6B4FE0] p-3 cursor-pointer transition-all"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') setSelectedSeriesModal(series);
+                }}
+                className="tv-card group bg-[#16162A] rounded-2xl border border-[#2A2A45] hover:border-[#6B4FE0] p-3 cursor-pointer transition-all focus:outline-none"
               >
                 <h4 className="font-bold text-xs text-white truncate">{series.title}</h4>
                 <p className="text-[10px] text-[#A8A6C0] mt-0.5 line-clamp-1">{series.overview}</p>

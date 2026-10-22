@@ -165,6 +165,17 @@ export const VideoPlayer: React.FC = () => {
     if (!isPlayerOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Guard: do not trigger player shortcuts if typing in form inputs or dialogs
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
       resetHideTimer();
       if (e.key === ' ' || e.key === 'k') {
         e.preventDefault();
@@ -346,7 +357,9 @@ export const VideoPlayer: React.FC = () => {
         <div className="flex items-center gap-4">
           <button
             onClick={closePlayer}
-            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center text-white transition-all cursor-pointer"
+            tabIndex={0}
+            data-tv-title="Voltar ao Catálogo"
+            className="tv-card w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center text-white transition-all cursor-pointer focus:outline-none"
             title="Voltar (Esc)"
           >
             <ChevronLeft className="w-6 h-6" />
@@ -363,7 +376,7 @@ export const VideoPlayer: React.FC = () => {
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-bold text-white tracking-wide">{currentStream.title}</h2>
               {currentStream.isLive && (
-                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#1FCFAE]/20 text-[#1FCFAE] text-[11px] font-bold uppercase tracking-wider border border-[#1FCFAE]/30">
+                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#1FCFAE]/20 text-[#1FCFAE] text-xs font-bold uppercase tracking-wider border border-[#1FCFAE]/30">
                   <span className="w-2 h-2 rounded-full bg-[#1FCFAE] animate-ping" />
                   Ao Vivo
                 </span>
@@ -379,7 +392,9 @@ export const VideoPlayer: React.FC = () => {
           {currentStream.channel && (
             <button
               onClick={() => toggleFavorite(currentStream.channel!.id)}
-              className={`w-10 h-10 rounded-xl backdrop-blur-md flex items-center justify-center transition-all cursor-pointer ${
+              tabIndex={0}
+              data-tv-title="Favoritar Canal"
+              className={`tv-card w-10 h-10 rounded-xl backdrop-blur-md flex items-center justify-center transition-all cursor-pointer focus:outline-none ${
                 isFavorite(currentStream.channel.id)
                   ? 'bg-[#FF6F91]/20 text-[#FF6F91] border border-[#FF6F91]/40'
                   : 'bg-white/10 hover:bg-white/20 text-white'
@@ -395,7 +410,9 @@ export const VideoPlayer: React.FC = () => {
 
           <button
             onClick={() => setShowDrawer(!showDrawer)}
-            className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md text-white text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer"
+            tabIndex={0}
+            data-tv-title="Zapping: Lista de Canais"
+            className="tv-card px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md text-white text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer focus:outline-none"
           >
             <List className="w-4 h-4 text-[#1FCFAE]" />
             Canais
@@ -403,7 +420,9 @@ export const VideoPlayer: React.FC = () => {
 
           <button
             onClick={closePlayer}
-            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center text-white transition-all cursor-pointer"
+            tabIndex={0}
+            data-tv-title="Fechar Player"
+            className="tv-card w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center text-white transition-all cursor-pointer focus:outline-none"
           >
             <X className="w-5 h-5" />
           </button>
@@ -445,7 +464,9 @@ export const VideoPlayer: React.FC = () => {
             {/* Play/Pause Button */}
             <button
               onClick={togglePlay}
-              className="w-12 h-12 rounded-xl bg-[#6B4FE0] hover:bg-[#6B4FE0]/80 text-white flex items-center justify-center transition-all transform active:scale-95 shadow-lg shadow-[#6B4FE0]/30 cursor-pointer"
+              tabIndex={0}
+              data-tv-title={isPlaying ? 'Pausar Reprodução' : 'Continuar Reprodução'}
+              className="tv-card w-12 h-12 rounded-xl bg-[#6B4FE0] hover:bg-[#6B4FE0]/80 text-white flex items-center justify-center transition-all transform active:scale-95 shadow-lg shadow-[#6B4FE0]/30 cursor-pointer focus:outline-none"
             >
               {isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current ml-0.5" />}
             </button>
@@ -454,7 +475,9 @@ export const VideoPlayer: React.FC = () => {
             <div className="flex items-center gap-2 group/vol">
               <button
                 onClick={toggleMute}
-                className="w-10 h-10 rounded-lg hover:bg-white/10 text-white flex items-center justify-center transition-colors cursor-pointer"
+                tabIndex={0}
+                data-tv-title={isMuted || volume === 0 ? 'Desmutar Áudio' : 'Mutar Áudio'}
+                className="tv-card w-10 h-10 rounded-lg hover:bg-white/10 text-white flex items-center justify-center transition-colors cursor-pointer focus:outline-none"
               >
                 {isMuted || volume === 0 ? (
                   <VolumeX className="w-5 h-5 text-[#FF5468]" />
@@ -485,7 +508,9 @@ export const VideoPlayer: React.FC = () => {
             {/* Aspect Ratio Toggle */}
             <button
               onClick={cycleAspectRatio}
-              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs text-white font-medium uppercase tracking-wider backdrop-blur cursor-pointer"
+              tabIndex={0}
+              data-tv-title={`Proporção: ${aspectRatio}`}
+              className="tv-card px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs text-white font-medium uppercase tracking-wider backdrop-blur cursor-pointer focus:outline-none"
               title="Ajustar Proporção"
             >
               {aspectRatio}
@@ -496,7 +521,9 @@ export const VideoPlayer: React.FC = () => {
               <div className="relative">
                 <button
                   onClick={() => setShowQualityMenu(!showQualityMenu)}
-                  className="w-10 h-10 rounded-lg hover:bg-white/10 text-white flex items-center justify-center transition-colors cursor-pointer"
+                  tabIndex={0}
+                  data-tv-title="Qualidade da Transmissão"
+                  className="tv-card w-10 h-10 rounded-lg hover:bg-white/10 text-white flex items-center justify-center transition-colors cursor-pointer focus:outline-none"
                   title="Qualidade do Stream"
                 >
                   <Sliders className="w-5 h-5" />
@@ -508,7 +535,9 @@ export const VideoPlayer: React.FC = () => {
                     </p>
                     <button
                       onClick={() => selectQuality(-1)}
-                      className="w-full px-3 py-2 text-left text-xs text-white hover:bg-[#6B4FE0]/20 rounded-lg flex items-center justify-between"
+                      tabIndex={0}
+                      data-tv-title="Qualidade Automática"
+                      className="tv-card w-full px-3 py-2 text-left text-xs text-white hover:bg-[#6B4FE0]/20 rounded-lg flex items-center justify-between focus:outline-none"
                     >
                       <span>Automático</span>
                       {currentLevel === -1 && <Check className="w-3.5 h-3.5 text-[#1FCFAE]" />}
@@ -517,7 +546,9 @@ export const VideoPlayer: React.FC = () => {
                       <button
                         key={lvl.id}
                         onClick={() => selectQuality(lvl.id)}
-                        className="w-full px-3 py-2 text-left text-xs text-white hover:bg-[#6B4FE0]/20 rounded-lg flex items-center justify-between"
+                        tabIndex={0}
+                        data-tv-title={`Resolução ${lvl.height}p`}
+                        className="tv-card w-full px-3 py-2 text-left text-xs text-white hover:bg-[#6B4FE0]/20 rounded-lg flex items-center justify-between focus:outline-none"
                       >
                         <span>{lvl.height}p ({Math.round(lvl.bitrate / 1000)}k)</span>
                         {currentLevel === lvl.id && <Check className="w-3.5 h-3.5 text-[#1FCFAE]" />}
@@ -531,7 +562,9 @@ export const VideoPlayer: React.FC = () => {
             {/* Picture in Picture */}
             <button
               onClick={togglePiP}
-              className="w-10 h-10 rounded-lg hover:bg-white/10 text-white flex items-center justify-center transition-colors cursor-pointer"
+              tabIndex={0}
+              data-tv-title="Modo Picture-in-Picture"
+              className="tv-card w-10 h-10 rounded-lg hover:bg-white/10 text-white flex items-center justify-center transition-colors cursor-pointer focus:outline-none"
               title="Picture-in-Picture"
             >
               <PictureInPicture className="w-5 h-5" />
@@ -540,7 +573,9 @@ export const VideoPlayer: React.FC = () => {
             {/* Fullscreen */}
             <button
               onClick={toggleFullscreen}
-              className="w-10 h-10 rounded-lg hover:bg-white/10 text-white flex items-center justify-center transition-colors cursor-pointer"
+              tabIndex={0}
+              data-tv-title="Tela Cheia"
+              className="tv-card w-10 h-10 rounded-lg hover:bg-white/10 text-white flex items-center justify-center transition-colors cursor-pointer focus:outline-none"
               title="Tela Cheia (F)"
             >
               {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
@@ -551,63 +586,79 @@ export const VideoPlayer: React.FC = () => {
 
       {/* Quick Channel Drawer */}
       {showDrawer && (
-        <div className="absolute top-0 right-0 bottom-0 w-80 md:w-96 bg-[#07070F]/95 backdrop-blur-xl border-l border-[#2A2A45] z-40 flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
+        <div className="quick-drawer absolute top-0 right-0 bottom-0 w-80 md:w-96 bg-[#07070F]/95 backdrop-blur-xl border-l border-[#2A2A45] z-40 flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
           <div className="p-4 border-b border-[#2A2A45] flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Tv className="w-5 h-5 text-[#6B4FE0]" />
-              <h3 className="font-bold text-white text-base">Canais Disponíveis</h3>
+              <h3 className="font-bold text-white text-base">Zapping Rápido de Canais</h3>
             </div>
             <button
               onClick={() => setShowDrawer(false)}
-              className="w-8 h-8 rounded-lg hover:bg-[#16162A] text-[#A8A6C0] hover:text-white flex items-center justify-center cursor-pointer"
+              tabIndex={0}
+              data-tv-title="Fechar Lista de Canais"
+              className="tv-card w-8 h-8 rounded-lg hover:bg-[#16162A] text-[#A8A6C0] hover:text-white flex items-center justify-center cursor-pointer focus:outline-none"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {filteredChannels.map((ch, idx) => {
-              const isSelected = currentStream.channel?.id === ch.id;
-              return (
-                <div
-                  key={ch.id}
-                  onClick={() => {
-                    playChannel(ch);
-                    setShowDrawer(false);
-                  }}
-                  className={`p-3 rounded-xl flex items-center gap-3 cursor-pointer transition-all border ${
-                    isSelected
-                      ? 'bg-[#6B4FE0]/20 border-[#6B4FE0] text-white'
-                      : 'bg-[#16162A]/60 hover:bg-[#16162A] border-[#2A2A45]/40 text-[#A8A6C0] hover:text-white'
-                  }`}
-                >
-                  <span className="text-xs font-mono font-bold text-[#A8A6C0] w-6 text-center">
-                    {(idx + 1).toString().padStart(2, '0')}
-                  </span>
-                  {ch.logoUrl ? (
-                    <img
-                      src={ch.logoUrl}
-                      alt={ch.name}
-                      className="w-9 h-9 object-contain rounded-md bg-black/40 p-1"
-                      onError={(e) => ((e.target as HTMLElement).style.display = 'none')}
-                    />
-                  ) : (
-                    <div className="w-9 h-9 rounded-md bg-[#2A2A45] flex items-center justify-center text-white">
-                      <Tv className="w-4 h-4" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate text-white">{ch.name}</p>
-                    <p className="text-[11px] text-[#A8A6C0]">{ch.groupTitle || 'Geral'}</p>
-                  </div>
-                  {ch.resolution && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/40 text-[#1FCFAE] border border-[#1FCFAE]/30">
-                      {ch.resolution}
+            {filteredChannels.length > 0 ? (
+              filteredChannels.map((ch, idx) => {
+                const isSelected = currentStream.channel?.id === ch.id;
+                return (
+                  <div
+                    key={ch.id}
+                    tabIndex={0}
+                    data-tv-title={`Zapping: ${ch.name}`}
+                    onClick={() => {
+                      playChannel(ch);
+                      setShowDrawer(false);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        playChannel(ch);
+                        setShowDrawer(false);
+                      }
+                    }}
+                    className={`tv-card p-3 rounded-xl flex items-center gap-3 cursor-pointer transition-all border focus:outline-none ${
+                      isSelected
+                        ? 'bg-[#6B4FE0]/30 border-[#6B4FE0] text-white shadow-lg'
+                        : 'bg-[#16162A]/60 hover:bg-[#16162A] border-[#2A2A45]/40 text-[#A8A6C0] hover:text-white'
+                    }`}
+                  >
+                    <span className="text-xs font-mono font-bold text-[#A8A6C0] w-6 text-center">
+                      {(idx + 1).toString().padStart(2, '0')}
                     </span>
-                  )}
-                </div>
-              );
-            })}
+                    {ch.logoUrl ? (
+                      <img
+                        src={ch.logoUrl}
+                        alt={ch.name}
+                        className="w-9 h-9 object-contain rounded-md bg-black/40 p-1"
+                        onError={(e) => ((e.target as HTMLElement).style.display = 'none')}
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-md bg-[#2A2A45] flex items-center justify-center text-white">
+                        <Tv className="w-4 h-4" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate text-white">{ch.name}</p>
+                      <p className="text-[11px] text-[#A8A6C0]">{ch.groupTitle || 'Geral'}</p>
+                    </div>
+                    {ch.resolution && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/40 text-[#1FCFAE] border border-[#1FCFAE]/30">
+                        {ch.resolution}
+                      </span>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="py-12 text-center text-[#A8A6C0] text-xs">
+                Nenhum canal ativo disponível nesta lista.
+              </div>
+            )}
           </div>
         </div>
       )}

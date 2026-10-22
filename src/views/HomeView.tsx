@@ -33,38 +33,45 @@ export const HomeView: React.FC = () => {
   const topChannels = filteredChannels.slice(0, 8);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8 select-none">
-      {/* Hero Showcase Banner */}
+    <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-8 select-none">
+      {/* Hero Showcase Banner with Netflix Multi-Stop Scrim Protection */}
       {heroChannel && (
-        <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-[#16162A] via-[#1E1E38] to-[#2A1D6B] border border-[#6B4FE0]/40 shadow-2xl p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="relative z-10 max-w-xl">
+        <div className="relative rounded-3xl overflow-hidden bg-[#16162A] border border-[#6B4FE0]/40 shadow-2xl p-6 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8">
+          {/* Background Scrim */}
+          <div className="absolute inset-0 scrim-hero-tv z-0 pointer-events-none" />
+
+          <div className="relative z-10 max-w-2xl">
             <div className="flex items-center gap-2 mb-3">
-              <span className="px-2.5 py-1 rounded-lg bg-[#1FCFAE]/20 text-[#1FCFAE] font-bold text-xs uppercase tracking-wider border border-[#1FCFAE]/30 flex items-center gap-1.5">
+              <span className="px-3 py-1 rounded-lg bg-[#1FCFAE]/20 text-[#1FCFAE] font-bold text-xs uppercase tracking-wider border border-[#1FCFAE]/40 flex items-center gap-1.5 shadow-sm">
                 <span className="w-2 h-2 rounded-full bg-[#1FCFAE] animate-ping" />
                 Destaque Ao Vivo
               </span>
-              <span className="text-xs text-[#A8A6C0] font-medium">Sinal Oficial</span>
+              <span className="text-xs text-[#A8A6C0] font-semibold tracking-wide">Transmissão Oficial</span>
             </div>
 
-            <h1 className="text-2xl md:text-4xl font-extrabold text-white tracking-tight font-['Outfit']">
+            <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight font-['Outfit'] drop-shadow-md">
               {heroChannel.name}
             </h1>
-            <p className="text-xs md:text-sm text-[#A8A6C0] mt-2 leading-relaxed">
+            <p className="text-sm md:text-base text-[#A8A6C0] mt-3 leading-relaxed max-w-xl">
               Assista à transmissão ao vivo com alta resolução, latência otimizada e guia de programação em tempo real no Nebula IPTV.
             </p>
 
-            <div className="flex items-center gap-3 mt-6">
+            <div className="flex items-center gap-4 mt-7">
               <button
                 onClick={() => playChannel(heroChannel)}
-                className="px-6 py-3 rounded-2xl bg-[#6B4FE0] hover:bg-[#6B4FE0]/80 text-white font-bold text-xs md:text-sm flex items-center gap-2.5 shadow-xl shadow-[#6B4FE0]/40 transition-transform active:scale-95 cursor-pointer"
+                tabIndex={0}
+                data-tv-title={`Destaque: Assistir ${heroChannel.name}`}
+                className="tv-card px-7 py-3.5 rounded-2xl bg-[#6B4FE0] hover:bg-[#6B4FE0]/90 text-white font-bold text-sm md:text-base flex items-center gap-2.5 shadow-xl shadow-[#6B4FE0]/40 transition-transform active:scale-95 cursor-pointer focus:outline-none"
               >
-                <Play className="w-4 h-4 fill-current" />
+                <Play className="w-5 h-5 fill-current" />
                 Assistir Ao Vivo
               </button>
 
               <button
                 onClick={() => setActiveTab('channels')}
-                className="px-5 py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs md:text-sm flex items-center gap-2 backdrop-blur-sm cursor-pointer transition-colors"
+                tabIndex={0}
+                data-tv-title="Menu: Ver Grade Completa"
+                className="tv-card px-6 py-3.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-semibold text-sm md:text-base flex items-center gap-2 backdrop-blur-sm cursor-pointer transition-colors focus:outline-none border border-white/5"
               >
                 Ver Grade Completa
                 <ChevronRight className="w-4 h-4 text-[#A8A6C0]" />
@@ -72,17 +79,17 @@ export const HomeView: React.FC = () => {
             </div>
           </div>
 
-          <div className="relative w-full md:w-80 h-44 md:h-52 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-center p-4 overflow-hidden group">
+          <div className="relative z-10 w-full md:w-96 h-48 md:h-60 rounded-3xl bg-[#0B0B18]/90 border border-white/10 flex items-center justify-center p-6 overflow-hidden group shadow-2xl">
             {heroChannel.logoUrl ? (
               <img
                 src={heroChannel.logoUrl}
                 alt={heroChannel.name}
-                className="max-h-24 max-w-full object-contain filter drop-shadow group-hover:scale-105 transition-transform duration-300"
+                className="max-h-28 max-w-full object-contain filter drop-shadow-xl group-hover:scale-105 transition-transform duration-300"
               />
             ) : (
-              <Tv className="w-16 h-16 text-[#6B4FE0]" />
+              <Tv className="w-20 h-20 text-[#6B4FE0]" />
             )}
-            <div className="absolute bottom-3 right-3 px-2 py-0.5 rounded bg-black/70 text-[10px] font-bold text-[#1FCFAE]">
+            <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-md bg-black/80 text-xs font-bold text-[#1FCFAE] border border-[#1FCFAE]/40">
               {heroChannel.resolution || 'HD'}
             </div>
           </div>
@@ -109,6 +116,8 @@ export const HomeView: React.FC = () => {
             {history.slice(0, 4).map((item) => (
               <div
                 key={item.id}
+                tabIndex={0}
+                data-tv-title={`Continuar: ${item.title}`}
                 onClick={() => {
                   const ch = filteredChannels.find((c) => c.id === item.contentId);
                   if (ch) playChannel(ch);
@@ -117,7 +126,17 @@ export const HomeView: React.FC = () => {
                     if (vod) playVod(vod);
                   }
                 }}
-                className="p-3.5 rounded-2xl bg-[#16162A] hover:bg-[#1E1E38] border border-[#2A2A45] hover:border-[#6B4FE0] flex items-center gap-3 cursor-pointer transition-all shadow-sm group"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const ch = filteredChannels.find((c) => c.id === item.contentId);
+                    if (ch) playChannel(ch);
+                    else if (item.contentType === 'vod') {
+                      const vod = vodItems.find((v) => v.id === item.contentId);
+                      if (vod) playVod(vod);
+                    }
+                  }
+                }}
+                className="tv-card group p-3.5 rounded-2xl bg-[#16162A] hover:bg-[#1E1E38] border border-[#2A2A45] hover:border-[#6B4FE0] flex items-center gap-3 cursor-pointer transition-all shadow-sm focus:outline-none"
               >
                 <div className="w-12 h-12 rounded-xl bg-black/40 overflow-hidden relative shrink-0 flex items-center justify-center border border-white/5">
                   {item.posterUrl ? (
@@ -192,8 +211,13 @@ export const HomeView: React.FC = () => {
           {vodItems.slice(0, 5).map((vod) => (
             <div
               key={vod.id}
+              tabIndex={0}
+              data-tv-title={`Filme: ${vod.title}`}
               onClick={() => setSelectedVodModal(vod)}
-              className="group bg-[#16162A] rounded-2xl border border-[#2A2A45] hover:border-[#6B4FE0] overflow-hidden cursor-pointer transition-all duration-200"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') setSelectedVodModal(vod);
+              }}
+              className="tv-card group bg-[#16162A] rounded-2xl border border-[#2A2A45] hover:border-[#6B4FE0] overflow-hidden cursor-pointer transition-all duration-200 focus:outline-none"
             >
               <div className="relative aspect-[2/3] w-full bg-black/40 overflow-hidden">
                 <img

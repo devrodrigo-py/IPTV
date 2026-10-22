@@ -18,10 +18,11 @@ export const ChannelListTile: React.FC<ChannelListTileProps> = ({ channel, index
     <div
       onClick={() => playChannel(channel)}
       tabIndex={0}
+      data-tv-title={`Canal: ${channel.name}`}
       onKeyDown={(e) => {
         if (e.key === 'Enter') playChannel(channel);
       }}
-      className="tv-card group flex items-center justify-between p-3.5 rounded-2xl bg-[#16162A] hover:bg-[#1E1E38] border border-[#2A2A45]/60 hover:border-[#6B4FE0]/50 transition-all cursor-pointer shadow-sm hover:shadow-lg"
+      className="tv-card group flex items-center justify-between p-3.5 rounded-2xl bg-[#16162A] hover:bg-[#1E1E38] border border-[#2A2A45]/60 hover:border-[#6B4FE0]/50 transition-all cursor-pointer shadow-sm hover:shadow-lg focus:outline-none"
     >
       <div className="flex items-center gap-4 min-w-0 flex-1">
         <span className="text-xs font-mono font-bold text-[#A8A6C0] w-7 text-center">

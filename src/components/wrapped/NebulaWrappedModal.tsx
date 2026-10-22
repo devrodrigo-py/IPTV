@@ -75,6 +75,23 @@ export const NebulaWrappedModal: React.FC<NebulaWrappedModalProps> = ({ onClose 
   const active = slides[currentSlide];
   const Icon = active.icon;
 
+  // Keyboard navigation for slides
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        e.preventDefault();
+        setCurrentSlide((prev) => Math.min(slides.length - 1, prev + 1));
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setCurrentSlide((prev) => Math.max(0, prev - 1));
+      } else if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [slides.length, onClose]);
+
   return (
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
       <div className="w-full max-w-lg rounded-3xl bg-[#07070F] border border-[#6B4FE0]/50 overflow-hidden shadow-2xl relative flex flex-col min-h-[500px]">

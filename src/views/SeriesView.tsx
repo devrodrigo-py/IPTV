@@ -7,7 +7,7 @@ export const SeriesView: React.FC = () => {
   const { seriesItems, selectedSeriesModal, setSelectedSeriesModal } = useApp();
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
       {/* Header */}
       <div className="pb-4 border-b border-[#2A2A45]">
         <div className="flex items-center gap-2">
@@ -27,8 +27,13 @@ export const SeriesView: React.FC = () => {
           return (
             <div
               key={series.id}
+              tabIndex={0}
+              data-tv-title={`Série: ${series.title}`}
               onClick={() => setSelectedSeriesModal(series)}
-              className="tv-card group bg-[#16162A] rounded-2xl border border-[#2A2A45] hover:border-[#6B4FE0]/60 overflow-hidden cursor-pointer flex flex-col justify-between transition-all duration-200 shadow-md hover:shadow-xl hover:shadow-[#6B4FE0]/15"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') setSelectedSeriesModal(series);
+              }}
+              className="tv-card group bg-[#16162A] rounded-2xl border border-[#2A2A45] hover:border-[#6B4FE0]/60 overflow-hidden cursor-pointer flex flex-col justify-between transition-all duration-200 shadow-md hover:shadow-xl hover:shadow-[#6B4FE0]/15 focus:outline-none"
             >
               <div className="relative aspect-[16/10] w-full bg-black/40 overflow-hidden">
                 <img
