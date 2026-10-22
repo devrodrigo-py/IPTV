@@ -1,29 +1,31 @@
-# Flutter/Dart
-.dart_tool/
-.packages
+# Dependencies
+node_modules/
+
+# Production build output
+dist/
+dist-ssr/
 build/
-.flutter-plugins
-.flutter-plugins-dependencies
 
-# IDE
-.idea/
-.vscode/
-*.iml
+# Environment variables
+.env
+.env.local
+.env.*.local
 
-# macOS
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Coverage
+coverage/
+
+# OS metadata
 .DS_Store
-
-# Windows
 Thumbs.db
 desktop.ini
 
-# Generated files (keep .g.dart and .freezed.dart committed per spec 4.6)
-
-# Misc
-*.log
-.env
-coverage/
-
-# Release signing (producao)
-android/key.properties
-android/nebula-release.jks
+# IDEs
+.idea/
+.vscode/
+*.iml
