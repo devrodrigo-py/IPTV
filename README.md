@@ -1,61 +1,88 @@
-# Nebula IPTV (Web / React)
+# Nebula IPTV
 
-Nebula IPTV é uma plataforma moderna e elegante para reprodução e gerenciamento de transmissões IPTV (Live TV, VOD e Séries), reescrita em **React + TypeScript + Vite + Tailwind CSS**.
+Player de IPTV com cara de serviço de streaming, feito para TV: Amazon Fire TV / Fire Stick, Google TV / Android TV e Xiaomi Mi Box / Mi TV. Também roda no navegador.
 
-## ✨ Principais Funcionalidades
+O Nebula **não fornece conteúdo**. Ele organiza e reproduz as listas que o usuário já tem (M3U/M3U8 ou login Xtream Codes do provedor).
 
-- **Canais Ao Vivo (Live TV)**:
-  - Grade e lista com logotipos, resolução (4K, FHD, HD) e status ao vivo.
-  - Sintonizador com Hls.js (.m3u8) e fallback nativo.
-  - Indicador dinâmico de programa atual e barra de progresso EPG.
-  - Gaveta de canais rápidos (Quick Channel Drawer) dentro do player.
-  - Ajuste de proporção (16:9, 4:3, Fill, Fit), qualidade de stream e Picture-in-Picture (PiP).
+## O que ele faz
 
-- **Multiview Wall**:
-  - Reprodução simultânea de 2, 4 (2x2) ou 9 (3x3) transmissões.
-  - Controle de foco de áudio dinâmico por tile.
-  - Adição e troca rápida de canais por slot.
+- **Ao vivo, filmes e séries** a partir de um login Xtream Codes (`player_api.php`) ou de uma lista M3U. Em listas M3U, filmes (`/movie/`, `.mp4`, `.mkv`…) e episódios (`S01E02`) são separados automaticamente.
+- **Home estilo streaming**: destaque, *Continuar assistindo* com barra de progresso, favoritos, adicionados recentemente, mais bem avaliados, séries e prateleiras por categoria.
+- **Retomar de onde parou**, "assistir do início", próximo episódio automático e marcação de episódios vistos.
+- **Guia de programação (EPG)**: baixado automaticamente da lista (`url-tvg`) ou do servidor Xtream (`xmltv.php`, aceita `.gz`), com processamento fora da thread principal.
+- **Player nativo no Android (Media3/ExoPlayer)**: HLS, MPEG-TS, MP4/MKV, HEVC, áudio Dolby (AC3/EAC3), escolha de faixa de áudio e legenda, reconexão automática, troca de canal com CH+/CH-, setas e teclado numérico.
+- **Controle remoto**: navegação espacial pelo D-pad, Voltar hierárquico (fecha player → modal → volta ao Início → menu → sai do app), teclas de mídia.
+- **Listas enormes**: catálogo no IndexedDB (sem o limite de ~5 MB do localStorage) e grades renderizadas aos poucos.
+- **Modo leve** automático em aparelhos de entrada (Fire TV Stick): menos blur, sombras e animações. A multitela é limitada ao que o aparelho decodifica.
+- Perfis com PIN, perfil Kids, estatísticas, backup/restauração.
+- Capas e sinopses opcionais via **TMDB** (chave gratuita em Configurações).
 
-- **Filmes sob Demanda (VOD) & Séries**:
-  - Catálogo categorizado com capas, sinopse, elenco, nota e ano.
-  - Navegação de séries por temporadas e lista de episódios.
-
-- **Guia Eletrônico de Programação (EPG)**:
-  - Linha do tempo de canais sincronizada em UTC e adaptada ao fuso local.
-  - Importação de arquivos XMLTV (.xml/.xmltv).
-
-- **Gerenciamento de Listas (Playlists)**:
-  - Suporte a links M3U / M3U8 web.
-  - Upload direto de arquivo local M3U / M3U8 com parser tolerante.
-  - Integração com servidores Xtream Codes API.
-  - Ativação/desativação individual e recarga de listas.
-
-- **Perfis de Usuário & Proteção Parental**:
-  - Suporte a múltiplos perfis (ex: Principal, Cinema, Kids).
-  - Bloqueio por senha/PIN de 4 dígitos.
-  - Modo Kids com filtragem automática de canais adultos.
-
-- **Modo TV (10-Foot UI)**:
-  - Navegação adaptada para controle remoto e teclas direcionais do teclado (D-Pad).
-  - Anéis de foco luminosos com gradiente Nebula.
-  - Overlay de controle remoto virtual na tela.
-
-- **Nebula Wrapped & Estatísticas**:
-  - Métricas de horas assistidas, dias ativos e ranking de canais mais sintonizados.
-  - Retrospectiva interativa no estilo Wrapped com cartões de estatísticas e personalidade.
-
-- **Persistência & Backups**:
-  - Armazenamento em `localStorage` com exportação e importação completa em JSON.
-
-## 🚀 Como Executar
+## Desenvolvimento
 
 ```bash
-# Instalar dependências
 npm install
+npm run dev        # http://localhost:3000
+npm test           # testes unitários (Vitest)
+npm run lint       # checagem de tipos
+npm run build      # build web em dist/
+```
 
-# Iniciar servidor de desenvolvimento (porta 3000)
-npm run dev
+No navegador, a maioria dos servidores IPTV bloqueia requisições (CORS). Para testar listas reais no navegador, configure um proxy em **Configurações → Proxy CORS**. O app Android não precisa disso.
 
-# Gerar build de produção
-npm run build
+## App Android TV
+
+O projeto Android fica em `android/` (Capacitor 7). O player nativo está em `android/app/src/main/java/app/nebula/iptv/player/`.
+
+### Baixar o APK pronto
+
+Cada pull request e cada push na `main` gera um APK de depuração: **GitHub → Actions → CI → execução → Artifacts → `nebula-iptv-debug-apk`**.
+
+### Compilar localmente
+
+Requisitos: Node 22, JDK 21 e Android SDK (Android Studio).
+
+```bash
+npm run android:apk
+# APK em android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Para um APK de produção assinado, defina `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` e `ANDROID_KEY_PASSWORD` e rode `./gradlew assembleRelease` em `android/`.
+
+### Instalar na TV
+
+**Fire TV / Fire Stick**
+1. *Configurações → Minha Fire TV → Opções do desenvolvedor*: ative a depuração ADB e a instalação de apps de origem desconhecida.
+2. Use o app *Downloader* com o link do APK, ou pelo computador: `adb connect IP_DA_TV` e `adb install -r app-debug.apk`.
+
+**Google TV / Android TV / Xiaomi Mi Box**
+1. Ative as *Opções do desenvolvedor* (toque 7 vezes em *Sobre → Build do Android TV OS*) e a *Depuração USB/ADB*.
+2. `adb connect IP_DA_TV` e `adb install -r app-debug.apk`, ou instale com um gerenciador de arquivos.
+
+O app aparece na fileira de apps da TV com o banner do Nebula.
+
+Compatibilidade: Android 6.0 ou mais novo (minSdk 23). Isso inclui o Fire TV Stick 2ª geração em diante (Fire OS 6+). Aparelhos com Fire OS 5 não são suportados pelo Capacitor 7.
+
+### Teclas do controle no player
+
+| Tecla | Ao vivo | Filmes e séries |
+|---|---|---|
+| CH+ / CH- (ou ↑ / ↓ com os controles ocultos) | troca de canal | — |
+| Números | vai para o canal digitado | — |
+| ← / → (controles ocultos) | — | volta / avança 10 s |
+| OK | mostra os controles (áudio, legendas, qualidade) | idem |
+| Voltar | esconde os controles; de novo, sai do player | idem (salva a posição) |
+
+## Publicação em lojas
+
+A Amazon Appstore e o Google Play aceitam players de IPTV que **não** incluem nem divulgam canais. Por isso, o app começa vazio, mostra o aviso "traga sua própria lista" e só carrega a demonstração (streams públicos de teste) se o usuário pedir. Não adicione listas, logos de canais ou marcas de terceiros ao material da loja.
+
+## Estrutura
+
+```
+src/
+  context/AppContext.tsx   estado global, sincronização de listas, reprodução
+  data/                    Xtream, M3U, XMLTV, EPG, progresso, IndexedDB, TMDB
+  platform/                detecção de aparelho, HTTP nativo, ponte do player nativo e do controle
+  components/ views/       interface
+android/                   app Android TV (Capacitor + Media3)
 ```
