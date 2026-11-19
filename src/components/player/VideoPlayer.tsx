@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import Hls from 'hls.js';
 import {
   Play,
   Pause,
@@ -19,15 +18,46 @@ import {
   ChevronRight,
   Sliders,
   Check,
+  Languages,
+  SkipForward,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { bufferSeconds, detectEngine } from './streamEngine';
+
+type HlsInstance = import('hls.js').default;
+type MpegtsPlayer = import('mpegts.js').default.Player;
+
+interface TrackOption {
+  id: number;
+  label: string;
+}
+
+const MAX_AUTO_RETRIES = 5;
+const NEXT_EPISODE_LEAD_SECONDS = 25;
 
 export const VideoPlayer: React.FC = () => {
-  const { currentStream, isPlayerOpen, closePlayer, filteredChannels, playChannel, isFavorite, toggleFavorite } = useApp();
+  const {
+    currentStream,
+    isPlayerOpen,
+    closePlayer,
+    filteredChannels,
+    playChannel,
+    isFavorite,
+    toggleFavorite,
+    saveProgress,
+    settings,
+    playNextEpisode,
+    getNextEpisodeTitle,
+  } = useApp();
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const hlsRef = useRef<Hls | null>(null);
+  const hlsRef = useRef<HlsInstance | null>(null);
+  const tsRef = useRef<MpegtsPlayer | null>(null);
+  const retryRef = useRef(0);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedRef = useRef(0);
+  const startedStreamRef = useRef<unknown>(null);
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
@@ -40,8 +70,15 @@ export const VideoPlayer: React.FC = () => {
   const [showControls, setShowControls] = useState(true);
   const [showDrawer, setShowDrawer] = useState(false);
   const [showQualityMenu, setShowQualityMenu] = useState(false);
+  const [showTracksMenu, setShowTracksMenu] = useState(false);
   const [availableLevels, setAvailableLevels] = useState<{ id: number; height: number; bitrate: number }[]>([]);
   const [currentLevel, setCurrentLevel] = useState<number>(-1); // -1 is auto
+  const [audioTracks, setAudioTracks] = useState<TrackOption[]>([]);
+  const [currentAudio, setCurrentAudio] = useState(-1);
+  const [subtitleTracks, setSubtitleTracks] = useState<TrackOption[]>([]);
+  const [currentSubtitle, setCurrentSubtitle] = useState(-1);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [nextDismissed, setNextDismissed] = useState(false);
 
   // Timeline for non-live
   const [currentTime, setCurrentTime] = useState(0);
@@ -53,100 +90,230 @@ export const VideoPlayer: React.FC = () => {
     setShowControls(true);
     if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
     hideControlsTimer.current = setTimeout(() => {
-      if (isPlaying && !showDrawer && !showQualityMenu) {
+      if (!videoRef.current?.paused && !showDrawer && !showQualityMenu && !showTracksMenu) {
         setShowControls(false);
       }
     }, 4000);
   };
 
-  // Initialize playback whenever currentStream changes
-  useEffect(() => {
-    if (!currentStream || !isPlayerOpen) return;
+  const contentId = currentStream ? currentStream.episode?.id || currentStream.id : '';
 
-    const video = videoRef.current;
-    if (!video) return;
+  /** Persists the position of on-demand content (movies and episodes). */
+  // Last known position: the <video> element is already gone when the player
+  // unmounts, so closing the player saves from here.
+  const posRef = useRef({ id: '', t: 0, d: 0 });
+  const persistProgress = () => {
+    const v = videoRef.current;
+    if (v && posRef.current.id === contentId) {
+      posRef.current.t = v.currentTime;
+      if (Number.isFinite(v.duration)) posRef.current.d = v.duration;
+    }
+    const { id, t, d } = posRef.current;
+    if (!id || t <= 0 || !(d > 0)) return;
+    saveProgress(id, t, d);
+  };
 
-    setHasError(false);
-    setIsBuffering(true);
-    setAvailableLevels([]);
-    setCurrentLevel(-1);
-
+  const destroyEngines = () => {
+    if (retryTimer.current) clearTimeout(retryTimer.current);
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
     }
+    if (tsRef.current) {
+      try {
+        tsRef.current.pause();
+        tsRef.current.unload();
+        tsRef.current.detachMediaElement();
+        tsRef.current.destroy();
+      } catch {
+        /* already torn down */
+      }
+      tsRef.current = null;
+    }
+  };
+
+  const fail = (message: string) => {
+    setHasError(true);
+    setErrorMessage(message);
+    setIsBuffering(false);
+  };
+
+  /** Live streams drop often; retry quietly with backoff before showing an error. */
+  const scheduleRetry = (message: string) => {
+    if (retryRef.current >= MAX_AUTO_RETRIES) {
+      fail(message);
+      return;
+    }
+    const delay = Math.min(15000, 1000 * 2 ** retryRef.current);
+    retryRef.current += 1;
+    setIsBuffering(true);
+    retryTimer.current = setTimeout(() => setReloadKey((k) => k + 1), delay);
+  };
+
+  // Initialize playback whenever the stream (or a reload) changes
+  useEffect(() => {
+    if (!currentStream || !isPlayerOpen) return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    let cancelled = false;
+    // Same stream again means a reconnect (keep position); otherwise a fresh start.
+    const isReload = startedStreamRef.current === currentStream;
+    startedStreamRef.current = currentStream;
+    setHasError(false);
+    setIsBuffering(true);
+    setAvailableLevels([]);
+    setCurrentLevel(-1);
+    setAudioTracks([]);
+    setSubtitleTracks([]);
+    setCurrentAudio(-1);
+    setCurrentSubtitle(-1);
+    setNextDismissed(false);
+    destroyEngines();
+    if (!isReload) posRef.current = { id: '', t: 0, d: 0 };
+    video.removeAttribute('src');
 
     const streamUrl = currentStream.streamUrl;
-    const isHlsUrl = streamUrl.includes('.m3u8') || streamUrl.includes('/hls/') || streamUrl.includes('live');
+    const isLive = currentStream.isLive;
+    const engine = detectEngine(streamUrl, isLive);
+    const startAt = !isReload ? currentStream.startPositionSeconds ?? 0 : posRef.current.t || currentStream.startPositionSeconds || 0;
+    const bufferLen = bufferSeconds(settings.bufferMode);
 
-    if (Hls.isSupported() && isHlsUrl) {
+    const seekToStart = () => {
+      if (!isLive && startAt > 0 && video.duration > startAt) video.currentTime = startAt;
+    };
+    video.addEventListener('loadedmetadata', seekToStart, { once: true });
+
+    const playSafe = () => {
+      video.play().catch(() => setIsPlaying(false));
+    };
+
+    const startNative = () => {
+      video.src = streamUrl;
+      video.load();
+      playSafe();
+    };
+
+    const startHls = async () => {
+      const { default: Hls } = await import('hls.js');
+      if (cancelled) return;
+      if (!Hls.isSupported()) {
+        // Safari and some TV browsers play HLS natively.
+        if (video.canPlayType('application/vnd.apple.mpegurl')) startNative();
+        else fail('Este navegador não reproduz HLS. Use o app Android ou outro navegador.');
+        return;
+      }
       const hls = new Hls({
         enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 60,
+        lowLatencyMode: settings.bufferMode === 'low',
+        maxBufferLength: bufferLen,
+        backBufferLength: 30,
+        startPosition: !isLive && startAt > 0 ? startAt : -1,
       });
       hlsRef.current = hls;
-
       hls.loadSource(streamUrl);
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+        retryRef.current = 0;
         setIsBuffering(false);
-        video.play().catch(() => setIsPlaying(false));
-        const levels = data.levels.map((lvl, index) => ({
-          id: index,
-          height: lvl.height,
-          bitrate: lvl.bitrate,
-        }));
-        setAvailableLevels(levels);
+        playSafe();
+        setAvailableLevels(data.levels.map((lvl, index) => ({ id: index, height: lvl.height, bitrate: lvl.bitrate })));
       });
-
-      hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
-        setCurrentLevel(data.level);
+      hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => setCurrentLevel(data.level));
+      hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) => {
+        setAudioTracks(data.audioTracks.map((t, i) => ({ id: i, label: t.name || t.lang || `Áudio ${i + 1}` })));
+        setCurrentAudio(hls.audioTrack);
       });
-
+      hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, (_, data) => {
+        setSubtitleTracks(data.subtitleTracks.map((t, i) => ({ id: i, label: t.name || t.lang || `Legenda ${i + 1}` })));
+      });
       hls.on(Hls.Events.ERROR, (_, data) => {
-        console.warn('HLS Event Error:', data);
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              hls.startLoad();
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              hls.recoverMediaError();
-              break;
-            default:
-              setHasError(true);
-              setErrorMessage('Falha na conexão do stream. O servidor de origem pode estar temporariamente offline.');
-              setIsBuffering(false);
-              hls.destroy();
-              break;
-          }
+        if (!data.fatal) return;
+        if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+          hls.recoverMediaError();
+        } else if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          scheduleRetry('Não foi possível conectar ao servidor do canal. Ele pode estar fora do ar.');
+        } else {
+          fail('Falha ao decodificar a transmissão. No Android, ative o player nativo em Configurações.');
         }
       });
-    } else {
-      // Native MP4 or Native HLS in Safari
-      video.src = streamUrl;
-      video.load();
-      video.play().catch(() => setIsPlaying(false));
-    }
+    };
+
+    const startTs = async () => {
+      const { default: mpegts } = await import('mpegts.js');
+      if (cancelled) return;
+      if (!mpegts.isSupported()) {
+        fail('Este aparelho não reproduz MPEG-TS no navegador. Use o app Android (player nativo).');
+        return;
+      }
+      const player = mpegts.createPlayer(
+        { type: 'mpegts', isLive, url: streamUrl },
+        {
+          enableWorker: true,
+          liveBufferLatencyChasing: settings.bufferMode === 'low',
+          lazyLoad: !isLive,
+          autoCleanupSourceBuffer: true,
+        }
+      );
+      tsRef.current = player;
+      player.attachMediaElement(video);
+      player.on(mpegts.Events.ERROR, (type: string) => {
+        if (type === mpegts.ErrorTypes.NETWORK_ERROR) scheduleRetry('Não foi possível conectar ao servidor do canal.');
+        else fail('Formato de vídeo não suportado pelo navegador. Use o app Android (player nativo).');
+      });
+      player.on(mpegts.Events.MEDIA_INFO, () => {
+        retryRef.current = 0;
+      });
+      player.load();
+      Promise.resolve(player.play()).catch(() => setIsPlaying(false));
+    };
+
+    if (engine === 'hls') void startHls();
+    else if (engine === 'mpegts') void startTs();
+    else startNative();
 
     resetHideTimer();
 
     return () => {
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
+      cancelled = true;
+      video.removeEventListener('loadedmetadata', seekToStart);
+      persistProgress();
+      destroyEngines();
     };
-  }, [currentStream, isPlayerOpen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStream, isPlayerOpen, reloadKey]);
+
+  // New stream: forget retries from the previous one.
+  useEffect(() => {
+    retryRef.current = 0;
+  }, [currentStream]);
+
+  // Closing and reopening the same stream object must start fresh too.
+  useEffect(() => {
+    if (!isPlayerOpen) startedStreamRef.current = null;
+  }, [isPlayerOpen]);
 
   // Video event listeners
   const onTimeUpdate = () => {
-    if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime);
-      setDuration(videoRef.current.duration || 0);
+    const v = videoRef.current;
+    if (!v) return;
+    if (currentStream && !currentStream.isLive) {
+      posRef.current = { id: contentId, t: v.currentTime, d: Number.isFinite(v.duration) ? v.duration : 0 };
     }
+    setCurrentTime(v.currentTime);
+    setDuration(Number.isFinite(v.duration) ? v.duration : 0);
+    const now = Date.now();
+    if (now - lastSavedRef.current > 10_000) {
+      lastSavedRef.current = now;
+      persistProgress();
+    }
+  };
+
+  const onEnded = () => {
+    persistProgress();
+    if (currentStream?.episode && settings.autoplayNextEpisode && playNextEpisode()) return;
+    if (!currentStream?.isLive) closePlayer();
   };
 
   const onWaiting = () => setIsBuffering(true);
@@ -155,9 +322,31 @@ export const VideoPlayer: React.FC = () => {
     setIsPlaying(true);
   };
   const onError = () => {
-    setIsBuffering(false);
-    setHasError(true);
-    setErrorMessage('Erro ao reproduzir o vídeo. Verifique se a URL da transmissão está ativa.');
+    // hls.js / mpegts.js report their own errors; this covers plain files.
+    if (hlsRef.current || tsRef.current) return;
+    if (currentStream?.isLive) scheduleRetry('Erro ao reproduzir a transmissão.');
+    else fail('Não foi possível abrir este vídeo. O formato pode não ser suportado pelo navegador (use o app Android) ou o link expirou.');
+  };
+
+  const selectAudio = (id: number) => {
+    if (hlsRef.current) hlsRef.current.audioTrack = id;
+    setCurrentAudio(id);
+    setShowTracksMenu(false);
+  };
+
+  const selectSubtitle = (id: number) => {
+    if (hlsRef.current) {
+      hlsRef.current.subtitleTrack = id;
+      hlsRef.current.subtitleDisplay = id >= 0;
+    }
+    setCurrentSubtitle(id);
+    setShowTracksMenu(false);
+  };
+
+  const manualReconnect = () => {
+    retryRef.current = 0;
+    setHasError(false);
+    setReloadKey((k) => k + 1);
   };
 
   // Keyboard navigation shortcuts
@@ -165,14 +354,8 @@ export const VideoPlayer: React.FC = () => {
     if (!isPlayerOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Guard: do not trigger player shortcuts if typing in form inputs or dialogs
       const target = e.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.isContentEditable)
-      ) {
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
         return;
       }
 
@@ -187,6 +370,9 @@ export const VideoPlayer: React.FC = () => {
       } else if (e.key === 'Escape') {
         if (showDrawer) {
           setShowDrawer(false);
+        } else if (showTracksMenu || showQualityMenu) {
+          setShowTracksMenu(false);
+          setShowQualityMenu(false);
         } else if (isFullscreen) {
           document.exitFullscreen?.();
         } else {
@@ -201,9 +387,16 @@ export const VideoPlayer: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlayerOpen, isPlaying, isMuted, isFullscreen, showDrawer, currentStream]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlayerOpen, isPlaying, isMuted, isFullscreen, showDrawer, showTracksMenu, showQualityMenu, currentStream]);
 
   if (!isPlayerOpen || !currentStream) return null;
+
+  const nextTitle = currentStream.episode ? getNextEpisodeTitle() : null;
+  // Zapping list: the current channel's category, capped so the drawer opens instantly.
+  const drawerGroup = currentStream.channel?.groupTitle;
+  const drawerChannels = (drawerGroup ? filteredChannels.filter((c) => c.groupTitle === drawerGroup) : filteredChannels).slice(0, 300);
+  const showNextCard = !!nextTitle && !nextDismissed && duration > 0 && duration - currentTime <= NEXT_EPISODE_LEAD_SECONDS;
 
   const togglePlay = () => {
     if (!videoRef.current) return;
@@ -288,6 +481,7 @@ export const VideoPlayer: React.FC = () => {
         playsInline
         autoPlay
         onTimeUpdate={onTimeUpdate}
+        onEnded={onEnded}
         onWaiting={onWaiting}
         onPlaying={onPlaying}
         onError={onError}
@@ -326,14 +520,9 @@ export const VideoPlayer: React.FC = () => {
           <p className="text-sm text-[#A8A6C0] max-w-md mb-6">{errorMessage}</p>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => {
-                setHasError(false);
-                setIsBuffering(true);
-                if (videoRef.current) {
-                  videoRef.current.load();
-                  videoRef.current.play().catch(() => {});
-                }
-              }}
+              onClick={manualReconnect}
+              autoFocus
+              data-tv-title="Tentar reconectar"
               className="px-5 py-2.5 rounded-xl bg-[#6B4FE0] hover:bg-[#6B4FE0]/80 text-white font-medium flex items-center gap-2 cursor-pointer transition-colors"
             >
               <RotateCcw className="w-4 h-4" /> Tentar Reconectar
@@ -559,6 +748,56 @@ export const VideoPlayer: React.FC = () => {
               </div>
             )}
 
+            {/* Audio & subtitle tracks */}
+            {(audioTracks.length > 1 || subtitleTracks.length > 0) && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowTracksMenu(!showTracksMenu)}
+                  data-tv-title="Áudio e legendas"
+                  className="tv-card w-10 h-10 rounded-lg hover:bg-white/10 text-white flex items-center justify-center transition-colors cursor-pointer focus:outline-none"
+                  title="Áudio e legendas"
+                >
+                  <Languages className="w-5 h-5" />
+                </button>
+                {showTracksMenu && (
+                  <div className="absolute bottom-12 right-0 bg-[#16162A] border border-[#2A2A45] rounded-xl shadow-2xl p-2 min-w-[200px] max-h-[60vh] overflow-y-auto z-50">
+                    {audioTracks.length > 1 && (
+                      <>
+                        <p className="text-[11px] font-semibold text-[#A8A6C0] uppercase px-3 py-1.5">Áudio</p>
+                        {audioTracks.map((t) => (
+                          <button
+                            key={`a${t.id}`}
+                            onClick={() => selectAudio(t.id)}
+                            data-tv-title={`Áudio: ${t.label}`}
+                            className="tv-card w-full px-3 py-2 text-left text-xs text-white hover:bg-[#6B4FE0]/20 rounded-lg flex items-center justify-between focus:outline-none"
+                          >
+                            <span>{t.label}</span>
+                            {currentAudio === t.id && <Check className="w-3.5 h-3.5 text-[#1FCFAE]" />}
+                          </button>
+                        ))}
+                      </>
+                    )}
+                    {subtitleTracks.length > 0 && (
+                      <>
+                        <p className="text-[11px] font-semibold text-[#A8A6C0] uppercase px-3 py-1.5">Legendas</p>
+                        {[{ id: -1, label: 'Desligadas' }, ...subtitleTracks].map((t) => (
+                          <button
+                            key={`s${t.id}`}
+                            onClick={() => selectSubtitle(t.id)}
+                            data-tv-title={`Legenda: ${t.label}`}
+                            className="tv-card w-full px-3 py-2 text-left text-xs text-white hover:bg-[#6B4FE0]/20 rounded-lg flex items-center justify-between focus:outline-none"
+                          >
+                            <span>{t.label}</span>
+                            {currentSubtitle === t.id && <Check className="w-3.5 h-3.5 text-[#1FCFAE]" />}
+                          </button>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Picture in Picture */}
             <button
               onClick={togglePiP}
@@ -584,6 +823,31 @@ export const VideoPlayer: React.FC = () => {
         </div>
       </div>
 
+      {/* Next episode card */}
+      {showNextCard && (
+        <div className="absolute right-8 bottom-32 z-30 bg-[#16162A]/95 border border-[#2A2A45] rounded-2xl p-4 shadow-2xl max-w-xs space-y-3">
+          <p className="text-[11px] uppercase font-bold text-[#A8A6C0]">Próximo episódio</p>
+          <p className="text-sm font-bold text-white line-clamp-2">{nextTitle}</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => playNextEpisode()}
+              autoFocus
+              data-tv-title="Assistir próximo episódio"
+              className="tv-card px-4 py-2 rounded-xl bg-white text-[#07070F] text-xs font-bold flex items-center gap-1.5 cursor-pointer focus:outline-none"
+            >
+              <SkipForward className="w-4 h-4" /> Assistir
+            </button>
+            <button
+              onClick={() => setNextDismissed(true)}
+              data-tv-title="Continuar neste episódio"
+              className="tv-card px-4 py-2 rounded-xl bg-white/10 text-white text-xs font-semibold cursor-pointer focus:outline-none"
+            >
+              Ficar
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Quick Channel Drawer */}
       {showDrawer && (
         <div className="quick-drawer absolute top-0 right-0 bottom-0 w-80 md:w-96 bg-[#07070F]/95 backdrop-blur-xl border-l border-[#2A2A45] z-40 flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
@@ -603,8 +867,8 @@ export const VideoPlayer: React.FC = () => {
           </div>
 
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {filteredChannels.length > 0 ? (
-              filteredChannels.map((ch, idx) => {
+            {drawerChannels.length > 0 ? (
+              drawerChannels.map((ch, idx) => {
                 const isSelected = currentStream.channel?.id === ch.id;
                 return (
                   <div

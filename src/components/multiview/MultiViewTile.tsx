@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import Hls from 'hls.js';
+import { detectEngine } from '../player/streamEngine';
 import { Volume2, VolumeX, RefreshCw, X, Radio, AlertCircle } from 'lucide-react';
 import { Channel } from '../../types';
 
@@ -21,7 +21,8 @@ export const MultiViewTile: React.FC<MultiViewTileProps> = ({
   onRemoveChannel,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const hlsRef = useRef<Hls | null>(null);
+  // Disposes whichever engine (hls.js or mpegts.js) the tile is using.
+  const disposeRef = useRef<(() => void) | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -29,62 +30,74 @@ export const MultiViewTile: React.FC<MultiViewTileProps> = ({
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+    let cancelled = false;
 
     setIsLoading(true);
     setHasError(false);
-
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
+    disposeRef.current?.();
+    disposeRef.current = null;
 
     const streamUrl = channel.streamUrl;
-    const isHls = streamUrl.includes('.m3u8') || streamUrl.includes('/hls/') || streamUrl.includes('live');
+    const engine = detectEngine(streamUrl, true);
+    const onFail = () => {
+      setHasError(true);
+      setIsLoading(false);
+    };
 
-    if (Hls.isSupported() && isHls) {
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 30,
-      });
-      hlsRef.current = hls;
-
-      hls.loadSource(streamUrl);
-      hls.attachMedia(video);
-
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        setIsLoading(false);
-        video.play().catch(() => {});
-      });
-
-      hls.on(Hls.Events.ERROR, (_, data) => {
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              hls.startLoad();
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              hls.recoverMediaError();
-              break;
-            default:
-              setHasError(true);
-              setIsLoading(false);
-              hls.destroy();
-              break;
-          }
+    const start = async () => {
+      if (engine === 'hls') {
+        const { default: Hls } = await import('hls.js');
+        if (cancelled) return;
+        if (!Hls.isSupported()) {
+          video.src = streamUrl;
+          video.play().catch(() => {});
+          return;
         }
-      });
-    } else {
-      video.src = streamUrl;
-      video.load();
-      video.play().catch(() => {});
-    }
+        // Small buffers: several tiles decode at once.
+        const hls = new Hls({ enableWorker: true, maxBufferLength: 10, backBufferLength: 10, capLevelToPlayerSize: true });
+        disposeRef.current = () => hls.destroy();
+        hls.loadSource(streamUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setIsLoading(false);
+          video.play().catch(() => {});
+        });
+        hls.on(Hls.Events.ERROR, (_, data) => {
+          if (!data.fatal) return;
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+          else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+          else onFail();
+        });
+      } else if (engine === 'mpegts') {
+        const { default: mpegts } = await import('mpegts.js');
+        if (cancelled) return;
+        if (!mpegts.isSupported()) return onFail();
+        const player = mpegts.createPlayer({ type: 'mpegts', isLive: true, url: streamUrl }, { enableWorker: true, autoCleanupSourceBuffer: true });
+        disposeRef.current = () => {
+          try {
+            player.unload();
+            player.detachMediaElement();
+            player.destroy();
+          } catch {
+            /* already disposed */
+          }
+        };
+        player.attachMediaElement(video);
+        player.on(mpegts.Events.ERROR, onFail);
+        player.load();
+        Promise.resolve(player.play()).catch(() => {});
+      } else {
+        video.src = streamUrl;
+        video.load();
+        video.play().catch(() => {});
+      }
+    };
+    void start();
 
     return () => {
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
+      cancelled = true;
+      disposeRef.current?.();
+      disposeRef.current = null;
     };
   }, [channel.streamUrl]);
 
