@@ -3,6 +3,13 @@
 // which older Fire TV / Android TV WebViews do not have.
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
-  theme: { extend: {} },
+  theme: {
+    extend: {
+      fontFamily: {
+        display: ['Outfit', 'system-ui', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+      },
+    },
+  },
   plugins: [],
 };

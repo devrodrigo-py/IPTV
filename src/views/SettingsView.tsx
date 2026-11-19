@@ -77,33 +77,33 @@ export const SettingsView: React.FC = () => {
   return (
     <div className="px-6 md:px-12 py-8 max-w-5xl mx-auto space-y-8 select-none">
       {/* Header */}
-      <div className="pb-4 border-b border-[#2A2A45]">
+      <div className="pb-4 border-b border-[#2A2A31]">
         <div className="flex items-center gap-2">
-          <Settings className="w-5 h-5 text-[#6B4FE0]" />
+          <Settings className="w-5 h-5 text-[#7C5CFF]" />
           <h1 className="text-xl font-bold text-white tracking-tight">Configurações do Sistema</h1>
         </div>
-        <p className="text-xs text-[#A8A6C0] mt-0.5">
+        <p className="text-xs text-[#A1A1AA] mt-0.5">
           Personalize a reprodução de vídeo, segurança, interface e backups.
         </p>
       </div>
 
       {backupFeedback && (
-        <div className="p-3.5 rounded-2xl bg-[#1FCFAE]/20 border border-[#1FCFAE]/40 text-xs text-[#1FCFAE] font-bold flex items-center gap-2">
+        <div className="p-3.5 rounded-2xl bg-[#22D3A6]/20 border border-[#22D3A6]/40 text-xs text-[#22D3A6] font-bold flex items-center gap-2">
           <CheckCircle className="w-4 h-4" />
           {backupFeedback}
         </div>
       )}
 
       {/* 1. Stream Playback & Buffer settings */}
-      <section className="p-6 rounded-3xl bg-[#16162A] border border-[#2A2A45] space-y-4">
+      <section className="p-6 rounded-3xl bg-[#141418] border border-[#2A2A31] space-y-4">
         <div className="flex items-center gap-2 text-white font-bold text-sm">
-          <Tv className="w-4 h-4 text-[#6B4FE0]" />
+          <Tv className="w-4 h-4 text-[#7C5CFF]" />
           Reprodução & Buffer de Transmissão
         </div>
 
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-semibold text-[#A8A6C0] mb-2">
+            <label className="block text-xs font-semibold text-[#A1A1AA] mb-2">
               Modo do Buffer de Stream
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -117,8 +117,8 @@ export const SettingsView: React.FC = () => {
                   onClick={() => updateSettings({ bufferMode: opt.id as any })}
                   className={`p-3.5 rounded-2xl border text-left cursor-pointer transition-all ${
                     settings.bufferMode === opt.id
-                      ? 'bg-[#6B4FE0]/20 border-[#6B4FE0] text-white'
-                      : 'bg-[#07070F] border-[#2A2A45] text-[#A8A6C0] hover:text-white'
+                      ? 'bg-[#7C5CFF]/20 border-[#7C5CFF] text-white'
+                      : 'bg-[#060608] border-[#2A2A31] text-[#A1A1AA] hover:text-white'
                   }`}
                 >
                   <p className="text-xs font-bold">{opt.title}</p>
@@ -128,10 +128,10 @@ export const SettingsView: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-3 border-t border-[#2A2A45]/60">
+          <div className="flex items-center justify-between pt-3 border-t border-[#2A2A31]/60">
             <div>
               <p className="text-xs font-bold text-white">Reprodução Automática (Autoplay)</p>
-              <p className="text-[11px] text-[#A8A6C0]">
+              <p className="text-[11px] text-[#A1A1AA]">
                 Iniciar o streaming do canal imediatamente ao clicar
               </p>
             </div>
@@ -139,19 +139,19 @@ export const SettingsView: React.FC = () => {
               type="checkbox"
               checked={settings.streamAutoplay}
               onChange={(e) => updateSettings({ streamAutoplay: e.target.checked })}
-              className="w-5 h-5 accent-[#6B4FE0] rounded cursor-pointer"
+              className="w-5 h-5 accent-[#7C5CFF] rounded cursor-pointer"
             />
           </div>
         </div>
       </section>
 
       {/* 1b. Device, player and catalog */}
-      <section className="p-6 rounded-3xl bg-[#16162A] border border-[#2A2A45] space-y-4">
+      <section className="p-6 rounded-3xl bg-[#141418] border border-[#2A2A31] space-y-4">
         <div className="flex items-center gap-2 text-white font-bold text-sm">
-          <Tv className="w-4 h-4 text-[#1FCFAE]" />
+          <Tv className="w-4 h-4 text-[#22D3A6]" />
           Aparelho, player e catálogo
         </div>
-        <p className="text-[11px] text-[#A8A6C0]">
+        <p className="text-[11px] text-[#A1A1AA]">
           Detectado: {deviceProfile.isFireTv ? 'Amazon Fire TV' : deviceProfile.isAndroidTv ? 'Android TV / Google TV' : 'navegador'}
           {deviceProfile.isLowEnd ? ' (aparelho de entrada)' : ''} · multitela até {deviceProfile.maxMultiviewTiles} telas
         </p>
@@ -171,7 +171,7 @@ export const SettingsView: React.FC = () => {
           onChange={(v) => updateSettings({ autoplayNextEpisode: v })}
         />
 
-        <div className="pt-3 border-t border-[#2A2A45]/60">
+        <div className="pt-3 border-t border-[#2A2A31]/60">
           <p className="text-xs font-bold text-white mb-2">Modo leve (menos animações e efeitos)</p>
           <div className="grid grid-cols-3 gap-3">
             {([
@@ -184,14 +184,14 @@ export const SettingsView: React.FC = () => {
                 onClick={() => updateSettings({ liteMode: id })}
                 data-tv-title={`Modo leve: ${label}`}
                 className={`tv-card p-3 rounded-2xl border text-xs font-bold cursor-pointer focus:outline-none ${
-                  settings.liteMode === id ? 'bg-[#6B4FE0]/20 border-[#6B4FE0] text-white' : 'bg-[#07070F] border-[#2A2A45] text-[#A8A6C0]'
+                  settings.liteMode === id ? 'bg-[#7C5CFF]/20 border-[#7C5CFF] text-white' : 'bg-[#060608] border-[#2A2A31] text-[#A1A1AA]'
                 }`}
               >
                 {label}
               </button>
             ))}
           </div>
-          <p className="text-[11px] text-[#A8A6C0] mt-2">Agora: {isLite ? 'ligado' : 'desligado'}.</p>
+          <p className="text-[11px] text-[#A1A1AA] mt-2">Agora: {isLite ? 'ligado' : 'desligado'}.</p>
         </div>
 
         <TextSetting
@@ -214,30 +214,30 @@ export const SettingsView: React.FC = () => {
       </section>
 
       {/* 2. TV Navigation Mode */}
-      <section className="p-6 rounded-3xl bg-[#16162A] border border-[#2A2A45] space-y-4">
+      <section className="p-6 rounded-3xl bg-[#141418] border border-[#2A2A31] space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-white font-bold text-sm">
-            <Tv className="w-4 h-4 text-[#1FCFAE]" />
+            <Tv className="w-4 h-4 text-[#22D3A6]" />
             Modo Android TV / 10-Foot UI (Controle Remoto)
           </div>
           <button
             onClick={toggleTvMode}
             className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               tvMode
-                ? 'bg-[#1FCFAE] text-black shadow-lg shadow-[#1FCFAE]/30'
-                : 'bg-[#2A2A45] text-[#A8A6C0]'
+                ? 'bg-[#22D3A6] text-black shadow-lg shadow-[#22D3A6]/30'
+                : 'bg-[#2A2A31] text-[#A1A1AA]'
             }`}
           >
             {tvMode ? 'Ativado' : 'Desativado'}
           </button>
         </div>
-        <p className="text-xs text-[#A8A6C0]">
+        <p className="text-xs text-[#A1A1AA]">
           Habilita os anéis de foco iluminados Nebula, controle remoto flutuante na tela e navegação D-pad pelas teclas direcionais do teclado.
         </p>
       </section>
 
       {/* 3. Parental Control */}
-      <section className="p-6 rounded-3xl bg-[#16162A] border border-[#2A2A45] space-y-4">
+      <section className="p-6 rounded-3xl bg-[#141418] border border-[#2A2A31] space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-white font-bold text-sm">
             <Shield className="w-4 h-4 text-[#FF6F91]" />
@@ -250,21 +250,21 @@ export const SettingsView: React.FC = () => {
             className="w-5 h-5 accent-[#FF6F91] rounded cursor-pointer"
           />
         </div>
-        <p className="text-xs text-[#A8A6C0]">
+        <p className="text-xs text-[#A1A1AA]">
           Bloqueia canais adultos e restringe perfis infantis (Kids) de acessar configurações ou trocar de perfil sem a senha.
         </p>
 
         {settings.parentalControlEnabled && (
           <div className="pt-2 flex items-center gap-3">
             <div className="relative w-48">
-              <Lock className="w-4 h-4 text-[#A8A6C0] absolute left-3 top-1/2 -translate-y-1/2" />
+              <Lock className="w-4 h-4 text-[#A1A1AA] absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="password"
                 maxLength={6}
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
                 placeholder="PIN Mestre (4-6 dígitos)"
-                className="w-full bg-[#07070F] border border-[#2A2A45] rounded-xl pl-9 pr-3 py-2 text-xs text-white tracking-widest outline-none focus:border-[#FF6F91]"
+                className="w-full bg-[#060608] border border-[#2A2A31] rounded-xl pl-9 pr-3 py-2 text-xs text-white tracking-widest outline-none focus:border-[#FF6F91]"
               />
             </div>
             <button
@@ -278,26 +278,26 @@ export const SettingsView: React.FC = () => {
       </section>
 
       {/* 4. Backup & Cache Management */}
-      <section className="p-6 rounded-3xl bg-[#16162A] border border-[#2A2A45] space-y-4">
+      <section className="p-6 rounded-3xl bg-[#141418] border border-[#2A2A31] space-y-4">
         <div className="flex items-center gap-2 text-white font-bold text-sm">
-          <Database className="w-4 h-4 text-[#6B4FE0]" />
+          <Database className="w-4 h-4 text-[#7C5CFF]" />
           Importação, Exportação e Cache
         </div>
-        <p className="text-xs text-[#A8A6C0]">
+        <p className="text-xs text-[#A1A1AA]">
           Faça backup de todos os seus canais, playlists, favoritos e perfis em formato JSON.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
           <button
             onClick={handleExportBackup}
-            className="p-3.5 rounded-2xl bg-[#07070F] hover:bg-[#1E1E38] border border-[#2A2A45] hover:border-[#6B4FE0] text-white flex flex-col items-center justify-center gap-2 cursor-pointer transition-all"
+            className="p-3.5 rounded-2xl bg-[#060608] hover:bg-[#1E1E24] border border-[#2A2A31] hover:border-[#7C5CFF] text-white flex flex-col items-center justify-center gap-2 cursor-pointer transition-all"
           >
-            <Download className="w-5 h-5 text-[#1FCFAE]" />
+            <Download className="w-5 h-5 text-[#22D3A6]" />
             <span className="text-xs font-bold">Exportar Backup</span>
           </button>
 
-          <label className="p-3.5 rounded-2xl bg-[#07070F] hover:bg-[#1E1E38] border border-[#2A2A45] hover:border-[#6B4FE0] text-white flex flex-col items-center justify-center gap-2 cursor-pointer transition-all text-center">
-            <Upload className="w-5 h-5 text-[#6B4FE0]" />
+          <label className="p-3.5 rounded-2xl bg-[#060608] hover:bg-[#1E1E24] border border-[#2A2A31] hover:border-[#7C5CFF] text-white flex flex-col items-center justify-center gap-2 cursor-pointer transition-all text-center">
+            <Upload className="w-5 h-5 text-[#7C5CFF]" />
             <span className="text-xs font-bold">Restaurar Backup</span>
             <input
               type="file"
@@ -309,7 +309,7 @@ export const SettingsView: React.FC = () => {
 
           <button
             onClick={() => setShowClearCacheModal(true)}
-            className="p-3.5 rounded-2xl bg-[#07070F] hover:bg-[#1E1E38] border border-[#2A2A45] hover:border-[#FF5468] text-white flex flex-col items-center justify-center gap-2 cursor-pointer transition-all"
+            className="p-3.5 rounded-2xl bg-[#060608] hover:bg-[#1E1E24] border border-[#2A2A31] hover:border-[#FF5468] text-white flex flex-col items-center justify-center gap-2 cursor-pointer transition-all"
           >
             <RefreshCw className="w-5 h-5 text-[#FF5468]" />
             <span className="text-xs font-bold">Limpar Cache</span>
@@ -333,15 +333,15 @@ export const SettingsView: React.FC = () => {
 };
 
 const ToggleRow: React.FC<{ title: string; desc: string; checked: boolean; onChange: (v: boolean) => void }> = ({ title, desc, checked, onChange }) => (
-  <div className="flex items-center justify-between gap-4 pt-3 border-t border-[#2A2A45]/60">
+  <div className="flex items-center justify-between gap-4 pt-3 border-t border-[#2A2A31]/60">
     <div>
       <p className="text-xs font-bold text-white">{title}</p>
-      <p className="text-[11px] text-[#A8A6C0]">{desc}</p>
+      <p className="text-[11px] text-[#A1A1AA]">{desc}</p>
     </div>
     <button
       onClick={() => onChange(!checked)}
       data-tv-title={`${title}: ${checked ? 'ligado' : 'desligado'}`}
-      className={`tv-card shrink-0 px-4 py-1.5 rounded-full text-xs font-bold cursor-pointer focus:outline-none ${checked ? 'bg-[#1FCFAE] text-black' : 'bg-[#2A2A45] text-[#A8A6C0]'}`}
+      className={`tv-card shrink-0 px-4 py-1.5 rounded-full text-xs font-bold cursor-pointer focus:outline-none ${checked ? 'bg-[#22D3A6] text-black' : 'bg-[#2A2A31] text-[#A1A1AA]'}`}
     >
       {checked ? 'Ligado' : 'Desligado'}
     </button>
@@ -352,16 +352,16 @@ const TextSetting: React.FC<{ title: string; desc: string; value: string; placeh
   const [draft, setDraft] = useState(value);
   const [saved, setSaved] = useState(false);
   return (
-    <div className="pt-3 border-t border-[#2A2A45]/60 space-y-2">
+    <div className="pt-3 border-t border-[#2A2A31]/60 space-y-2">
       <p className="text-xs font-bold text-white">{title}</p>
-      <p className="text-[11px] text-[#A8A6C0]">{desc}</p>
+      <p className="text-[11px] text-[#A1A1AA]">{desc}</p>
       <div className="flex gap-2">
         <input
           type="text"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder={placeholder}
-          className="flex-1 bg-[#07070F] border border-[#2A2A45] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#6B4FE0]"
+          className="flex-1 bg-[#060608] border border-[#2A2A31] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#7C5CFF]"
         />
         <button
           onClick={() => {
@@ -370,7 +370,7 @@ const TextSetting: React.FC<{ title: string; desc: string; value: string; placeh
             setTimeout(() => setSaved(false), 1500);
           }}
           data-tv-title={`Salvar ${title}`}
-          className="tv-card px-4 py-2 rounded-xl bg-[#6B4FE0] text-white text-xs font-bold cursor-pointer focus:outline-none"
+          className="tv-card px-4 py-2 rounded-xl bg-[#7C5CFF] text-white text-xs font-bold cursor-pointer focus:outline-none"
         >
           {saved ? 'Salvo' : 'Salvar'}
         </button>

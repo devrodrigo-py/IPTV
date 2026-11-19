@@ -18,21 +18,21 @@ button,
 
 @layer base {
   :root {
-    --void-950: #07070F;
-    --void-800: #16162A;
-    --void-600: #2A2A45;
-    --surface-elevated: #1E1E38;
-    --nebula-violet: #6B4FE0;
-    --nebula-violet-deep: #2A1D6B;
-    --aurora-teal: #1FCFAE;
+    --void-950: #060608;
+    --void-800: #141418;
+    --void-600: #2A2A31;
+    --surface-elevated: #1E1E24;
+    --nebula-violet: #7C5CFF;
+    --nebula-violet-deep: #2B1F66;
+    --aurora-teal: #22D3A6;
     --solar-coral: #FF6F91;
-    --text-primary: #F5F3FF;
-    --text-secondary: #A8A6C0;
+    --text-primary: #F5F5F7;
+    --text-secondary: #A1A1AA;
   }
 
   body {
-    background-color: #07070F;
-    color: #F5F3FF;
+    background-color: #060608;
+    color: #F5F5F7;
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     overflow-x: hidden;
   }
@@ -49,32 +49,38 @@ button,
 }
 
 ::-webkit-scrollbar-track {
-  background: #0B0B18;
+  background: #0B0B0E;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2A2A45;
+  background: #2A2A31;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #6B4FE0;
+  background: #7C5CFF;
 }
 
-/* Smart TV 10-Foot Focus Ring (Netflix / HBO Max / Apple TV+ Benchmark) */
+/*
+ * Focus on TV: the element grows a little and gets a thin white edge and a
+ * deep shadow, like the big streaming apps. box-shadow (not outline) follows
+ * rounded corners on old WebViews too.
+ */
 .tv-focused {
-  outline: 3px solid #FFFFFF !important;
-  outline-offset: 3px !important;
-  box-shadow: 
-    0 0 0 4px #1FCFAE,
-    0 12px 36px rgba(31, 207, 174, 0.55),
-    0 0 60px rgba(107, 79, 224, 0.35) !important;
-  transform: scale(1.08) translateY(-4px) !important;
-  transition: 
-    transform 0.18s cubic-bezier(0.25, 1, 0.5, 1), 
-    box-shadow 0.18s cubic-bezier(0.25, 1, 0.5, 1), 
-    outline 0.18s ease !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px #ffffff, 0 18px 42px rgba(0, 0, 0, 0.7) !important;
+  transform: scale(1.06) !important;
   z-index: 50 !important;
+  position: relative;
+}
+.tv-card {
+  transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 180ms ease;
+}
+/* Text buttons and menu entries: no zoom, just the edge (zoom on text looks blurry). */
+aside .tv-focused,
+button.tv-focused:not([data-zoom]),
+.tv-focused[data-nozoom] {
+  transform: none !important;
 }
 
 /* Netflix Scrim Multi-Stop Protection Gradients */
@@ -143,7 +149,7 @@ button.tv-card {
 }
 .lite .tv-focused {
   transform: scale(1.04) !important;
-  box-shadow: 0 0 0 4px #1fcfae !important;
+  box-shadow: 0 0 0 3px #ffffff !important;
 }
 .lite img {
   image-rendering: auto;
@@ -203,4 +209,19 @@ button.tv-card {
     height: 0;
     padding-top: 56.25%;
   }
+}
+
+.lite aside .tv-focused,
+.lite button.tv-focused:not([data-zoom]),
+.lite .tv-focused[data-nozoom] {
+  transform: none !important;
+}
+
+@keyframes billboardIn {
+  from { opacity: 0; transform: scale(1.04); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes billboardTextIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }

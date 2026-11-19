@@ -19,8 +19,8 @@ export const CategoryChips: React.FC<CategoryChipsProps> = ({
         onFocus={(e) => e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })}
         className={`tv-card px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer focus:outline-none ${
           selectedCategory === 'all'
-            ? 'bg-[#6B4FE0] text-white shadow-lg shadow-[#6B4FE0]/30'
-            : 'bg-[#16162A] text-[#A8A6C0] hover:text-white hover:bg-[#1E1E38] border border-[#2A2A45]'
+            ? 'bg-[#7C5CFF] text-white shadow-lg shadow-[#7C5CFF]/30'
+            : 'bg-[#141418] text-[#A1A1AA] hover:text-white hover:bg-[#1E1E24] border border-[#2A2A31]'
         }`}
       >
         Todos
@@ -36,8 +36,8 @@ export const CategoryChips: React.FC<CategoryChipsProps> = ({
             onFocus={(e) => e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })}
             className={`tv-card px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer focus:outline-none ${
               isSelected
-                ? 'bg-[#6B4FE0] text-white shadow-lg shadow-[#6B4FE0]/30'
-                : 'bg-[#16162A] text-[#A8A6C0] hover:text-white hover:bg-[#1E1E38] border border-[#2A2A45]'
+                ? 'bg-[#7C5CFF] text-white shadow-lg shadow-[#7C5CFF]/30'
+                : 'bg-[#141418] text-[#A1A1AA] hover:text-white hover:bg-[#1E1E24] border border-[#2A2A31]'
             }`}
           >
             {cat}

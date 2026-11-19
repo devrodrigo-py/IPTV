@@ -66,20 +66,20 @@ export const SearchView: React.FC = () => {
   return (
     <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
       {/* Header and Search input */}
-      <div className="space-y-4 pb-4 border-b border-[#2A2A45]">
+      <div className="space-y-4 pb-4 border-b border-[#2A2A31]">
         <div className="flex items-center gap-2">
-          <Search className="w-5 h-5 text-[#6B4FE0]" />
+          <Search className="w-5 h-5 text-[#7C5CFF]" />
           <h1 className="text-xl font-bold text-white tracking-tight">Busca Global</h1>
         </div>
 
         <div className="relative max-w-2xl">
-          <Search className="w-5 h-5 text-[#A8A6C0] absolute left-4 top-1/2 -translate-y-1/2" />
+          <Search className="w-5 h-5 text-[#A1A1AA] absolute left-4 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Pesquise por nome do canal, filme, série, ator ou categoria..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#16162A] text-sm text-white placeholder-[#A8A6C0] pl-12 pr-4 py-3 rounded-2xl border border-[#2A2A45] focus:border-[#6B4FE0] outline-none shadow-inner"
+            className="w-full bg-[#141418] text-sm text-white placeholder-[#A1A1AA] pl-12 pr-4 py-3 rounded-2xl border border-[#2A2A31] focus:border-[#7C5CFF] outline-none shadow-inner"
             // On TV the on-screen keyboard would cover the screen as soon as the page opens.
             autoFocus={!tvMode}
           />
@@ -89,7 +89,7 @@ export const SearchView: React.FC = () => {
             data-autofocus
             onClick={startVoice}
             data-tv-title="Buscar por voz"
-            className="tv-card w-fit px-5 py-3 rounded-2xl bg-[#6B4FE0] text-white text-sm font-bold flex items-center gap-2 cursor-pointer focus:outline-none"
+            className="tv-card w-fit px-5 py-3 rounded-2xl bg-[#7C5CFF] text-white text-sm font-bold flex items-center gap-2 cursor-pointer focus:outline-none"
           >
             <Mic className="w-5 h-5" /> {listening ? 'Ouvindo…' : 'Buscar por voz'}
           </button>
@@ -101,8 +101,8 @@ export const SearchView: React.FC = () => {
             onClick={() => setActiveFilter('all')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
               activeFilter === 'all'
-                ? 'bg-[#6B4FE0] text-white'
-                : 'bg-[#16162A] text-[#A8A6C0] hover:text-white border border-[#2A2A45]'
+                ? 'bg-[#7C5CFF] text-white'
+                : 'bg-[#141418] text-[#A1A1AA] hover:text-white border border-[#2A2A31]'
             }`}
           >
             Tudo ({matchedChannels.length + matchedVod.length + matchedSeries.length})
@@ -111,8 +111,8 @@ export const SearchView: React.FC = () => {
             onClick={() => setActiveFilter('channels')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
               activeFilter === 'channels'
-                ? 'bg-[#6B4FE0] text-white'
-                : 'bg-[#16162A] text-[#A8A6C0] hover:text-white border border-[#2A2A45]'
+                ? 'bg-[#7C5CFF] text-white'
+                : 'bg-[#141418] text-[#A1A1AA] hover:text-white border border-[#2A2A31]'
             }`}
           >
             Canais ({matchedChannels.length})
@@ -121,8 +121,8 @@ export const SearchView: React.FC = () => {
             onClick={() => setActiveFilter('vod')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
               activeFilter === 'vod'
-                ? 'bg-[#6B4FE0] text-white'
-                : 'bg-[#16162A] text-[#A8A6C0] hover:text-white border border-[#2A2A45]'
+                ? 'bg-[#7C5CFF] text-white'
+                : 'bg-[#141418] text-[#A1A1AA] hover:text-white border border-[#2A2A31]'
             }`}
           >
             Filmes ({matchedVod.length})
@@ -131,8 +131,8 @@ export const SearchView: React.FC = () => {
             onClick={() => setActiveFilter('series')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
               activeFilter === 'series'
-                ? 'bg-[#6B4FE0] text-white'
-                : 'bg-[#16162A] text-[#A8A6C0] hover:text-white border border-[#2A2A45]'
+                ? 'bg-[#7C5CFF] text-white'
+                : 'bg-[#141418] text-[#A1A1AA] hover:text-white border border-[#2A2A31]'
             }`}
           >
             Séries ({matchedSeries.length})
@@ -143,7 +143,7 @@ export const SearchView: React.FC = () => {
       {/* Results */}
       {(activeFilter === 'all' || activeFilter === 'channels') && matchedChannels.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-sm font-bold text-[#A8A6C0] uppercase tracking-wider">
+          <h2 className="text-sm font-bold text-[#A1A1AA] uppercase tracking-wider">
             Canais Ao Vivo ({matchedChannels.length})
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -156,7 +156,7 @@ export const SearchView: React.FC = () => {
 
       {(activeFilter === 'all' || activeFilter === 'vod') && matchedVod.length > 0 && (
         <section className="space-y-3 pt-4">
-          <h2 className="text-sm font-bold text-[#A8A6C0] uppercase tracking-wider">
+          <h2 className="text-sm font-bold text-[#A1A1AA] uppercase tracking-wider">
             Filmes (VOD) ({matchedVod.length})
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
@@ -169,7 +169,7 @@ export const SearchView: React.FC = () => {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') { e.preventDefault(); setSelectedVodModal(vod); }
                 }}
-                className="tv-card group bg-[#16162A] rounded-2xl border border-[#2A2A45] hover:border-[#6B4FE0] overflow-hidden cursor-pointer transition-all focus:outline-none"
+                className="tv-card group bg-[#141418] rounded-2xl border border-[#2A2A31] hover:border-[#7C5CFF] overflow-hidden cursor-pointer transition-all focus:outline-none"
               >
                 <div className="relative aspect-[2/3] w-full bg-black/40 overflow-hidden">
                   <img
@@ -183,7 +183,7 @@ export const SearchView: React.FC = () => {
                 </div>
                 <div className="p-2.5">
                   <h4 className="font-bold text-xs text-white truncate">{vod.title}</h4>
-                  <p className="text-[10px] text-[#A8A6C0] mt-0.5">{vod.category}</p>
+                  <p className="text-[10px] text-[#A1A1AA] mt-0.5">{vod.category}</p>
                 </div>
               </div>
             ))}
@@ -193,7 +193,7 @@ export const SearchView: React.FC = () => {
 
       {(activeFilter === 'all' || activeFilter === 'series') && matchedSeries.length > 0 && (
         <section className="space-y-3 pt-4">
-          <h2 className="text-sm font-bold text-[#A8A6C0] uppercase tracking-wider">
+          <h2 className="text-sm font-bold text-[#A1A1AA] uppercase tracking-wider">
             Séries ({matchedSeries.length})
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
@@ -206,10 +206,10 @@ export const SearchView: React.FC = () => {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') { e.preventDefault(); setSelectedSeriesModal(series); }
                 }}
-                className="tv-card group bg-[#16162A] rounded-2xl border border-[#2A2A45] hover:border-[#6B4FE0] p-3 cursor-pointer transition-all focus:outline-none"
+                className="tv-card group bg-[#141418] rounded-2xl border border-[#2A2A31] hover:border-[#7C5CFF] p-3 cursor-pointer transition-all focus:outline-none"
               >
                 <h4 className="font-bold text-xs text-white truncate">{series.title}</h4>
-                <p className="text-[10px] text-[#A8A6C0] mt-0.5 line-clamp-1">{series.overview}</p>
+                <p className="text-[10px] text-[#A1A1AA] mt-0.5 line-clamp-1">{series.overview}</p>
               </div>
             ))}
           </div>

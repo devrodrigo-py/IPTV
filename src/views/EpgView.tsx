@@ -95,13 +95,13 @@ export const EpgView: React.FC = () => {
   return (
     <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#2A2A45]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#2A2A31]">
         <div>
           <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-[#6B4FE0]" />
+            <Calendar className="w-5 h-5 text-[#7C5CFF]" />
             <h1 className="text-xl font-bold text-white tracking-tight">Guia Eletrônico de Programação (EPG)</h1>
           </div>
-          <p className="text-xs text-[#A8A6C0] mt-0.5">
+          <p className="text-xs text-[#A1A1AA] mt-0.5">
             Horários sincronizados em UTC e adaptados ao horário local do seu dispositivo.
           </p>
         </div>
@@ -110,9 +110,9 @@ export const EpgView: React.FC = () => {
           onClick={() => setIsImportModalOpen(true)}
           tabIndex={0}
           data-tv-title="Importar Guia XMLTV"
-          className="tv-card px-4 py-2 rounded-xl bg-[#16162A] hover:bg-[#1E1E38] border border-[#2A2A45] hover:border-[#6B4FE0] text-xs font-semibold text-white flex items-center gap-2 transition-all cursor-pointer shadow-sm focus:outline-none"
+          className="tv-card px-4 py-2 rounded-xl bg-[#141418] hover:bg-[#1E1E24] border border-[#2A2A31] hover:border-[#7C5CFF] text-xs font-semibold text-white flex items-center gap-2 transition-all cursor-pointer shadow-sm focus:outline-none"
         >
-          <Upload className="w-4 h-4 text-[#1FCFAE]" />
+          <Upload className="w-4 h-4 text-[#22D3A6]" />
           Importar XMLTV (.xml)
         </button>
       </div>
@@ -120,7 +120,7 @@ export const EpgView: React.FC = () => {
       {/* Channel Rows Timeline */}
       <div className="space-y-4">
         {filteredChannels.length === 0 && (
-          <div className="p-10 text-center text-sm text-[#A8A6C0] bg-[#16162A]/50 rounded-2xl border border-[#2A2A45]">
+          <div className="p-10 text-center text-sm text-[#A1A1AA] bg-[#141418]/50 rounded-2xl border border-[#2A2A31]">
             Adicione uma lista em “Listas” para ver a programação dos seus canais.
           </div>
         )}
@@ -130,7 +130,7 @@ export const EpgView: React.FC = () => {
           return (
             <div
               key={channel.id}
-              className="bg-[#16162A]/60 rounded-2xl border border-[#2A2A45]/60 p-4 transition-all hover:border-[#6B4FE0]/40"
+              className="bg-[#141418]/60 rounded-2xl border border-[#2A2A31]/60 p-4 transition-all hover:border-[#7C5CFF]/40"
             >
               <div className="flex flex-col md:flex-row md:items-center gap-4">
                 {/* Channel Header (TV Focusable) */}
@@ -141,9 +141,9 @@ export const EpgView: React.FC = () => {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') { e.preventDefault(); playChannel(channel); }
                   }}
-                  className="tv-card w-full md:w-56 shrink-0 flex items-center gap-3 cursor-pointer group p-2 rounded-xl border border-transparent hover:border-[#6B4FE0]/30 focus:outline-none"
+                  className="tv-card w-full md:w-56 shrink-0 flex items-center gap-3 cursor-pointer group p-2 rounded-xl border border-transparent hover:border-[#7C5CFF]/30 focus:outline-none"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-[#0B0B18] p-1.5 flex items-center justify-center border border-white/10 shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-[#0B0B0E] p-1.5 flex items-center justify-center border border-white/10 shrink-0">
                     {channel.logoUrl ? (
                       <img
                         src={channel.logoUrl}
@@ -151,14 +151,14 @@ export const EpgView: React.FC = () => {
                         className="max-h-7 max-w-full object-contain filter drop-shadow"
                       />
                     ) : (
-                      <Tv className="w-5 h-5 text-[#6B4FE0]" />
+                      <Tv className="w-5 h-5 text-[#7C5CFF]" />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-bold text-sm text-white truncate group-hover:text-[#1FCFAE] transition-colors">
+                    <h3 className="font-bold text-sm text-white truncate group-hover:text-[#22D3A6] transition-colors">
                       {channel.name}
                     </h3>
-                    <p className="text-[11px] text-[#A8A6C0] truncate">{channel.groupTitle || 'Geral'}</p>
+                    <p className="text-[11px] text-[#A1A1AA] truncate">{channel.groupTitle || 'Geral'}</p>
                   </div>
                 </div>
 
@@ -178,18 +178,18 @@ export const EpgView: React.FC = () => {
                           }}
                           className={`tv-card min-w-[200px] max-w-[240px] p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between shrink-0 focus:outline-none ${
                             active
-                              ? 'bg-[#6B4FE0]/20 border-[#6B4FE0] text-white shadow-md shadow-[#6B4FE0]/20'
-                              : 'bg-[#07070F]/60 hover:bg-[#1E1E38] border-[#2A2A45] text-[#A8A6C0] hover:text-white'
+                              ? 'bg-[#7C5CFF]/20 border-[#7C5CFF] text-white shadow-md shadow-[#7C5CFF]/20'
+                              : 'bg-[#060608]/60 hover:bg-[#1E1E24] border-[#2A2A31] text-[#A1A1AA] hover:text-white'
                           }`}
                         >
                           <div>
                             <div className="flex items-center justify-between text-[10px] mb-1">
                               <span className="font-mono font-bold flex items-center gap-1">
-                                <Clock className="w-3 h-3 text-[#1FCFAE]" />
+                                <Clock className="w-3 h-3 text-[#22D3A6]" />
                                 {formatHour(prog.startUtc)} - {formatHour(prog.endUtc)}
                               </span>
                               {active && (
-                                <span className="px-1.5 py-0.2 rounded bg-[#1FCFAE] text-black font-extrabold text-[9px] uppercase">
+                                <span className="px-1.5 py-0.2 rounded bg-[#22D3A6] text-black font-extrabold text-[9px] uppercase">
                                   No Ar
                                 </span>
                               )}
@@ -199,7 +199,7 @@ export const EpgView: React.FC = () => {
                             </h4>
                           </div>
                           {prog.category && (
-                            <span className="text-[10px] text-[#A8A6C0] mt-1 truncate">
+                            <span className="text-[10px] text-[#A1A1AA] mt-1 truncate">
                               {prog.category}
                             </span>
                           )}
@@ -207,7 +207,7 @@ export const EpgView: React.FC = () => {
                       );
                     })
                   ) : (
-                    <div className="text-xs text-[#A8A6C0]/60 italic py-2">
+                    <div className="text-xs text-[#A1A1AA]/60 italic py-2">
                       Sem grade de programação EPG cadastrada para este canal.
                     </div>
                   )}
@@ -222,10 +222,10 @@ export const EpgView: React.FC = () => {
       {/* Program Details Modal */}
       {selectedProgram && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-[#16162A] border border-[#2A2A45] rounded-3xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-150">
+          <div className="w-full max-w-lg bg-[#141418] border border-[#2A2A31] rounded-3xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-150">
             <button
               onClick={() => setSelectedProgram(null)}
-              className="absolute top-5 right-5 w-8 h-8 rounded-full bg-[#1E1E38] hover:bg-[#2A2A45] text-[#A8A6C0] hover:text-white flex items-center justify-center cursor-pointer"
+              className="absolute top-5 right-5 w-8 h-8 rounded-full bg-[#1E1E24] hover:bg-[#2A2A31] text-[#A1A1AA] hover:text-white flex items-center justify-center cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -239,12 +239,12 @@ export const EpgView: React.FC = () => {
                     className="max-h-7 max-w-full object-contain"
                   />
                 ) : (
-                  <Tv className="w-5 h-5 text-[#6B4FE0]" />
+                  <Tv className="w-5 h-5 text-[#7C5CFF]" />
                 )}
               </div>
               <div>
                 <h3 className="font-bold text-sm text-white">{selectedProgram.channel.name}</h3>
-                <span className="text-xs text-[#1FCFAE] font-mono">
+                <span className="text-xs text-[#22D3A6] font-mono">
                   {formatHour(selectedProgram.program.startUtc)} às {formatHour(selectedProgram.program.endUtc)}
                 </span>
               </div>
@@ -255,22 +255,22 @@ export const EpgView: React.FC = () => {
             </h2>
 
             {selectedProgram.program.category && (
-              <span className="inline-block px-2.5 py-1 rounded-lg bg-[#6B4FE0]/20 text-[#6B4FE0] text-xs font-semibold mb-3">
+              <span className="inline-block px-2.5 py-1 rounded-lg bg-[#7C5CFF]/20 text-[#7C5CFF] text-xs font-semibold mb-3">
                 {selectedProgram.program.category}
               </span>
             )}
 
-            <p className="text-xs text-[#A8A6C0] leading-relaxed mb-6">
+            <p className="text-xs text-[#A1A1AA] leading-relaxed mb-6">
               {selectedProgram.program.description ||
                 'Nenhuma descrição detalhada fornecida pela emissora.'}
             </p>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#2A2A45]">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#2A2A31]">
               <button
                 onClick={() => setSelectedProgram(null)}
                 tabIndex={0}
                 data-tv-title="Fechar Detalhes EPG"
-                className="tv-card px-4 py-2 rounded-xl bg-[#1E1E38] hover:bg-[#2A2A45] text-xs font-semibold text-[#A8A6C0] cursor-pointer focus:outline-none"
+                className="tv-card px-4 py-2 rounded-xl bg-[#1E1E24] hover:bg-[#2A2A31] text-xs font-semibold text-[#A1A1AA] cursor-pointer focus:outline-none"
               >
                 Fechar
               </button>
@@ -282,7 +282,7 @@ export const EpgView: React.FC = () => {
                 tabIndex={0}
                 autoFocus
                 data-tv-title={`Sintonizar ${selectedProgram.channel.name}`}
-                className="tv-card px-5 py-2 rounded-xl bg-[#6B4FE0] hover:bg-[#6B4FE0]/80 text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-lg shadow-[#6B4FE0]/40 focus:outline-none"
+                className="tv-card px-5 py-2 rounded-xl bg-[#7C5CFF] hover:bg-[#7C5CFF]/80 text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-lg shadow-[#7C5CFF]/40 focus:outline-none"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
                 Assistir Canal Agora
@@ -295,37 +295,37 @@ export const EpgView: React.FC = () => {
       {/* XMLTV Import Modal */}
       {isImportModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-xl bg-[#16162A] border border-[#2A2A45] rounded-3xl p-6 shadow-2xl relative">
+          <div className="w-full max-w-xl bg-[#141418] border border-[#2A2A31] rounded-3xl p-6 shadow-2xl relative">
             <button
               onClick={() => setIsImportModalOpen(false)}
-              className="absolute top-5 right-5 w-8 h-8 rounded-full bg-[#1E1E38] text-[#A8A6C0] hover:text-white flex items-center justify-center cursor-pointer"
+              className="absolute top-5 right-5 w-8 h-8 rounded-full bg-[#1E1E24] text-[#A1A1AA] hover:text-white flex items-center justify-center cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
 
             <div className="flex items-center gap-2 mb-2">
-              <Upload className="w-5 h-5 text-[#1FCFAE]" />
+              <Upload className="w-5 h-5 text-[#22D3A6]" />
               <h2 className="text-lg font-bold text-white">Importar Dados XMLTV (EPG)</h2>
             </div>
-            <p className="text-xs text-[#A8A6C0] mb-4">
+            <p className="text-xs text-[#A1A1AA] mb-4">
               Carregue um arquivo .xml ou cole o XML com tags &lt;tv&gt;, &lt;channel&gt; e &lt;programme&gt;.
             </p>
 
             <div className="mb-4">
-              <label className="block text-xs font-bold text-[#F5F3FF] mb-1.5">URL do guia (XMLTV, aceita .xml.gz)</label>
+              <label className="block text-xs font-bold text-[#F5F5F7] mb-1.5">URL do guia (XMLTV, aceita .xml.gz)</label>
               <div className="flex gap-2">
                 <input
                   type="url"
                   value={epgUrlInput}
                   onChange={(e) => setEpgUrlInput(e.target.value)}
                   placeholder="http://servidor/xmltv.php?username=…&password=…"
-                  className="flex-1 bg-[#07070F] border border-[#2A2A45] rounded-xl px-3 py-2 text-xs text-[#F5F3FF] outline-none focus:border-[#6B4FE0]"
+                  className="flex-1 bg-[#060608] border border-[#2A2A31] rounded-xl px-3 py-2 text-xs text-[#F5F5F7] outline-none focus:border-[#7C5CFF]"
                 />
                 <button
                   onClick={handleUrlImport}
                   disabled={isImporting || !epgUrlInput.trim()}
                   data-tv-title="Baixar guia pela URL"
-                  className="tv-card px-4 py-2 rounded-xl bg-[#6B4FE0] disabled:opacity-50 text-white text-xs font-bold cursor-pointer focus:outline-none"
+                  className="tv-card px-4 py-2 rounded-xl bg-[#7C5CFF] disabled:opacity-50 text-white text-xs font-bold cursor-pointer focus:outline-none"
                 >
                   {isImporting ? 'Baixando…' : 'Baixar'}
                 </button>
@@ -333,19 +333,19 @@ export const EpgView: React.FC = () => {
             </div>
 
             <div className="mb-4">
-              <label className="block text-xs font-bold text-[#F5F3FF] mb-1.5">
+              <label className="block text-xs font-bold text-[#F5F5F7] mb-1.5">
                 Upload de Arquivo XMLTV (.xml)
               </label>
               <input
                 type="file"
                 accept=".xml,.xmltv"
                 onChange={handleFileUpload}
-                className="w-full text-xs text-[#A8A6C0] file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#6B4FE0] file:text-white hover:file:bg-[#6B4FE0]/80 cursor-pointer"
+                className="w-full text-xs text-[#A1A1AA] file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#7C5CFF] file:text-white hover:file:bg-[#7C5CFF]/80 cursor-pointer"
               />
             </div>
 
             <div className="mb-4">
-              <label className="block text-xs font-bold text-[#F5F3FF] mb-1.5">
+              <label className="block text-xs font-bold text-[#F5F5F7] mb-1.5">
                 Ou cole o conteúdo XML diretamente:
               </label>
               <textarea
@@ -359,26 +359,26 @@ export const EpgView: React.FC = () => {
     <title>Espaço & Ciência</title>
   </programme>
 </tv>'
-                className="w-full bg-[#07070F] border border-[#2A2A45] rounded-xl p-3 text-xs text-[#F5F3FF] font-mono outline-none focus:border-[#6B4FE0]"
+                className="w-full bg-[#060608] border border-[#2A2A31] rounded-xl p-3 text-xs text-[#F5F5F7] font-mono outline-none focus:border-[#7C5CFF]"
               />
             </div>
 
             {importStatus && (
-              <div className="p-3 rounded-xl bg-[#6B4FE0]/20 border border-[#6B4FE0]/40 text-xs text-white mb-4">
+              <div className="p-3 rounded-xl bg-[#7C5CFF]/20 border border-[#7C5CFF]/40 text-xs text-white mb-4">
                 {importStatus}
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#2A2A45]">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#2A2A31]">
               <button
                 onClick={() => setIsImportModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-[#1E1E38] text-xs font-semibold text-[#A8A6C0] cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-[#1E1E24] text-xs font-semibold text-[#A1A1AA] cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleXmltvImport}
-                className="px-5 py-2 rounded-xl bg-[#6B4FE0] hover:bg-[#6B4FE0]/80 text-white text-xs font-bold cursor-pointer"
+                className="px-5 py-2 rounded-xl bg-[#7C5CFF] hover:bg-[#7C5CFF]/80 text-white text-xs font-bold cursor-pointer"
               >
                 Processar e Salvar EPG
               </button>

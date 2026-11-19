@@ -61,12 +61,12 @@ export const ProfileGate: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#07070F] flex flex-col items-center justify-center p-6 select-none relative">
+    <div className="fixed inset-0 z-50 bg-[#060608] flex flex-col items-center justify-center p-6 select-none relative">
       {/* Return button if already logged into a profile */}
       {activeProfile && !activeProfile.pin && (
         <button
           onClick={() => selectProfile(activeProfile)}
-          className="absolute top-6 right-6 px-4 py-2 rounded-xl bg-[#16162A] hover:bg-[#1E1E38] text-xs font-semibold text-[#A8A6C0] hover:text-white border border-[#2A2A45] cursor-pointer transition-colors"
+          className="absolute top-6 right-6 px-4 py-2 rounded-xl bg-[#141418] hover:bg-[#1E1E24] text-xs font-semibold text-[#A1A1AA] hover:text-white border border-[#2A2A31] cursor-pointer transition-colors"
         >
           Voltar ao App
         </button>
@@ -74,7 +74,7 @@ export const ProfileGate: React.FC = () => {
 
       {/* Brand Icon Header */}
       <div className="flex flex-col items-center mb-10">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#6B4FE0] via-[#2A1D6B] to-[#1FCFAE] p-2 flex items-center justify-center shadow-xl shadow-[#6B4FE0]/30 mb-3">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#7C5CFF] via-[#2B1F66] to-[#22D3A6] p-2 flex items-center justify-center shadow-xl shadow-[#7C5CFF]/30 mb-3">
           <img
             src={nebulaIcon}
             alt="Nebula"
@@ -87,7 +87,7 @@ export const ProfileGate: React.FC = () => {
         <h1 className="text-3xl font-extrabold text-white tracking-tight font-['Outfit']">
           Quem está assistindo?
         </h1>
-        <p className="text-xs text-[#A8A6C0] mt-1">
+        <p className="text-xs text-[#A1A1AA] mt-1">
           Escolha um perfil para carregar preferências, favoritos e histórico.
         </p>
       </div>
@@ -106,7 +106,7 @@ export const ProfileGate: React.FC = () => {
             }}
             className="tv-card group flex flex-col items-center cursor-pointer focus:outline-none"
           >
-            <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-3xl overflow-hidden border-2 border-transparent group-hover:border-[#6B4FE0] group-hover:scale-105 group-hover:shadow-2xl group-hover:shadow-[#6B4FE0]/40 transition-all duration-300 bg-[#16162A]">
+            <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-3xl overflow-hidden border-2 border-transparent group-hover:border-[#7C5CFF] group-hover:scale-105 group-hover:shadow-2xl group-hover:shadow-[#7C5CFF]/40 transition-all duration-300 bg-[#141418]">
               <Avatar avatar={profile.avatar} name={profile.name} className="w-full h-full" textClassName="text-5xl" />
 
               {/* Pin indicator */}
@@ -124,7 +124,7 @@ export const ProfileGate: React.FC = () => {
               )}
             </div>
 
-            <span className="text-sm font-bold text-[#A8A6C0] group-hover:text-white mt-3 text-center transition-colors">
+            <span className="text-sm font-bold text-[#A1A1AA] group-hover:text-white mt-3 text-center transition-colors">
               {profile.name}
             </span>
           </div>
@@ -140,10 +140,10 @@ export const ProfileGate: React.FC = () => {
           }}
           className="tv-card group flex flex-col items-center cursor-pointer focus:outline-none"
         >
-          <div className="w-28 h-28 md:w-32 md:h-32 rounded-3xl border-2 border-dashed border-[#2A2A45] group-hover:border-[#1FCFAE] group-hover:scale-105 transition-all flex items-center justify-center bg-[#16162A]/30">
-            <Plus className="w-10 h-10 text-[#A8A6C0] group-hover:text-[#1FCFAE] transition-colors" />
+          <div className="w-28 h-28 md:w-32 md:h-32 rounded-3xl border-2 border-dashed border-[#2A2A31] group-hover:border-[#22D3A6] group-hover:scale-105 transition-all flex items-center justify-center bg-[#141418]/30">
+            <Plus className="w-10 h-10 text-[#A1A1AA] group-hover:text-[#22D3A6] transition-colors" />
           </div>
-          <span className="text-sm font-bold text-[#A8A6C0] group-hover:text-white mt-3 text-center">
+          <span className="text-sm font-bold text-[#A1A1AA] group-hover:text-white mt-3 text-center">
             Adicionar Perfil
           </span>
         </div>
@@ -152,10 +152,10 @@ export const ProfileGate: React.FC = () => {
       {/* PIN Enter Modal */}
       {selectedProfileForPin && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-[#16162A] border border-[#2A2A45] rounded-3xl p-6 shadow-2xl relative text-center">
+          <div className="w-full max-w-sm bg-[#141418] border border-[#2A2A31] rounded-3xl p-6 shadow-2xl relative text-center">
             <button
               onClick={() => setSelectedProfileForPin(null)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#1E1E38] text-[#A8A6C0] hover:text-white flex items-center justify-center cursor-pointer"
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#1E1E24] text-[#A1A1AA] hover:text-white flex items-center justify-center cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -167,7 +167,7 @@ export const ProfileGate: React.FC = () => {
             <h3 className="text-lg font-bold text-white mb-1">
               Perfil Protegido por PIN
             </h3>
-            <p className="text-xs text-[#A8A6C0] mb-5">
+            <p className="text-xs text-[#A1A1AA] mb-5">
               Digite a senha de 4 dígitos para acessar o perfil de {selectedProfileForPin.name}.
             </p>
 
@@ -182,7 +182,7 @@ export const ProfileGate: React.FC = () => {
                   setPinError(false);
                 }}
                 placeholder="• • • •"
-                className="w-40 mx-auto text-center text-2xl tracking-[0.5em] font-mono bg-[#07070F] border border-[#2A2A45] focus:border-[#6B4FE0] rounded-2xl py-3 text-white outline-none"
+                className="w-40 mx-auto text-center text-2xl tracking-[0.5em] font-mono bg-[#060608] border border-[#2A2A31] focus:border-[#7C5CFF] rounded-2xl py-3 text-white outline-none"
               />
 
               {pinError && (
@@ -195,13 +195,13 @@ export const ProfileGate: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedProfileForPin(null)}
-                  className="flex-1 py-2.5 rounded-xl bg-[#1E1E38] text-xs font-semibold text-[#A8A6C0] cursor-pointer"
+                  className="flex-1 py-2.5 rounded-xl bg-[#1E1E24] text-xs font-semibold text-[#A1A1AA] cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-[#6B4FE0] hover:bg-[#6B4FE0]/80 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[#6B4FE0]/30"
+                  className="flex-1 py-2.5 rounded-xl bg-[#7C5CFF] hover:bg-[#7C5CFF]/80 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[#7C5CFF]/30"
                 >
                   Entrar
                 </button>
@@ -214,10 +214,10 @@ export const ProfileGate: React.FC = () => {
       {/* Create Profile Modal */}
       {isAddingProfile && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#16162A] border border-[#2A2A45] rounded-3xl p-6 shadow-2xl relative">
+          <div className="w-full max-w-md bg-[#141418] border border-[#2A2A31] rounded-3xl p-6 shadow-2xl relative">
             <button
               onClick={() => setIsAddingProfile(false)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#1E1E38] text-[#A8A6C0] hover:text-white flex items-center justify-center cursor-pointer"
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#1E1E24] text-[#A1A1AA] hover:text-white flex items-center justify-center cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -227,7 +227,7 @@ export const ProfileGate: React.FC = () => {
             <form onSubmit={handleCreateProfileSubmit} className="space-y-4">
               {/* Select Avatar */}
               <div>
-                <label className="block text-xs font-bold text-[#F5F3FF] mb-2">
+                <label className="block text-xs font-bold text-[#F5F5F7] mb-2">
                   Escolha um Avatar
                 </label>
                 <div className="flex items-center gap-3">
@@ -248,7 +248,7 @@ export const ProfileGate: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#F5F3FF] mb-1.5">
+                <label className="block text-xs font-bold text-[#F5F5F7] mb-1.5">
                   Nome do Perfil
                 </label>
                 <input
@@ -257,14 +257,14 @@ export const ProfileGate: React.FC = () => {
                   placeholder="Ex: Quarto, Filhos, Cinema..."
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="w-full bg-[#07070F] border border-[#2A2A45] rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#6B4FE0] outline-none"
+                  className="w-full bg-[#060608] border border-[#2A2A31] rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#7C5CFF] outline-none"
                 />
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-xl bg-[#07070F] border border-[#2A2A45]">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-[#060608] border border-[#2A2A31]">
                 <div>
                   <p className="text-xs font-bold text-white">Perfil Infantil (Kids)</p>
-                  <p className="text-[11px] text-[#A8A6C0]">
+                  <p className="text-[11px] text-[#A1A1AA]">
                     Filtra automaticamente conteúdos e canais adultos
                   </p>
                 </div>
@@ -277,7 +277,7 @@ export const ProfileGate: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#F5F3FF] mb-1.5">
+                <label className="block text-xs font-bold text-[#F5F5F7] mb-1.5">
                   PIN de Bloqueio (Opcional - 4 dígitos)
                 </label>
                 <input
@@ -286,21 +286,21 @@ export const ProfileGate: React.FC = () => {
                   placeholder="Ex: 1234"
                   value={newPin}
                   onChange={(e) => setNewPin(e.target.value)}
-                  className="w-full bg-[#07070F] border border-[#2A2A45] rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#6B4FE0] outline-none font-mono"
+                  className="w-full bg-[#060608] border border-[#2A2A31] rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#7C5CFF] outline-none font-mono"
                 />
               </div>
 
-              <div className="flex gap-2 pt-3 border-t border-[#2A2A45]">
+              <div className="flex gap-2 pt-3 border-t border-[#2A2A31]">
                 <button
                   type="button"
                   onClick={() => setIsAddingProfile(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-[#1E1E38] text-xs font-semibold text-[#A8A6C0] cursor-pointer"
+                  className="flex-1 py-2.5 rounded-xl bg-[#1E1E24] text-xs font-semibold text-[#A1A1AA] cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-[#6B4FE0] hover:bg-[#6B4FE0]/80 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[#6B4FE0]/30"
+                  className="flex-1 py-2.5 rounded-xl bg-[#7C5CFF] hover:bg-[#7C5CFF]/80 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[#7C5CFF]/30"
                 >
                   Criar Perfil
                 </button>

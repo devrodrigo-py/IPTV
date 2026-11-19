@@ -19,22 +19,22 @@ export const SeriesView: React.FC = () => {
 
   return (
     <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#2A2A45]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#2A2A31]">
         <div>
           <div className="flex items-center gap-2">
-            <Tv className="w-5 h-5 text-[#6B4FE0]" />
+            <Tv className="w-5 h-5 text-[#7C5CFF]" />
             <h1 className="text-xl font-bold text-white tracking-tight">Séries</h1>
           </div>
-          <p className="text-xs text-[#A8A6C0] mt-0.5">{filtered.length} de {seriesItems.length} séries</p>
+          <p className="text-xs text-[#A1A1AA] mt-0.5">{filtered.length} de {seriesItems.length} séries</p>
         </div>
         <div className="relative">
-          <Search className="w-3.5 h-3.5 text-[#A8A6C0] absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-3.5 h-3.5 text-[#A1A1AA] absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Buscar série…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="bg-[#16162A] text-xs text-white placeholder-[#A8A6C0] pl-8 pr-3 py-2 rounded-xl border border-[#2A2A45] focus:border-[#6B4FE0] outline-none"
+            className="bg-[#141418] text-xs text-white placeholder-[#A1A1AA] pl-8 pr-3 py-2 rounded-xl border border-[#2A2A31] focus:border-[#7C5CFF] outline-none"
           />
         </div>
       </div>
@@ -42,7 +42,7 @@ export const SeriesView: React.FC = () => {
       <CategoryChips categories={categories} selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
 
       {filtered.length === 0 ? (
-        <div className="p-12 text-center bg-[#16162A]/50 rounded-3xl border border-[#2A2A45] text-sm text-[#A8A6C0]">
+        <div className="p-12 text-center bg-[#141418]/50 rounded-3xl border border-[#2A2A31] text-sm text-[#A1A1AA]">
           {seriesItems.length === 0 ? 'Nenhuma série nas suas listas ativas.' : 'Nenhuma série encontrada com esse filtro.'}
         </div>
       ) : (

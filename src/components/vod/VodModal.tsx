@@ -1,25 +1,35 @@
 import React, { useEffect, useState } from 'react';
-import { X, Play, Star, Clock, Calendar, RotateCcw, Loader2, Plus, Check } from 'lucide-react';
+import { Play, RotateCcw, Plus, Check } from 'lucide-react';
 import { VodItem } from '../../types';
 import { useApp } from '../../context/AppContext';
+import { DetailHero, heroBtn } from '../media/DetailHero';
+import { MediaRow } from '../media/MediaRow';
+import { PosterCard } from '../media/PosterCard';
 
 interface VodModalProps {
   vod: VodItem;
   onClose: () => void;
 }
 
-function fmt(sec: number): string {
+function clock(sec: number): string {
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
   return h > 0 ? `${h}h${m.toString().padStart(2, '0')}` : `${m} min`;
 }
 
+function duration(min: number) {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h > 0 ? `${h}h ${m.toString().padStart(2, '0')}min` : `${m}min`;
+}
+
+/** Movie title page. */
 export const VodModal: React.FC<VodModalProps> = ({ vod, onClose }) => {
-  const { playVod, loadVodDetails, getResumeSeconds, getProgressFraction, toggleMyList, isInMyList } = useApp();
-  const inList = isInMyList(vod.id);
+  const { playVod, loadVodDetails, getResumeSeconds, getProgressFraction, toggleMyList, isInMyList, vodItems, setSelectedVodModal } = useApp();
   const [loading, setLoading] = useState(false);
   const resumeAt = getResumeSeconds(vod.id);
   const fraction = getProgressFraction(vod.id);
+  const inList = isInMyList(vod.id);
 
   useEffect(() => {
     let alive = true;
@@ -30,104 +40,74 @@ export const VodModal: React.FC<VodModalProps> = ({ vod, onClose }) => {
     return () => {
       alive = false;
     };
-    // Load once per opened title; the modal re-renders with enriched data.
+    // Load once per opened title; the page re-renders with enriched data.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vod.id]);
 
+  // "Títulos semelhantes": same category, best rated first.
+  const similar = React.useMemo(
+    () => vodItems.filter((v) => v.category === vod.category && v.id !== vod.id).sort((a, b) => b.rating - a.rating).slice(0, 14),
+    [vodItems, vod.category, vod.id]
+  );
+
+  const meta = [vod.year ? String(vod.year) : '', vod.durationMinutes ? duration(vod.durationMinutes) : '', vod.category].filter(Boolean);
+  const credits = [
+    vod.cast && vod.cast.length ? { label: 'Elenco', value: vod.cast.join(', ') } : null,
+    vod.director ? { label: 'Direção', value: vod.director } : null,
+  ].filter((c): c is { label: string; value: string } => !!c);
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="w-full max-w-3xl bg-[#16162A] border border-[#2A2A45] rounded-3xl overflow-hidden shadow-2xl relative max-h-[90vh] flex flex-col">
-        <button
-          onClick={onClose}
-          data-tv-title="Fechar detalhes do filme"
-          className="tv-card absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center cursor-pointer focus:outline-none"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        <div className="relative h-56 md:h-72 w-full bg-black shrink-0">
-          {(vod.backdropUrl || vod.posterUrl) && (
-            <img src={vod.backdropUrl || vod.posterUrl} alt="" onError={(e) => ((e.target as HTMLElement).style.display = 'none')} className="w-full h-full object-cover opacity-60" />
+    <DetailHero
+      kind="FILME"
+      title={vod.title}
+      backdropUrl={vod.backdropUrl}
+      posterUrl={vod.posterUrl}
+      rating={vod.rating}
+      meta={meta}
+      synopsis={vod.description}
+      credits={credits}
+      loading={loading}
+      onClose={onClose}
+      actions={
+        <>
+          <button
+            autoFocus
+            data-autofocus
+            onClick={() => playVod(vod)}
+            data-tv-title={resumeAt ? `Continuar ${vod.title}` : `Assistir ${vod.title}`}
+            className={heroBtn.primary}
+          >
+            <Play className="w-6 h-6 fill-current" />
+            {resumeAt ? `Continuar de ${clock(resumeAt)}` : 'Assistir'}
+          </button>
+          {resumeAt > 0 && (
+            <button onClick={() => playVod(vod, true)} data-tv-title="Assistir do início" className={heroBtn.secondary}>
+              <RotateCcw className="w-5 h-5" /> Do início
+            </button>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#16162A] via-[#16162A]/40 to-transparent" />
-          <div className="absolute bottom-5 left-6 right-6 flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => playVod(vod)}
-              autoFocus
-              data-tv-title={resumeAt ? `Continuar ${vod.title}` : `Assistir ${vod.title}`}
-              className="tv-card px-6 py-3 rounded-2xl bg-white text-[#07070F] font-bold text-sm flex items-center gap-2.5 cursor-pointer focus:outline-none"
-            >
-              <Play className="w-5 h-5 fill-current" />
-              {resumeAt ? `Continuar de ${fmt(resumeAt)}` : 'Assistir'}
-            </button>
-            {resumeAt > 0 && (
-              <button
-                onClick={() => playVod(vod, true)}
-                data-tv-title="Assistir do início"
-                className="tv-card px-5 py-3 rounded-2xl bg-white/15 text-white font-semibold text-sm flex items-center gap-2 cursor-pointer focus:outline-none"
-              >
-                <RotateCcw className="w-4 h-4" /> Do início
-              </button>
-            )}
-            <button
-              onClick={() => toggleMyList(vod.id)}
-              data-tv-title={inList ? 'Remover da minha lista' : 'Adicionar à minha lista'}
-              className="tv-card px-5 py-3 rounded-2xl bg-white/15 text-white font-semibold text-sm flex items-center gap-2 cursor-pointer focus:outline-none"
-            >
-              {inList ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />} Minha lista
-            </button>
-            {loading && <Loader2 className="w-5 h-5 text-white/70 animate-spin" />}
-          </div>
+          <button
+            onClick={() => toggleMyList(vod.id)}
+            data-tv-title={inList ? 'Remover da minha lista' : 'Adicionar à minha lista'}
+            title="Minha lista"
+            className={heroBtn.round}
+          >
+            {inList ? <Check className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
+          </button>
           {fraction > 0 && fraction < 1 && (
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
-              <div className="h-full bg-[#FF5468]" style={{ width: `${fraction * 100}%` }} />
+            <div className="basis-full max-w-sm mt-1 h-1 rounded-full bg-white/20 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-[#7C5CFF] to-[#FF4D8D]" style={{ width: `${fraction * 100}%` }} />
             </div>
           )}
-        </div>
-
-        <div className="p-6 pt-3 space-y-4 overflow-y-auto">
-          <div>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-[#A8A6C0] mb-1.5">
-              {vod.rating > 0 && (
-                <span className="flex items-center gap-1 text-[#FF6F91] font-bold">
-                  <Star className="w-3.5 h-3.5 fill-current" /> {vod.rating} / 10
-                </span>
-              )}
-              {vod.year > 0 && (
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5" /> {vod.year}
-                </span>
-              )}
-              {vod.durationMinutes > 0 && (
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5" /> {vod.durationMinutes} min
-                </span>
-              )}
-              <span className="px-2 py-0.5 rounded-md bg-[#6B4FE0]/20 text-[#B9A8FF] font-semibold">{vod.category}</span>
-            </div>
-            <h2 className="text-2xl font-black text-white">{vod.title}</h2>
-          </div>
-
-          <p className="text-sm text-[#C9C7DA] leading-relaxed">{vod.description || (loading ? 'Carregando sinopse…' : 'Sinopse não informada pelo provedor.')}</p>
-
-          {(vod.director || (vod.cast && vod.cast.length > 0)) && (
-            <div className="pt-2 border-t border-[#2A2A45]/60 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              {vod.director && (
-                <div>
-                  <span className="text-[#A8A6C0] block text-[10px] uppercase font-bold tracking-wider">Direção</span>
-                  <span className="text-white font-medium">{vod.director}</span>
-                </div>
-              )}
-              {vod.cast && vod.cast.length > 0 && (
-                <div>
-                  <span className="text-[#A8A6C0] block text-[10px] uppercase font-bold tracking-wider">Elenco</span>
-                  <span className="text-white font-medium">{vod.cast.join(', ')}</span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    >
+      {similar.length > 0 && (
+        <MediaRow title="Títulos semelhantes">
+          {similar.map((v) => (
+            <PosterCard key={v.id} title={v.title} subtitle={v.category} imageUrl={v.posterUrl} progress={getProgressFraction(v.id)} onSelect={() => setSelectedVodModal(v)} />
+          ))}
+        </MediaRow>
+      )}
+    </DetailHero>
   );
 };

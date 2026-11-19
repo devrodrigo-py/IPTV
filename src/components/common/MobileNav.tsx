@@ -15,7 +15,7 @@ export const MobileNav: React.FC = () => {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#07070F]/95 backdrop-blur-xl border-t border-[#2A2A45] flex items-center justify-around px-2 z-30">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#060608]/95 backdrop-blur-xl border-t border-[#2A2A31] flex items-center justify-around px-2 z-30">
       {items.map((item) => {
         const isActive = activeTab === item.id;
         const Icon = item.icon;
@@ -24,7 +24,7 @@ export const MobileNav: React.FC = () => {
             key={item.id}
             onClick={() => setActiveTab(item.id)}
             className={`flex flex-col items-center justify-center flex-1 py-1 transition-all cursor-pointer ${
-              isActive ? 'text-[#6B4FE0]' : 'text-[#A8A6C0] hover:text-white'
+              isActive ? 'text-[#7C5CFF]' : 'text-[#A1A1AA] hover:text-white'
             }`}
           >
             <Icon className="w-5 h-5 mb-1" />

@@ -24,6 +24,7 @@ import { StatsView } from './views/StatsView';
 import { SettingsView } from './views/SettingsView';
 import { SearchView } from './views/SearchView';
 import { MyListView } from './views/MyListView';
+import { MoreView } from './views/MoreView';
 
 const AppContent: React.FC = () => {
   const {
@@ -36,6 +37,7 @@ const AppContent: React.FC = () => {
     setSelectedVodModal,
     selectedSeriesModal,
     setSelectedSeriesModal,
+    tvMode,
   } = useApp();
   useNativeBridge();
 
@@ -76,13 +78,15 @@ const AppContent: React.FC = () => {
         return <SearchView />;
       case 'mylist':
         return <MyListView />;
+      case 'more':
+        return <MoreView />;
       default:
         return <HomeView />;
     }
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#07070F] text-[#F5F3FF]">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#060608] text-[#F5F5F7]">
       {/* Desktop/Tablet Sidebar */}
       <div className="hidden md:block">
         <Sidebar />
@@ -90,14 +94,15 @@ const AppContent: React.FC = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
-        <Navbar />
+        {/* TV: no header (search and profile live in the menu rail). */}
+        {!tvMode && <Navbar />}
 
-        <main className="flex-1 overflow-y-auto pb-20 md:pb-6">
+        <main className={`flex-1 overflow-y-auto ${tvMode ? 'pb-10' : 'pb-20 md:pb-6'}`}>
           {renderActiveTab()}
         </main>
 
         {/* Mobile Navigation */}
-        <MobileNav />
+        {!tvMode && <MobileNav />}
       </div>
 
       {/* Detail modals (shared by every screen) */}

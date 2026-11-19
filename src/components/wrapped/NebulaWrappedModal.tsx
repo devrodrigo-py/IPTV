@@ -33,7 +33,7 @@ export const NebulaWrappedModal: React.FC<NebulaWrappedModalProps> = ({ onClose 
       badge: 'Retrospectiva Cósmica',
       title: `Nebula Wrapped 2026`,
       subtitle: `Olá, ${activeProfile?.name || 'Explorador'}! Pronto para decolar e relembrar sua jornada de entretenimento neste ano?`,
-      gradient: 'from-[#6B4FE0] via-[#2A1D6B] to-[#07070F]',
+      gradient: 'from-[#7C5CFF] via-[#2B1F66] to-[#060608]',
       icon: Sparkles,
       iconColor: '#FF6F91',
     },
@@ -44,9 +44,9 @@ export const NebulaWrappedModal: React.FC<NebulaWrappedModalProps> = ({ onClose 
       subtitle: `Você explorou transmissões do mundo todo em ${stats.daysActive} dias ativos no Nebula IPTV.`,
       stat: `${stats.totalMinutesWatched.toLocaleString()} Minutos`,
       statLabel: 'Tempo Total de Reprodução',
-      gradient: 'from-[#1FCFAE]/40 via-[#16162A] to-[#07070F]',
+      gradient: 'from-[#22D3A6]/40 via-[#141418] to-[#060608]',
       icon: Clock,
-      iconColor: '#1FCFAE',
+      iconColor: '#22D3A6',
     },
     // Slide 2: Top Channel
     {
@@ -55,7 +55,7 @@ export const NebulaWrappedModal: React.FC<NebulaWrappedModalProps> = ({ onClose 
       subtitle: `Você deu o play ${topChannel[1]} vezes nesta transmissão! Este foi o seu refúgio preferido em frente à tela.`,
       stat: `#1 Mais Assistido`,
       statLabel: `${topChannel[1]} sessões de stream`,
-      gradient: 'from-[#6B4FE0]/50 via-[#1E1E38] to-[#07070F]',
+      gradient: 'from-[#7C5CFF]/50 via-[#1E1E24] to-[#060608]',
       icon: Trophy,
       iconColor: '#FFB800',
     },
@@ -66,7 +66,7 @@ export const NebulaWrappedModal: React.FC<NebulaWrappedModalProps> = ({ onClose 
       subtitle: `Seu gênero mais assistido foi "${topGenre[0]}". Você tem uma curiosidade sem limites pelas fronteiras do conhecimento e entretenimento.`,
       stat: topGenre[0],
       statLabel: 'Gênero Predominante',
-      gradient: 'from-[#FF6F91]/40 via-[#2A1D6B] to-[#07070F]',
+      gradient: 'from-[#FF6F91]/40 via-[#2B1F66] to-[#060608]',
       icon: Heart,
       iconColor: '#FF6F91',
     },
@@ -94,7 +94,7 @@ export const NebulaWrappedModal: React.FC<NebulaWrappedModalProps> = ({ onClose 
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
-      <div className="w-full max-w-lg rounded-3xl bg-[#07070F] border border-[#6B4FE0]/50 overflow-hidden shadow-2xl relative flex flex-col min-h-[500px]">
+      <div className="w-full max-w-lg rounded-3xl bg-[#060608] border border-[#7C5CFF]/50 overflow-hidden shadow-2xl relative flex flex-col min-h-[500px]">
         {/* Top Header */}
         <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between">
           {/* Slide Progress bars */}
@@ -135,17 +135,17 @@ export const NebulaWrappedModal: React.FC<NebulaWrappedModalProps> = ({ onClose 
               {active.title}
             </h2>
 
-            <p className="text-sm md:text-base text-[#F5F3FF]/80 leading-relaxed font-normal">
+            <p className="text-sm md:text-base text-[#F5F5F7]/80 leading-relaxed font-normal">
               {active.subtitle}
             </p>
 
             {active.stat && (
               <div className="pt-6">
                 <div className="p-4 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-md">
-                  <span className="text-2xl md:text-3xl font-extrabold text-[#1FCFAE] font-mono block">
+                  <span className="text-2xl md:text-3xl font-extrabold text-[#22D3A6] font-mono block">
                     {active.stat}
                   </span>
-                  <span className="text-xs text-[#A8A6C0] font-medium block mt-1">
+                  <span className="text-xs text-[#A1A1AA] font-medium block mt-1">
                     {active.statLabel}
                   </span>
                 </div>
@@ -177,7 +177,7 @@ export const NebulaWrappedModal: React.FC<NebulaWrappedModalProps> = ({ onClose 
             ) : (
               <button
                 onClick={onClose}
-                className="px-5 py-2.5 rounded-xl bg-[#6B4FE0] text-white font-bold text-xs flex items-center gap-1 cursor-pointer hover:bg-[#6B4FE0]/80"
+                className="px-5 py-2.5 rounded-xl bg-[#7C5CFF] text-white font-bold text-xs flex items-center gap-1 cursor-pointer hover:bg-[#7C5CFF]/80"
               >
                 Concluir Wrapped
               </button>
