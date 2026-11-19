@@ -62,7 +62,11 @@ Para um APK de produção assinado, defina `ANDROID_KEYSTORE_PATH`, `ANDROID_KEY
 
 O app aparece na fileira de apps da TV com o banner do Nebula.
 
-Compatibilidade: Android 6.0 ou mais novo (minSdk 23). Isso inclui o Fire TV Stick 2ª geração em diante (Fire OS 6+). Aparelhos com Fire OS 5 não são suportados pelo Capacitor 7.
+Compatibilidade:
+- Android 6.0 ou mais novo (minSdk 23): Fire TV Stick 2ª geração em diante (Fire OS 6+), Google TV, Android TV, Mi Box / Mi TV. Fire OS 5 não é suportado pelo Capacitor 7.
+- Funciona mesmo com WebView antiga e sem atualização (testado com a WebView 66 de um Android TV 9): o código é convertido para Chrome 64+ e o CSS não depende de recursos recentes.
+- A interface é desenhada em 1280 px de largura lógica dentro do app de TV (escala de leitura a 3 m da tela) e o player é nativo (Media3), então o desempenho de vídeo não depende da WebView.
+- Fontes, logo e avatares vão dentro do app: nada depende de serviços externos para abrir.
 
 ### Teclas do controle no player
 
