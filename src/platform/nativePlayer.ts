@@ -12,6 +12,7 @@ export interface NativeQueueItem {
   title: string;
   url: string;
   logoUrl?: string;
+  subtitle?: string;
 }
 
 export interface NativePlayOptions {
@@ -43,6 +44,8 @@ export interface NativePlayResult {
 
 interface NebulaPlayerPlugin {
   play(options: NativePlayOptions): Promise<NativePlayResult>;
+  isVoiceSearchAvailable(): Promise<{ available: boolean }>;
+  voiceSearch(): Promise<{ text: string }>;
 }
 
 const NebulaPlayer = registerPlugin<NebulaPlayerPlugin>('NebulaPlayer');
@@ -53,4 +56,19 @@ export function canUseNativePlayer(): boolean {
 
 export function playNative(options: NativePlayOptions): Promise<NativePlayResult> {
   return NebulaPlayer.play(options);
+}
+
+/** Speech recognition through the TV's system service (Google TV / Android TV). */
+export async function isVoiceSearchAvailable(): Promise<boolean> {
+  if (!isNativeApp()) return false;
+  try {
+    return (await NebulaPlayer.isVoiceSearchAvailable()).available;
+  } catch {
+    return false;
+  }
+}
+
+export async function voiceSearch(): Promise<string> {
+  const res = await NebulaPlayer.voiceSearch();
+  return res.text?.trim() ?? '';
 }

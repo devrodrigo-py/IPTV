@@ -1,5 +1,6 @@
-import React, { useDeferredValue, useState } from 'react';
-import { Search, Tv, Film, Play, Star } from 'lucide-react';
+import React, { useDeferredValue, useEffect, useState } from 'react';
+import { Search, Tv, Film, Play, Star, Mic } from 'lucide-react';
+import { isVoiceSearchAvailable, voiceSearch } from '../platform/nativePlayer';
 import { useApp } from '../context/AppContext';
 import { ChannelCard } from '../components/channels/ChannelCard';
 import { VodItem, SeriesItem } from '../types';
@@ -10,6 +11,7 @@ export const SearchView: React.FC = () => {
   const {
     searchQuery,
     setSearchQuery,
+    tvMode,
     filteredChannels,
     vodItems,
     seriesItems,
@@ -18,6 +20,22 @@ export const SearchView: React.FC = () => {
   } = useApp();
 
   const [activeFilter, setActiveFilter] = useState<'all' | 'channels' | 'vod' | 'series'>('all');
+  const [voiceAvailable, setVoiceAvailable] = useState(false);
+  const [listening, setListening] = useState(false);
+  useEffect(() => {
+    void isVoiceSearchAvailable().then(setVoiceAvailable);
+  }, []);
+  const startVoice = async () => {
+    setListening(true);
+    try {
+      const text = await voiceSearch();
+      if (text) setSearchQuery(text);
+    } catch {
+      setVoiceAvailable(false);
+    } finally {
+      setListening(false);
+    }
+  };
 
   // Typing stays responsive on TV sticks while big lists are filtered.
   const q = useDeferredValue(searchQuery).toLowerCase().trim();
@@ -62,9 +80,20 @@ export const SearchView: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-[#16162A] text-sm text-white placeholder-[#A8A6C0] pl-12 pr-4 py-3 rounded-2xl border border-[#2A2A45] focus:border-[#6B4FE0] outline-none shadow-inner"
-            autoFocus
+            // On TV the on-screen keyboard would cover the screen as soon as the page opens.
+            autoFocus={!tvMode}
           />
         </div>
+        {voiceAvailable && (
+          <button
+            data-autofocus
+            onClick={startVoice}
+            data-tv-title="Buscar por voz"
+            className="tv-card w-fit px-5 py-3 rounded-2xl bg-[#6B4FE0] text-white text-sm font-bold flex items-center gap-2 cursor-pointer focus:outline-none"
+          >
+            <Mic className="w-5 h-5" /> {listening ? 'Ouvindo…' : 'Buscar por voz'}
+          </button>
+        )}
 
         {/* Filter Pills */}
         <div className="flex items-center gap-2">

@@ -326,8 +326,9 @@ export const TvRemoteOverlay: React.FC = () => {
 
     // 6. If already on Home and focus is inside main content -> Netflix behavior: Back moves focus to the Sidebar Menu!
     const active = document.activeElement as HTMLElement;
-    // 7. Already in the menu on Home: leave the app (Android TV).
-    if (active && active.closest('aside')) {
+    // 7. Already in the menu on Home, or on a screen without the menu (profile
+    // picker): leave the app (Android TV).
+    if ((active && active.closest('aside')) || !document.querySelector('aside')) {
       window.dispatchEvent(new CustomEvent(EXIT_EVENT));
       return;
     }
@@ -450,7 +451,10 @@ export const TvRemoteOverlay: React.FC = () => {
       const modal = document.querySelector<HTMLElement>('.fixed.inset-0.z-50');
       const target = modal
         ? modal.querySelector<HTMLElement>('[autofocus], .tv-card, button')
-        : document.querySelector<HTMLElement>('main [data-autofocus]') || document.querySelector<HTMLElement>('main .tv-card, main button');
+        : document.querySelector<HTMLElement>('main [data-autofocus]') ||
+          document.querySelector<HTMLElement>('main .tv-card, main button') ||
+          // Screens without the main layout (profile picker)
+          document.querySelector<HTMLElement>('[data-autofocus], .tv-card');
       if (target) applyTvFocus(target);
     };
     const first = setTimeout(ensureFocus, 300);

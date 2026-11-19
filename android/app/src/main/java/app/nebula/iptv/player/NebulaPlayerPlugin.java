@@ -2,6 +2,8 @@ package app.nebula.iptv.player;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.speech.RecognizerIntent;
+import java.util.Locale;
 import androidx.activity.result.ActivityResult;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -35,7 +37,7 @@ public class NebulaPlayerPlugin extends Plugin {
             for (int i = 0; i < raw.length(); i++) {
                 JSONObject o = raw.optJSONObject(i);
                 if (o == null) continue;
-                queue.add(new PlayerQueue.Item(o.optString("id"), o.optString("title"), o.optString("url")));
+                queue.add(new PlayerQueue.Item(o.optString("id"), o.optString("title"), o.optString("url"), o.optString("subtitle", "")));
             }
         }
         PlayerQueue.set(queue);
@@ -54,6 +56,47 @@ public class NebulaPlayerPlugin extends Plugin {
         intent.putExtra(PlayerActivity.EXTRA_NEXT_TITLE, call.getString("nextTitle", ""));
 
         startActivityForResult(call, intent, "onPlayerClosed");
+    }
+
+    /** True when the device offers speech recognition to apps (Google TV yes, most Fire TV no). */
+    @PluginMethod
+    public void isVoiceSearchAvailable(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("available", speechIntent().resolveActivity(getContext().getPackageManager()) != null);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void voiceSearch(PluginCall call) {
+        Intent intent = speechIntent();
+        if (intent.resolveActivity(getContext().getPackageManager()) == null) {
+            call.reject("Busca por voz indisponível neste aparelho", "UNAVAILABLE");
+            return;
+        }
+        startActivityForResult(call, intent, "onVoiceResult");
+    }
+
+    private Intent speechIntent() {
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag());
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Diga o nome de um filme, série ou canal");
+        intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+        return intent;
+    }
+
+    @ActivityCallback
+    private void onVoiceResult(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        JSObject ret = new JSObject();
+        String text = "";
+        Intent data = result.getData();
+        if (result.getResultCode() == Activity.RESULT_OK && data != null) {
+            java.util.ArrayList<String> matches = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            if (matches != null && !matches.isEmpty()) text = matches.get(0);
+        }
+        ret.put("text", text);
+        call.resolve(ret);
     }
 
     @ActivityCallback

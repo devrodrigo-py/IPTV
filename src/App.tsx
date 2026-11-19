@@ -40,7 +40,12 @@ const AppContent: React.FC = () => {
   useNativeBridge();
 
   if (!activeProfile || isGateLocked) {
-    return <ProfileGate />;
+    return (
+      <>
+        <ProfileGate />
+        <TvRemoteOverlay />
+      </>
+    );
   }
 
   const renderActiveTab = () => {

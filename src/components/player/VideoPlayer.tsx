@@ -828,6 +828,9 @@ export const VideoPlayer: React.FC = () => {
         <div className="absolute right-8 bottom-32 z-30 bg-[#16162A]/95 border border-[#2A2A45] rounded-2xl p-4 shadow-2xl max-w-xs space-y-3">
           <p className="text-[11px] uppercase font-bold text-[#A8A6C0]">Próximo episódio</p>
           <p className="text-sm font-bold text-white line-clamp-2">{nextTitle}</p>
+          {settings.autoplayNextEpisode && (
+            <p className="text-xs text-[#1FCFAE]">Começa em {Math.max(0, Math.ceil(duration - currentTime))} s</p>
+          )}
           <div className="flex gap-2">
             <button
               onClick={() => playNextEpisode()}

@@ -298,9 +298,10 @@ public class PlayerActivity extends AppCompatActivity {
         queueIndex = index;
         PlayerQueue.Item item = queue.get(index);
         title = item.title;
+        subtitle = item.subtitle;
         retries = 0;
         load(item.url, 0);
-        showInfo(String.format(Locale.ROOT, "%d  %s", index + 1, item.title), null);
+        showInfo(String.format(Locale.ROOT, "%d  %s", index + 1, item.title), item.subtitle);
     }
 
     private void jumpToTypedChannel() {

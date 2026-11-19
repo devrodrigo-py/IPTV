@@ -12,11 +12,13 @@ public final class PlayerQueue {
         public final String id;
         public final String title;
         public final String url;
+        public final String subtitle;
 
-        public Item(String id, String title, String url) {
+        public Item(String id, String title, String url, String subtitle) {
             this.id = id;
             this.title = title;
             this.url = url;
+            this.subtitle = subtitle;
         }
     }
 

@@ -99,10 +99,11 @@ export const ProfileGate: React.FC = () => {
 
       {/* Profiles Grid */}
       <div className="flex flex-wrap items-center justify-center gap-6 max-w-4xl">
-        {profiles.map((profile) => (
+        {profiles.map((profile, idx) => (
           <div
             key={profile.id}
             tabIndex={0}
+            data-autofocus={idx === 0 ? true : undefined}
             data-tv-title={`Perfil: ${profile.name}`}
             onClick={() => handleProfileClick(profile)}
             onKeyDown={(e) => {

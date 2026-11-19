@@ -228,7 +228,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const activeId = loadActiveProfileId();
     return loaded.find((p) => p.id === activeId) || loaded[0] || null;
   });
-  const [isGateLocked, setIsGateLocked] = useState(false);
+  // Like streaming apps: ask who is watching on launch when there is more than one profile.
+  const [isGateLocked, setIsGateLocked] = useState(() => loadProfiles().length > 1);
 
   // Small data (localStorage)
   const [playlists, setPlaylists] = useState<Playlist[]>(loadPlaylists);
@@ -671,7 +672,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     stream: ActiveStream,
     opts: { queue?: Channel[]; queueIndex?: number; nextTitle?: string; genre: string }
   ) => {
-    const queueItems: NativeQueueItem[] | undefined = opts.queue?.map((c) => ({ id: c.id, title: c.name, url: c.streamUrl, logoUrl: c.logoUrl }));
+    const queueItems: NativeQueueItem[] | undefined = opts.queue?.map((c) => ({
+      id: c.id,
+      title: c.name,
+      url: c.streamUrl,
+      logoUrl: c.logoUrl,
+      // "Now playing" line shown in the native zapping banner.
+      subtitle: getChannelCurrentProgram(c.id)?.title,
+    }));
     try {
       const res = await playNative({
         url: stream.streamUrl,
