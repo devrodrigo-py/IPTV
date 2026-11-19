@@ -7,11 +7,13 @@ O Nebula **não fornece conteúdo**. Ele organiza e reproduz as listas que o usu
 ## O que ele faz
 
 - **Ao vivo, filmes e séries** a partir de um login Xtream Codes (`player_api.php`) ou de uma lista M3U. Em listas M3U, filmes (`/movie/`, `.mp4`, `.mkv`…) e episódios (`S01E02`) são separados automaticamente.
-- **Home estilo streaming**: destaque, *Continuar assistindo* com barra de progresso, favoritos, adicionados recentemente, mais bem avaliados, séries e prateleiras por categoria.
+- **Home estilo streaming**: o fundo e a sinopse do topo acompanham o título em foco (e giram sozinhos quando parado), *Continuar assistindo* com barra de progresso, *Minha lista*, Top 10 com numerais, adicionados recentemente, séries e prateleiras por categoria.
+- **Minha lista** por perfil e tela **"Quem está assistindo?"** ao abrir.
+- **Busca por voz** no Google TV / Android TV (usa o reconhecimento de fala do sistema).
 - **Retomar de onde parou**, "assistir do início", próximo episódio automático e marcação de episódios vistos.
 - **Guia de programação (EPG)**: baixado automaticamente da lista (`url-tvg`) ou do servidor Xtream (`xmltv.php`, aceita `.gz`), com processamento fora da thread principal.
 - **Player nativo no Android (Media3/ExoPlayer)**: HLS, MPEG-TS, MP4/MKV, HEVC, áudio Dolby (AC3/EAC3), escolha de faixa de áudio e legenda, reconexão automática, troca de canal com CH+/CH-, setas e teclado numérico.
-- **Controle remoto**: navegação espacial pelo D-pad, Voltar hierárquico (fecha player → modal → volta ao Início → menu → sai do app), teclas de mídia.
+- **Controle remoto**: menu lateral recolhido que se expande ao receber foco, foco sempre visível, navegação de fileira em fileira pelo D-pad, Voltar hierárquico (fecha player → modal → volta ao Início → menu → sai do app), teclas de mídia.
 - **Listas enormes**: catálogo no IndexedDB (sem o limite de ~5 MB do localStorage) e grades renderizadas aos poucos.
 - **Modo leve** automático em aparelhos de entrada (Fire TV Stick): menos blur, sombras e animações. A multitela é limitada ao que o aparelho decodifica.
 - Perfis com PIN, perfil Kids, estatísticas, backup/restauração.
