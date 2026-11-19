@@ -617,6 +617,7 @@ export const VideoPlayer: React.FC = () => {
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
+                        e.preventDefault();
                         playChannel(ch);
                         setShowDrawer(false);
                       }

@@ -1,269 +1,172 @@
 import { AppSettings, Channel, EpgProgram, Playlist, UserProfile, VodItem, SeriesItem, WatchHistoryItem, WatchStats } from '../types';
-import { DEFAULT_PROFILES, DEFAULT_SETTINGS, INITIAL_CHANNELS, INITIAL_PLAYLISTS, INITIAL_SERIES, INITIAL_STATS, INITIAL_VOD, generateSampleEpg } from './sampleData';
+import { DEFAULT_PROFILES, DEFAULT_SETTINGS, EMPTY_STATS } from './sampleData';
+import { dbDelete, dbGet, dbSet } from './db';
+import type { ProgressMap } from './progress';
 
-const STORAGE_KEYS = {
+/**
+ * Small, frequently read data stays in localStorage (synchronous at startup).
+ * Large catalog data lives in IndexedDB (see db.ts): localStorage caps at about
+ * 5 MB, which one real provider list already exceeds.
+ */
+
+const LS = {
   PROFILES: 'nebula_profiles',
   ACTIVE_PROFILE: 'nebula_active_profile',
   PLAYLISTS: 'nebula_playlists',
-  CHANNELS: 'nebula_channels',
   FAVORITES: 'nebula_favorites',
   HISTORY: 'nebula_history',
-  EPG: 'nebula_epg',
   SETTINGS: 'nebula_settings',
   STATS: 'nebula_stats',
+} as const;
+
+/** Keys in IndexedDB. */
+export const DB_KEYS = {
+  CHANNELS: 'channels',
+  VOD: 'vod',
+  SERIES: 'series',
+  EPG: 'epg',
+  PROGRESS: 'progress',
+} as const;
+
+/** Pre-IndexedDB versions stored these in localStorage. */
+const LEGACY_LS = {
+  CHANNELS: 'nebula_channels',
   VOD: 'nebula_vod',
   SERIES: 'nebula_series',
+  EPG: 'nebula_epg',
 };
 
-export function loadProfiles(): UserProfile[] {
+function readLs<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.PROFILES);
-    if (raw) return JSON.parse(raw);
+    const raw = localStorage.getItem(key);
+    if (raw) return JSON.parse(raw) as T;
   } catch (e) {
-    console.error('Failed to load profiles:', e);
+    console.error(`Falha ao ler ${key}:`, e);
   }
-  return DEFAULT_PROFILES;
+  return fallback;
 }
 
-export function saveProfiles(profiles: UserProfile[]): void {
-  localStorage.setItem(STORAGE_KEYS.PROFILES, JSON.stringify(profiles));
-}
-
-export function loadActiveProfileId(): string {
-  return localStorage.getItem(STORAGE_KEYS.ACTIVE_PROFILE) || DEFAULT_PROFILES[0].id;
-}
-
-export function saveActiveProfileId(id: string): void {
-  localStorage.setItem(STORAGE_KEYS.ACTIVE_PROFILE, id);
-}
-
-export function loadPlaylists(): Playlist[] {
+function writeLs(key: string, value: unknown): void {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.PLAYLISTS);
-    if (raw) return JSON.parse(raw);
+    localStorage.setItem(key, JSON.stringify(value));
   } catch (e) {
-    console.error('Failed to load playlists:', e);
+    console.error(`Falha ao salvar ${key}:`, e);
   }
-  return INITIAL_PLAYLISTS;
 }
 
-export function savePlaylists(playlists: Playlist[]): void {
-  localStorage.setItem(STORAGE_KEYS.PLAYLISTS, JSON.stringify(playlists));
+export const loadProfiles = (): UserProfile[] => {
+  const p = readLs<UserProfile[]>(LS.PROFILES, []);
+  return p.length ? p : DEFAULT_PROFILES;
+};
+export const saveProfiles = (v: UserProfile[]) => writeLs(LS.PROFILES, v);
+export const loadActiveProfileId = (): string => localStorage.getItem(LS.ACTIVE_PROFILE) || DEFAULT_PROFILES[0].id;
+export const saveActiveProfileId = (id: string) => localStorage.setItem(LS.ACTIVE_PROFILE, id);
+export const loadPlaylists = (): Playlist[] => readLs<Playlist[]>(LS.PLAYLISTS, []);
+export const savePlaylists = (v: Playlist[]) => writeLs(LS.PLAYLISTS, v);
+export const loadFavorites = (): string[] => readLs<string[]>(LS.FAVORITES, []);
+export const saveFavorites = (v: string[]) => writeLs(LS.FAVORITES, v);
+export const loadHistory = (): WatchHistoryItem[] => readLs<WatchHistoryItem[]>(LS.HISTORY, []);
+export const saveHistory = (v: WatchHistoryItem[]) => writeLs(LS.HISTORY, v);
+export const loadSettings = (): AppSettings => ({ ...DEFAULT_SETTINGS, ...readLs<Partial<AppSettings>>(LS.SETTINGS, {}) });
+export const saveSettings = (v: AppSettings) => writeLs(LS.SETTINGS, v);
+export const loadStats = (): WatchStats => ({ ...EMPTY_STATS, ...readLs<Partial<WatchStats>>(LS.STATS, {}) });
+export const saveStats = (v: WatchStats) => writeLs(LS.STATS, v);
+
+export interface CatalogData {
+  channels: Channel[];
+  vod: VodItem[];
+  series: SeriesItem[];
+  epg: EpgProgram[];
+  progress: ProgressMap;
 }
 
-export function loadChannels(): Channel[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.CHANNELS);
-    if (raw) return JSON.parse(raw);
-  } catch (e) {
-    console.error('Failed to load channels:', e);
-  }
-  return INITIAL_CHANNELS;
-}
+/**
+ * Loads catalog data from IndexedDB. On the first run after upgrading, data
+ * left in localStorage by older versions is moved over and removed there.
+ */
+export async function loadCatalog(): Promise<CatalogData> {
+  const [channels, vod, series, epg, progress] = await Promise.all([
+    dbGet<Channel[]>(DB_KEYS.CHANNELS),
+    dbGet<VodItem[]>(DB_KEYS.VOD),
+    dbGet<SeriesItem[]>(DB_KEYS.SERIES),
+    dbGet<EpgProgram[]>(DB_KEYS.EPG),
+    dbGet<ProgressMap>(DB_KEYS.PROGRESS),
+  ]);
 
-export function saveChannels(channels: Channel[]): void {
-  localStorage.setItem(STORAGE_KEYS.CHANNELS, JSON.stringify(channels));
-}
-
-export function loadFavorites(): string[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.FAVORITES);
-    if (raw) return JSON.parse(raw);
-  } catch (e) {
-    console.error('Failed to load favorites:', e);
-  }
-  // Default favorites from initial channels
-  return INITIAL_CHANNELS.filter(c => c.isFavorite).map(c => c.id);
-}
-
-export function saveFavorites(favIds: string[]): void {
-  localStorage.setItem(STORAGE_KEYS.FAVORITES, JSON.stringify(favIds));
-}
-
-export function loadHistory(): WatchHistoryItem[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.HISTORY);
-    if (raw) return JSON.parse(raw);
-  } catch (e) {
-    console.error('Failed to load history:', e);
-  }
-  return [
-    {
-      id: 'hist_1',
-      contentId: 'ch_1',
-      contentType: 'channel',
-      title: 'NASA TV HD (Ciência & Espaço)',
-      subtitle: 'ISS Live Views from Orbit',
-      posterUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/e5/NASA_logo.svg',
-      streamUrl: 'https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8',
-      timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-      positionSeconds: 1800,
-    },
-    {
-      id: 'hist_2',
-      contentId: 'vod_1',
-      contentType: 'vod',
-      title: 'Tears of Steel: A Resistência Cyber',
-      subtitle: 'Ficção Científica • 124 min',
-      posterUrl: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&auto=format&fit=crop&q=80',
-      streamUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
-      timestamp: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-      positionSeconds: 2450,
-      durationSeconds: 7440,
-    },
-  ];
-}
-
-export function saveHistory(history: WatchHistoryItem[]): void {
-  localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
-}
-
-export function loadEpg(): EpgProgram[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.EPG);
-    if (raw) {
-      const parsed: EpgProgram[] = JSON.parse(raw);
-      if (parsed.length > 0) return parsed;
-    }
-  } catch (e) {
-    console.error('Failed to load EPG:', e);
-  }
-  return generateSampleEpg();
-}
-
-export function saveEpg(epg: EpgProgram[]): void {
-  localStorage.setItem(STORAGE_KEYS.EPG, JSON.stringify(epg));
-}
-
-export function loadSettings(): AppSettings {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-    if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
-  } catch (e) {
-    console.error('Failed to load settings:', e);
-  }
-  return DEFAULT_SETTINGS;
-}
-
-export function saveSettings(settings: AppSettings): void {
-  localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
-}
-
-export function loadStats(): WatchStats {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.STATS);
-    if (raw) return JSON.parse(raw);
-  } catch (e) {
-    console.error('Failed to load stats:', e);
-  }
-  return INITIAL_STATS;
-}
-
-export function saveStats(stats: WatchStats): void {
-  localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(stats));
-}
-
-export function loadVod(): VodItem[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.VOD);
-    if (raw) return JSON.parse(raw);
-  } catch (e) {
-    console.error('Failed to load VOD:', e);
-  }
-  return INITIAL_VOD;
-}
-
-export function saveVod(vod: VodItem[]): void {
-  localStorage.setItem(STORAGE_KEYS.VOD, JSON.stringify(vod));
-}
-
-export function loadSeries(): SeriesItem[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.SERIES);
-    if (raw) return JSON.parse(raw);
-  } catch (e) {
-    console.error('Failed to load series:', e);
-  }
-  return INITIAL_SERIES;
-}
-
-export function saveSeries(series: SeriesItem[]): void {
-  localStorage.setItem(STORAGE_KEYS.SERIES, JSON.stringify(series));
-}
-
-export function exportNebulaData(): string {
-  const data = {
-    version: '2.1.0',
-    exportedAt: new Date().toISOString(),
-    profiles: loadProfiles(),
-    playlists: loadPlaylists(),
-    channels: loadChannels(),
-    favorites: loadFavorites(),
-    history: loadHistory(),
-    settings: loadSettings(),
-    stats: loadStats(),
+  const data: CatalogData = {
+    channels: channels ?? readLs<Channel[]>(LEGACY_LS.CHANNELS, []),
+    vod: vod ?? readLs<VodItem[]>(LEGACY_LS.VOD, []),
+    series: series ?? readLs<SeriesItem[]>(LEGACY_LS.SERIES, []),
+    epg: epg ?? readLs<EpgProgram[]>(LEGACY_LS.EPG, []),
+    progress: progress ?? {},
   };
-  return JSON.stringify(data, null, 2);
+
+  if (!channels && localStorage.getItem(LEGACY_LS.CHANNELS)) {
+    await Promise.all([
+      dbSet(DB_KEYS.CHANNELS, data.channels),
+      dbSet(DB_KEYS.VOD, data.vod),
+      dbSet(DB_KEYS.SERIES, data.series),
+      dbSet(DB_KEYS.EPG, data.epg),
+    ]);
+    Object.values(LEGACY_LS).forEach((k) => localStorage.removeItem(k));
+  }
+  return data;
 }
 
-export function importNebulaData(jsonString: string): boolean {
+export async function clearEpgCache(): Promise<void> {
+  await dbDelete(DB_KEYS.EPG);
+}
+
+/**
+ * Backup of user data (profiles, lists, favourites, history, progress).
+ * Catalogs are not included: they are downloaded again from the lists.
+ * Note: the file contains list passwords so it can restore Xtream logins.
+ */
+export async function exportNebulaData(): Promise<string> {
+  const progress = (await dbGet<ProgressMap>(DB_KEYS.PROGRESS).catch(() => undefined)) ?? {};
+  return JSON.stringify(
+    {
+      version: '3.0.0',
+      exportedAt: new Date().toISOString(),
+      profiles: loadProfiles(),
+      playlists: loadPlaylists(),
+      favorites: loadFavorites(),
+      history: loadHistory(),
+      settings: loadSettings(),
+      stats: loadStats(),
+      progress,
+    },
+    null,
+    2
+  );
+}
+
+export async function importNebulaData(jsonString: string): Promise<boolean> {
   try {
     const parsed = JSON.parse(jsonString);
     if (!parsed || typeof parsed !== 'object') return false;
 
-    // Validate profiles
-    if (Array.isArray(parsed.profiles) && parsed.profiles.length > 0) {
-      const validProfiles = parsed.profiles.filter(
-        (p: any) => p && typeof p.id === 'string' && typeof p.name === 'string'
-      );
-      if (validProfiles.length > 0) saveProfiles(validProfiles);
+    if (Array.isArray(parsed.profiles)) {
+      const valid = parsed.profiles.filter((p: UserProfile) => p && typeof p.id === 'string' && typeof p.name === 'string');
+      if (valid.length > 0) saveProfiles(valid);
     }
-
-    // Validate playlists
     if (Array.isArray(parsed.playlists)) {
-      const validPlaylists = parsed.playlists.filter(
-        (pl: any) => pl && typeof pl.id === 'string' && typeof pl.name === 'string'
-      );
-      savePlaylists(validPlaylists);
+      savePlaylists(parsed.playlists.filter((pl: Playlist) => pl && typeof pl.id === 'string' && typeof pl.name === 'string'));
     }
-
-    // Validate channels
-    if (Array.isArray(parsed.channels)) {
-      const validChannels = parsed.channels.filter(
-        (c: any) => c && typeof c.id === 'string' && typeof c.streamUrl === 'string'
-      );
-      saveChannels(validChannels);
-    }
-
-    // Validate favorites
-    if (Array.isArray(parsed.favorites)) {
-      const validFavs = parsed.favorites.filter((f: any) => typeof f === 'string');
-      saveFavorites(validFavs);
-    }
-
-    // Validate history
+    if (Array.isArray(parsed.favorites)) saveFavorites(parsed.favorites.filter((f: unknown) => typeof f === 'string'));
     if (Array.isArray(parsed.history)) {
-      const validHistory = parsed.history.filter(
-        (h: any) => h && typeof h.id === 'string' && typeof h.streamUrl === 'string'
-      );
-      saveHistory(validHistory);
+      saveHistory(parsed.history.filter((h: WatchHistoryItem) => h && typeof h.id === 'string' && typeof h.streamUrl === 'string'));
     }
-
-    // Validate settings
-    if (parsed.settings && typeof parsed.settings === 'object') {
-      const current = loadSettings();
-      saveSettings({ ...current, ...parsed.settings });
+    if (parsed.settings && typeof parsed.settings === 'object') saveSettings({ ...loadSettings(), ...parsed.settings });
+    if (parsed.stats && typeof parsed.stats === 'object') saveStats({ ...loadStats(), ...parsed.stats });
+    if (parsed.progress && typeof parsed.progress === 'object') await dbSet(DB_KEYS.PROGRESS, parsed.progress);
+    // Older backups carried channels; keep them so the app is not empty until a refresh.
+    if (Array.isArray(parsed.channels)) {
+      await dbSet(DB_KEYS.CHANNELS, parsed.channels.filter((c: Channel) => c && typeof c.id === 'string' && typeof c.streamUrl === 'string'));
     }
-
-    // Validate stats
-    if (parsed.stats && typeof parsed.stats === 'object') {
-      const currentStats = loadStats();
-      saveStats({ ...currentStats, ...parsed.stats });
-    }
-
     return true;
   } catch (e) {
-    console.error('Error importing backup:', e);
+    console.error('Erro ao importar backup:', e);
     return false;
   }
 }

@@ -1,112 +1,93 @@
-import React, { useState } from 'react';
-import { Film, Star, Clock, Play, Filter } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Film, Search } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { VodItem } from '../types';
-import { VodModal } from '../components/vod/VodModal';
+import { PosterCard } from '../components/media/PosterCard';
+import { CategoryChips } from '../components/channels/CategoryChips';
+import { useProgressiveList } from '../hooks/useProgressiveList';
+
+type SortMode = 'default' | 'recent' | 'rating' | 'title';
 
 export const VodView: React.FC = () => {
-  const { vodItems, playVod, selectedVodModal, setSelectedVodModal } = useApp();
+  const { vodItems, setSelectedVodModal, getProgressFraction, enrichArtwork } = useApp();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<SortMode>('default');
 
-  const categories = Array.from(new Set(vodItems.map((v) => v.category))).sort();
+  const categories = useMemo(() => Array.from(new Set(vodItems.map((v) => v.category))).sort((a, b) => a.localeCompare(b, 'pt-BR')), [vodItems]);
 
-  const filtered = vodItems.filter((v) => {
-    if (selectedCategory !== 'all' && v.category !== selectedCategory) return false;
-    return true;
-  });
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const list = vodItems.filter((v) => {
+      if (selectedCategory !== 'all' && v.category !== selectedCategory) return false;
+      return !q || v.title.toLowerCase().includes(q);
+    });
+    if (sort === 'recent') list.sort((a, b) => (b.addedAt ?? 0) - (a.addedAt ?? 0));
+    else if (sort === 'rating') list.sort((a, b) => b.rating - a.rating);
+    else if (sort === 'title') list.sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
+    return list;
+  }, [vodItems, selectedCategory, query, sort]);
+
+  const { visible, hasMore, sentinelRef } = useProgressiveList(filtered, 60);
 
   return (
     <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#2A2A45]">
         <div>
           <div className="flex items-center gap-2">
             <Film className="w-5 h-5 text-[#6B4FE0]" />
-            <h1 className="text-xl font-bold text-white tracking-tight">Filmes sob Demanda (VOD)</h1>
+            <h1 className="text-xl font-bold text-white tracking-tight">Filmes</h1>
           </div>
-          <p className="text-xs text-[#A8A6C0] mt-0.5">
-            Catálogo completo com sinopses, avaliações e reprodução instantânea.
-          </p>
+          <p className="text-xs text-[#A8A6C0] mt-0.5">{filtered.length} de {vodItems.length} filmes</p>
         </div>
-
-        {/* Categories Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          <button
-            onClick={() => setSelectedCategory('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition-all ${
-              selectedCategory === 'all'
-                ? 'bg-[#6B4FE0] text-white'
-                : 'bg-[#16162A] text-[#A8A6C0] hover:text-white border border-[#2A2A45]'
-            }`}
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-[#A8A6C0] absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Buscar filme…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="bg-[#16162A] text-xs text-white placeholder-[#A8A6C0] pl-8 pr-3 py-2 rounded-xl border border-[#2A2A45] focus:border-[#6B4FE0] outline-none"
+            />
+          </div>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortMode)}
+            data-tv-title="Ordenar filmes"
+            className="bg-[#16162A] text-xs text-white px-3 py-2 rounded-xl border border-[#2A2A45] focus:border-[#6B4FE0] outline-none"
           >
-            Todos
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition-all ${
-                selectedCategory === cat
-                  ? 'bg-[#6B4FE0] text-white'
-                  : 'bg-[#16162A] text-[#A8A6C0] hover:text-white border border-[#2A2A45]'
-              }`}
-            >
-              {cat}
-            </button>
+            <option value="default">Ordem da lista</option>
+            <option value="recent">Mais recentes</option>
+            <option value="rating">Melhor avaliados</option>
+            <option value="title">A–Z</option>
+          </select>
+        </div>
+      </div>
+
+      <CategoryChips categories={categories} selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
+
+      {filtered.length === 0 ? (
+        <div className="p-12 text-center bg-[#16162A]/50 rounded-3xl border border-[#2A2A45] text-sm text-[#A8A6C0]">
+          {vodItems.length === 0 ? 'Nenhum filme nas suas listas ativas.' : 'Nenhum filme encontrado com esse filtro.'}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-8 gap-4">
+          {visible.map((vod) => (
+            <PosterCard
+              key={vod.id}
+              title={vod.title}
+              subtitle={[vod.year || null, vod.durationMinutes ? `${vod.durationMinutes} min` : null].filter(Boolean).join(' • ') || vod.category}
+              imageUrl={vod.posterUrl}
+              rating={vod.rating}
+              progress={getProgressFraction(vod.id)}
+              tvTitle={`Filme: ${vod.title}`}
+              onSelect={() => setSelectedVodModal(vod)}
+              onVisible={() => enrichArtwork('vod', vod.id)}
+            />
           ))}
         </div>
-      </div>
-
-      {/* Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {filtered.map((vod) => (
-          <div
-            key={vod.id}
-            tabIndex={0}
-            data-tv-title={`Filme: ${vod.title}`}
-            onClick={() => setSelectedVodModal(vod)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') setSelectedVodModal(vod);
-            }}
-            className="tv-card group bg-[#16162A] rounded-2xl border border-[#2A2A45] hover:border-[#6B4FE0]/60 overflow-hidden cursor-pointer flex flex-col justify-between transition-all duration-200 shadow-md hover:shadow-xl hover:shadow-[#6B4FE0]/15 focus:outline-none"
-          >
-            <div className="relative aspect-[2/3] w-full bg-black/40 overflow-hidden">
-              <img
-                src={vod.posterUrl}
-                alt={vod.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
-
-              <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[11px] font-bold text-[#FF6F91] flex items-center gap-1 border border-white/10">
-                <Star className="w-3 h-3 fill-current" />
-                {vod.rating}
-              </div>
-
-              {/* Hover Overlay */}
-              <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                <div className="w-12 h-12 rounded-full bg-[#6B4FE0] text-white flex items-center justify-center shadow-lg shadow-[#6B4FE0]/50 transform group-hover:scale-105 transition-transform">
-                  <Play className="w-5 h-5 fill-current ml-0.5" />
-                </div>
-              </div>
-            </div>
-
-            <div className="p-3">
-              <h3 className="font-bold text-xs text-white truncate group-hover:text-[#1FCFAE] transition-colors">
-                {vod.title}
-              </h3>
-              <div className="flex items-center justify-between text-[11px] text-[#A8A6C0] mt-1">
-                <span>{vod.year}</span>
-                <span>{vod.durationMinutes} min</span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Modal */}
-      {selectedVodModal && (
-        <VodModal vod={selectedVodModal} onClose={() => setSelectedVodModal(null)} />
       )}
+      {hasMore && <div ref={sentinelRef} className="h-10" aria-hidden />}
     </div>
   );
 };

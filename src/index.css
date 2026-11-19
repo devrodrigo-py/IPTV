@@ -91,3 +91,50 @@
   mask-image: linear-gradient(to right, black 75%, transparent 100%);
   -webkit-mask-image: linear-gradient(to right, black 75%, transparent 100%);
 }
+
+/* Hide scrollbars on horizontal shelves (still scrollable by D-pad and touch) */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Long grids: let the browser skip layout/paint of off-screen cards */
+.tv-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 220px;
+}
+.tv-card.tv-focused,
+button.tv-card {
+  content-visibility: visible;
+}
+
+/*
+ * Lite mode (Fire TV Stick and other low-end boxes): blur, large shadows and
+ * transitions are what drop frames on their GPUs, so they are switched off.
+ */
+.lite *,
+.lite *::before,
+.lite *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  animation-duration: 0s !important;
+  transition-duration: 0s !important;
+}
+.lite [class*='shadow'] {
+  box-shadow: none !important;
+}
+.lite .tv-focused {
+  transform: scale(1.04) !important;
+  box-shadow: 0 0 0 4px #1fcfae !important;
+}
+.lite img {
+  image-rendering: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tv-focused {
+    transform: none !important;
+  }
+}

@@ -1,89 +1,67 @@
-import React from 'react';
-import { Tv, Star, Layers, Play } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Tv, Search } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { SeriesDetailModal } from '../components/series/SeriesDetailModal';
+import { PosterCard } from '../components/media/PosterCard';
+import { CategoryChips } from '../components/channels/CategoryChips';
+import { useProgressiveList } from '../hooks/useProgressiveList';
 
 export const SeriesView: React.FC = () => {
-  const { seriesItems, selectedSeriesModal, setSelectedSeriesModal } = useApp();
+  const { seriesItems, setSelectedSeriesModal, enrichArtwork } = useApp();
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [query, setQuery] = useState('');
+
+  const categories = useMemo(() => Array.from(new Set(seriesItems.map((s) => s.category))).sort((a, b) => a.localeCompare(b, 'pt-BR')), [seriesItems]);
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return seriesItems.filter((s) => (selectedCategory === 'all' || s.category === selectedCategory) && (!q || s.title.toLowerCase().includes(q)));
+  }, [seriesItems, selectedCategory, query]);
+  const { visible, hasMore, sentinelRef } = useProgressiveList(filtered, 60);
 
   return (
     <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
-      {/* Header */}
-      <div className="pb-4 border-b border-[#2A2A45]">
-        <div className="flex items-center gap-2">
-          <Tv className="w-5 h-5 text-[#6B4FE0]" />
-          <h1 className="text-xl font-bold text-white tracking-tight">Séries e Temporadas</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#2A2A45]">
+        <div>
+          <div className="flex items-center gap-2">
+            <Tv className="w-5 h-5 text-[#6B4FE0]" />
+            <h1 className="text-xl font-bold text-white tracking-tight">Séries</h1>
+          </div>
+          <p className="text-xs text-[#A8A6C0] mt-0.5">{filtered.length} de {seriesItems.length} séries</p>
         </div>
-        <p className="text-xs text-[#A8A6C0] mt-0.5">
-          Acesse episódios organizados por temporada com suporte a reprodução contínua.
-        </p>
+        <div className="relative">
+          <Search className="w-3.5 h-3.5 text-[#A8A6C0] absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Buscar série…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="bg-[#16162A] text-xs text-white placeholder-[#A8A6C0] pl-8 pr-3 py-2 rounded-xl border border-[#2A2A45] focus:border-[#6B4FE0] outline-none"
+          />
+        </div>
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-        {seriesItems.map((series) => {
-          const totalEpisodes = series.seasons.reduce((acc, s) => acc + s.episodes.length, 0);
+      <CategoryChips categories={categories} selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
 
-          return (
-            <div
-              key={series.id}
-              tabIndex={0}
-              data-tv-title={`Série: ${series.title}`}
-              onClick={() => setSelectedSeriesModal(series)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') setSelectedSeriesModal(series);
-              }}
-              className="tv-card group bg-[#16162A] rounded-2xl border border-[#2A2A45] hover:border-[#6B4FE0]/60 overflow-hidden cursor-pointer flex flex-col justify-between transition-all duration-200 shadow-md hover:shadow-xl hover:shadow-[#6B4FE0]/15 focus:outline-none"
-            >
-              <div className="relative aspect-[16/10] w-full bg-black/40 overflow-hidden">
-                <img
-                  src={series.backdropUrl || series.posterUrl}
-                  alt={series.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-
-                <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[11px] font-bold text-[#FF6F91] flex items-center gap-1 border border-white/10">
-                  <Star className="w-3 h-3 fill-current" />
-                  {series.rating}
-                </div>
-
-                <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <div className="w-12 h-12 rounded-full bg-[#6B4FE0] text-white flex items-center justify-center shadow-lg shadow-[#6B4FE0]/50 transform group-hover:scale-105 transition-transform">
-                    <Play className="w-5 h-5 fill-current ml-0.5" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4">
-                <h3 className="font-bold text-sm text-white truncate group-hover:text-[#1FCFAE] transition-colors">
-                  {series.title}
-                </h3>
-                <p className="text-xs text-[#A8A6C0] line-clamp-2 mt-1 leading-relaxed">
-                  {series.overview}
-                </p>
-
-                <div className="flex items-center justify-between text-xs text-[#A8A6C0] mt-3 pt-2 border-t border-[#2A2A45]/50">
-                  <span className="flex items-center gap-1 font-mono text-[11px]">
-                    <Layers className="w-3.5 h-3.5 text-[#6B4FE0]" />
-                    {series.seasons.length} Temp. ({totalEpisodes} eps)
-                  </span>
-                  <span className="text-[11px] font-medium text-[#1FCFAE]">
-                    {series.category}
-                  </span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Series Detail Modal */}
-      {selectedSeriesModal && (
-        <SeriesDetailModal
-          series={selectedSeriesModal}
-          onClose={() => setSelectedSeriesModal(null)}
-        />
+      {filtered.length === 0 ? (
+        <div className="p-12 text-center bg-[#16162A]/50 rounded-3xl border border-[#2A2A45] text-sm text-[#A8A6C0]">
+          {seriesItems.length === 0 ? 'Nenhuma série nas suas listas ativas.' : 'Nenhuma série encontrada com esse filtro.'}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-8 gap-4">
+          {visible.map((s) => (
+            <PosterCard
+              key={s.id}
+              title={s.title}
+              subtitle={s.category}
+              imageUrl={s.posterUrl}
+              rating={s.rating}
+              tvTitle={`Série: ${s.title}`}
+              onSelect={() => setSelectedSeriesModal(s)}
+              onVisible={() => enrichArtwork('series', s.id)}
+            />
+          ))}
+        </div>
       )}
+      {hasMore && <div ref={sentinelRef} className="h-10" aria-hidden />}
     </div>
   );
 };

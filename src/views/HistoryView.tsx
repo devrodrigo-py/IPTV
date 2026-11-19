@@ -3,7 +3,7 @@ import { History, Trash2, Play, Tv, Film } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export const HistoryView: React.FC = () => {
-  const { history, clearHistory, filteredChannels, vodItems, playChannel, playVod } = useApp();
+  const { history, clearHistory, resumeHistoryItem } = useApp();
 
   return (
     <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
@@ -37,22 +37,11 @@ export const HistoryView: React.FC = () => {
               key={item.id}
               tabIndex={0}
               data-tv-title={`Histórico: ${item.title}`}
-              onClick={() => {
-                const ch = filteredChannels.find((c) => c.id === item.contentId);
-                if (ch) playChannel(ch);
-                else if (item.contentType === 'vod') {
-                  const vod = vodItems.find((v) => v.id === item.contentId);
-                  if (vod) playVod(vod);
-                }
-              }}
+              onClick={() => resumeHistoryItem(item)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  const ch = filteredChannels.find((c) => c.id === item.contentId);
-                  if (ch) playChannel(ch);
-                  else if (item.contentType === 'vod') {
-                    const vod = vodItems.find((v) => v.id === item.contentId);
-                    if (vod) playVod(vod);
-                  }
+                  e.preventDefault();
+                  resumeHistoryItem(item);
                 }
               }}
               className="tv-card p-4 rounded-2xl bg-[#16162A] hover:bg-[#1E1E38] border border-[#2A2A45] hover:border-[#6B4FE0] flex items-center justify-between cursor-pointer transition-all shadow-sm group focus:outline-none"

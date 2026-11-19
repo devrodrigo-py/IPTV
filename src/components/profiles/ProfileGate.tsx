@@ -106,7 +106,7 @@ export const ProfileGate: React.FC = () => {
             data-tv-title={`Perfil: ${profile.name}`}
             onClick={() => handleProfileClick(profile)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') handleProfileClick(profile);
+              if (e.key === 'Enter') { e.preventDefault(); handleProfileClick(profile); }
             }}
             className="tv-card group flex flex-col items-center cursor-pointer focus:outline-none"
           >
@@ -144,7 +144,7 @@ export const ProfileGate: React.FC = () => {
           data-tv-title="Adicionar Novo Perfil"
           onClick={() => setIsAddingProfile(true)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') setIsAddingProfile(true);
+            if (e.key === 'Enter') { e.preventDefault(); setIsAddingProfile(true); }
           }}
           className="tv-card group flex flex-col items-center cursor-pointer focus:outline-none"
         >

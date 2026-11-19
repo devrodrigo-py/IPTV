@@ -8,7 +8,8 @@ interface PlaylistModalProps {
 }
 
 export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
-  const { addPlaylist } = useApp();
+  const { addPlaylist, syncStatus } = useApp();
+  const [epgUrl, setEpgUrl] = useState('');
 
   const [playlistType, setPlaylistType] = useState<PlaylistType>('m3u');
   const [importMode, setImportMode] = useState<'url' | 'file'>('url');
@@ -41,10 +42,6 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      setFeedback({ type: 'error', message: 'Por favor, insira um nome para a playlist.' });
-      return;
-    }
 
     setIsLoading(true);
     setFeedback(null);
@@ -65,6 +62,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
       res = await addPlaylist(name, 'm3u', {
         url: importMode === 'url' ? url.trim() : undefined,
         content: importMode === 'file' ? fileContent : undefined,
+        epgUrl: epgUrl.trim() || undefined,
       });
     } else {
       // Xtream
@@ -78,6 +76,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
         url: serverUrl.trim(),
         username: username.trim(),
         password: password.trim(),
+        epgUrl: epgUrl.trim() || undefined,
       });
     }
 
@@ -86,11 +85,11 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
     if (res.success) {
       setFeedback({
         type: 'success',
-        message: `Playlist adicionada com sucesso! ${res.channelCount} canais carregados.`,
+        message: `Lista adicionada: ${res.channelCount} canais, ${res.vodCount ?? 0} filmes e ${res.seriesCount ?? 0} séries. O guia de programação é baixado em segundo plano.`,
       });
       setTimeout(() => {
         onClose();
-      }, 1200);
+      }, 2500);
     } else {
       setFeedback({
         type: 'error',
@@ -262,6 +261,25 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
             </>
           )}
 
+          <div>
+            <label className="block text-xs font-bold text-[#F5F3FF] mb-1.5">
+              URL do guia de programação (opcional)
+            </label>
+            <input
+              type="url"
+              value={epgUrl}
+              onChange={(e) => setEpgUrl(e.target.value)}
+              placeholder={playlistType === 'xtream' ? 'Automático pelo servidor Xtream' : 'Automático se a lista informar url-tvg'}
+              className="w-full bg-[#07070F] border border-[#2A2A45] rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#6B4FE0] outline-none"
+            />
+          </div>
+
+          {isLoading && syncStatus && (
+            <p className="text-xs text-[#1FCFAE] flex items-center gap-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" /> {syncStatus.step}
+            </p>
+          )}
+
           {feedback && (
             <div
               className={`p-3 rounded-xl flex items-center gap-2 text-xs font-medium ${
@@ -283,14 +301,16 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl bg-[#1E1E38] hover:bg-[#2A2A45] text-xs font-semibold text-[#A8A6C0] cursor-pointer"
+              data-tv-title="Cancelar"
+              className="tv-card focus:outline-none px-4 py-2.5 rounded-xl bg-[#1E1E38] hover:bg-[#2A2A45] text-xs font-semibold text-[#A8A6C0] cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="px-5 py-2.5 rounded-xl bg-[#6B4FE0] hover:bg-[#6B4FE0]/80 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-lg shadow-[#6B4FE0]/30"
+              data-tv-title="Salvar lista"
+              className="tv-card focus:outline-none px-5 py-2.5 rounded-xl bg-[#6B4FE0] hover:bg-[#6B4FE0]/80 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-lg shadow-[#6B4FE0]/30"
             >
               {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               {isLoading ? 'Importando e Processando...' : 'Salvar e Sincronizar'}

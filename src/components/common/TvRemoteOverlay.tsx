@@ -22,6 +22,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { EXIT_EVENT } from '../../platform/useNativeBridge';
 
 export const TvRemoteOverlay: React.FC = () => {
   const {
@@ -298,6 +299,11 @@ export const TvRemoteOverlay: React.FC = () => {
 
     // 6. If already on Home and focus is inside main content -> Netflix behavior: Back moves focus to the Sidebar Menu!
     const active = document.activeElement as HTMLElement;
+    // 7. Already in the menu on Home: leave the app (Android TV).
+    if (active && active.closest('aside')) {
+      window.dispatchEvent(new CustomEvent(EXIT_EVENT));
+      return;
+    }
     if (active && !active.closest('aside')) {
       const activeSidebarBtn =
         document.querySelector<HTMLElement>('aside nav button[class*="bg-[#16162A]"]') ||
@@ -447,6 +453,8 @@ export const TvRemoteOverlay: React.FC = () => {
           navigateDirectional('right');
         }
       } else if (e.key === 'Enter') {
+        // The focused card already handled Enter itself (and prevented default).
+        if (e.defaultPrevented) return;
         e.preventDefault();
         triggerSelect();
       } else if (e.key === 'Escape' || e.key === 'Backspace') {

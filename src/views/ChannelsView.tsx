@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useProgressiveList } from '../hooks/useProgressiveList';
 import {
   Tv2,
   LayoutGrid,
@@ -19,7 +20,7 @@ export const ChannelsView: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [localSearch, setLocalSearch] = useState('');
 
-  const displayChannels = filteredChannels.filter((c) => {
+  const displayChannels = useMemo(() => filteredChannels.filter((c) => {
     if (selectedCategory !== 'all') {
       const g = (c.groupTitle || 'Geral').trim().toLowerCase();
       if (g !== selectedCategory.trim().toLowerCase()) return false;
@@ -31,7 +32,8 @@ export const ChannelsView: React.FC = () => {
       if (!matchName && !matchGroup) return false;
     }
     return true;
-  });
+  }), [filteredChannels, selectedCategory, localSearch]);
+  const { visible, hasMore, sentinelRef } = useProgressiveList(displayChannels, 48);
 
   return (
     <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
@@ -95,13 +97,13 @@ export const ChannelsView: React.FC = () => {
       {displayChannels.length > 0 ? (
         viewMode === 'grid' ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {displayChannels.map((ch, idx) => (
+            {visible.map((ch, idx) => (
               <ChannelCard key={ch.id} channel={ch} index={idx} />
             ))}
           </div>
         ) : (
           <div className="space-y-2.5">
-            {displayChannels.map((ch, idx) => (
+            {visible.map((ch, idx) => (
               <ChannelListTile key={ch.id} channel={ch} index={idx} />
             ))}
           </div>
@@ -115,6 +117,7 @@ export const ChannelsView: React.FC = () => {
           </p>
         </div>
       )}
+      {hasMore && <div ref={sentinelRef} className="h-10" aria-hidden />}
     </div>
   );
 };

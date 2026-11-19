@@ -20,7 +20,7 @@ export const ChannelListTile: React.FC<ChannelListTileProps> = ({ channel, index
       tabIndex={0}
       data-tv-title={`Canal: ${channel.name}`}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') playChannel(channel);
+        if (e.key === 'Enter') { e.preventDefault(); playChannel(channel); }
       }}
       className="tv-card group flex items-center justify-between p-3.5 rounded-2xl bg-[#16162A] hover:bg-[#1E1E38] border border-[#2A2A45]/60 hover:border-[#6B4FE0]/50 transition-all cursor-pointer shadow-sm hover:shadow-lg focus:outline-none"
     >

@@ -13,11 +13,13 @@ import {
   Lock,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { exportNebulaData, importNebulaData } from '../data/storage';
+import { isNativeApp } from '../platform/platform';
+import { clearEpgCache, exportNebulaData, importNebulaData } from '../data/storage';
 import { ConfirmModal } from '../components/common/ConfirmModal';
 
 export const SettingsView: React.FC = () => {
-  const { settings, updateSettings, tvMode, toggleTvMode } = useApp();
+  const { settings, updateSettings, tvMode, toggleTvMode, deviceProfile, isLite } = useApp();
+  const native = isNativeApp();
 
   const [pinInput, setPinInput] = useState(settings.masterPin);
   const [pinSavedFeedback, setPinSavedFeedback] = useState(false);
@@ -32,8 +34,8 @@ export const SettingsView: React.FC = () => {
     }
   };
 
-  const handleExportBackup = () => {
-    const jsonStr = exportNebulaData();
+  const handleExportBackup = async () => {
+    const jsonStr = await exportNebulaData();
     const blob = new Blob([jsonStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -49,10 +51,10 @@ export const SettingsView: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         const text = event.target?.result as string;
         if (text) {
-          const ok = importNebulaData(text);
+          const ok = await importNebulaData(text);
           if (ok) {
             setBackupFeedback('Backup restaurado com sucesso! Recarregando...');
             setTimeout(() => window.location.reload(), 1200);
@@ -65,8 +67,8 @@ export const SettingsView: React.FC = () => {
     }
   };
 
-  const handleClearCacheConfirm = () => {
-    localStorage.removeItem('nebula_epg');
+  const handleClearCacheConfirm = async () => {
+    await clearEpgCache();
     setShowClearCacheModal(false);
     setBackupFeedback('Cache limpo com sucesso.');
     setTimeout(() => setBackupFeedback(null), 2500);
@@ -141,6 +143,74 @@ export const SettingsView: React.FC = () => {
             />
           </div>
         </div>
+      </section>
+
+      {/* 1b. Device, player and catalog */}
+      <section className="p-6 rounded-3xl bg-[#16162A] border border-[#2A2A45] space-y-4">
+        <div className="flex items-center gap-2 text-white font-bold text-sm">
+          <Tv className="w-4 h-4 text-[#1FCFAE]" />
+          Aparelho, player e catálogo
+        </div>
+        <p className="text-[11px] text-[#A8A6C0]">
+          Detectado: {deviceProfile.isFireTv ? 'Amazon Fire TV' : deviceProfile.isAndroidTv ? 'Android TV / Google TV' : 'navegador'}
+          {deviceProfile.isLowEnd ? ' (aparelho de entrada)' : ''} · multitela até {deviceProfile.maxMultiviewTiles} telas
+        </p>
+
+        {native && (
+          <ToggleRow
+            title="Player nativo (recomendado)"
+            desc="Toca .ts, HEVC/H.265, áudio Dolby (AC3/EAC3), legendas e várias faixas de áudio com decodificação por hardware."
+            checked={settings.useNativePlayer}
+            onChange={(v) => updateSettings({ useNativePlayer: v })}
+          />
+        )}
+        <ToggleRow
+          title="Próximo episódio automaticamente"
+          desc="Ao terminar um episódio, começa o seguinte."
+          checked={settings.autoplayNextEpisode}
+          onChange={(v) => updateSettings({ autoplayNextEpisode: v })}
+        />
+
+        <div className="pt-3 border-t border-[#2A2A45]/60">
+          <p className="text-xs font-bold text-white mb-2">Modo leve (menos animações e efeitos)</p>
+          <div className="grid grid-cols-3 gap-3">
+            {([
+              ['auto', 'Automático'],
+              ['on', 'Ligado'],
+              ['off', 'Desligado'],
+            ] as const).map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => updateSettings({ liteMode: id })}
+                data-tv-title={`Modo leve: ${label}`}
+                className={`tv-card p-3 rounded-2xl border text-xs font-bold cursor-pointer focus:outline-none ${
+                  settings.liteMode === id ? 'bg-[#6B4FE0]/20 border-[#6B4FE0] text-white' : 'bg-[#07070F] border-[#2A2A45] text-[#A8A6C0]'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-[#A8A6C0] mt-2">Agora: {isLite ? 'ligado' : 'desligado'}.</p>
+        </div>
+
+        <TextSetting
+          title="Chave da API do TMDB (opcional)"
+          desc="Preenche capas, fundos e sinopses que o provedor não envia. Crie uma chave gratuita em themoviedb.org."
+          value={settings.tmdbApiKey}
+          placeholder="Chave v3 ou token de leitura v4"
+          onSave={(v) => updateSettings({ tmdbApiKey: v })}
+        />
+
+        {!native && (
+          <TextSetting
+            title="Proxy CORS (somente navegador)"
+            desc="A maioria dos servidores IPTV bloqueia navegadores. Use um proxy próprio, ex.: https://meu-proxy.exemplo/?url= ou com {url}. No app Android isto não é necessário."
+            value={settings.corsProxyUrl}
+            placeholder="https://meu-proxy.exemplo/?url="
+            onSave={(v) => updateSettings({ corsProxyUrl: v })}
+          />
+        )}
       </section>
 
       {/* 2. TV Navigation Mode */}
@@ -258,6 +328,53 @@ export const SettingsView: React.FC = () => {
         onConfirm={handleClearCacheConfirm}
         onCancel={() => setShowClearCacheModal(false)}
       />
+    </div>
+  );
+};
+
+const ToggleRow: React.FC<{ title: string; desc: string; checked: boolean; onChange: (v: boolean) => void }> = ({ title, desc, checked, onChange }) => (
+  <div className="flex items-center justify-between gap-4 pt-3 border-t border-[#2A2A45]/60">
+    <div>
+      <p className="text-xs font-bold text-white">{title}</p>
+      <p className="text-[11px] text-[#A8A6C0]">{desc}</p>
+    </div>
+    <button
+      onClick={() => onChange(!checked)}
+      data-tv-title={`${title}: ${checked ? 'ligado' : 'desligado'}`}
+      className={`tv-card shrink-0 px-4 py-1.5 rounded-full text-xs font-bold cursor-pointer focus:outline-none ${checked ? 'bg-[#1FCFAE] text-black' : 'bg-[#2A2A45] text-[#A8A6C0]'}`}
+    >
+      {checked ? 'Ligado' : 'Desligado'}
+    </button>
+  </div>
+);
+
+const TextSetting: React.FC<{ title: string; desc: string; value: string; placeholder: string; onSave: (v: string) => void }> = ({ title, desc, value, placeholder, onSave }) => {
+  const [draft, setDraft] = useState(value);
+  const [saved, setSaved] = useState(false);
+  return (
+    <div className="pt-3 border-t border-[#2A2A45]/60 space-y-2">
+      <p className="text-xs font-bold text-white">{title}</p>
+      <p className="text-[11px] text-[#A8A6C0]">{desc}</p>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder={placeholder}
+          className="flex-1 bg-[#07070F] border border-[#2A2A45] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#6B4FE0]"
+        />
+        <button
+          onClick={() => {
+            onSave(draft.trim());
+            setSaved(true);
+            setTimeout(() => setSaved(false), 1500);
+          }}
+          data-tv-title={`Salvar ${title}`}
+          className="tv-card px-4 py-2 rounded-xl bg-[#6B4FE0] text-white text-xs font-bold cursor-pointer focus:outline-none"
+        >
+          {saved ? 'Salvo' : 'Salvar'}
+        </button>
+      </div>
     </div>
   );
 };

@@ -121,7 +121,7 @@ export const Sidebar: React.FC = () => {
           data-tv-title="Especial: Nebula Wrapped 2026"
           onClick={() => setIsWrappedOpen(true)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') setIsWrappedOpen(true);
+            if (e.key === 'Enter') { e.preventDefault(); setIsWrappedOpen(true); }
           }}
           className="tv-card p-3.5 rounded-2xl bg-gradient-to-br from-[#16162A] via-[#1E1E38] to-[#2A1D6B]/40 border border-[#6B4FE0]/30 hover:border-[#6B4FE0]/70 transition-all cursor-pointer group shadow-lg focus:outline-none"
         >

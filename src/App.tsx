@@ -7,6 +7,9 @@ import { TvRemoteOverlay } from './components/common/TvRemoteOverlay';
 import { VideoPlayer } from './components/player/VideoPlayer';
 import { ProfileGate } from './components/profiles/ProfileGate';
 import { NebulaWrappedModal } from './components/wrapped/NebulaWrappedModal';
+import { VodModal } from './components/vod/VodModal';
+import { SeriesDetailModal } from './components/series/SeriesDetailModal';
+import { useNativeBridge } from './platform/useNativeBridge';
 
 import { HomeView } from './views/HomeView';
 import { ChannelsView } from './views/ChannelsView';
@@ -22,7 +25,18 @@ import { SettingsView } from './views/SettingsView';
 import { SearchView } from './views/SearchView';
 
 const AppContent: React.FC = () => {
-  const { activeProfile, isGateLocked, activeTab, isWrappedOpen, setIsWrappedOpen } = useApp();
+  const {
+    activeProfile,
+    isGateLocked,
+    activeTab,
+    isWrappedOpen,
+    setIsWrappedOpen,
+    selectedVodModal,
+    setSelectedVodModal,
+    selectedSeriesModal,
+    setSelectedSeriesModal,
+  } = useApp();
+  useNativeBridge();
 
   if (!activeProfile || isGateLocked) {
     return <ProfileGate />;
@@ -77,6 +91,10 @@ const AppContent: React.FC = () => {
         {/* Mobile Navigation */}
         <MobileNav />
       </div>
+
+      {/* Detail modals (shared by every screen) */}
+      {selectedVodModal && <VodModal vod={selectedVodModal} onClose={() => setSelectedVodModal(null)} />}
+      {selectedSeriesModal && <SeriesDetailModal series={selectedSeriesModal} onClose={() => setSelectedSeriesModal(null)} />}
 
       {/* Embedded / Fullscreen Video Player */}
       <VideoPlayer />

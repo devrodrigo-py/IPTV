@@ -13,16 +13,18 @@ import { Channel } from '../types';
 import { MultiViewTile } from '../components/multiview/MultiViewTile';
 
 export const MultiViewScreen: React.FC = () => {
-  const { filteredChannels } = useApp();
+  const { filteredChannels, deviceProfile } = useApp();
+  const maxTiles = deviceProfile.maxMultiviewTiles;
+  const [pickerQuery, setPickerQuery] = useState('');
+  const pickerChannels = (pickerQuery.trim()
+    ? filteredChannels.filter((c) => c.name.toLowerCase().includes(pickerQuery.trim().toLowerCase()))
+    : filteredChannels
+  ).slice(0, 150);
 
-  const [layoutMode, setLayoutMode] = useState<2 | 4 | 9>(4);
+  const [layoutMode, setLayoutMode] = useState<2 | 4 | 9>(() => (maxTiles >= 4 ? 4 : 2));
   const [activeAudioSlot, setActiveAudioSlot] = useState<number>(0);
-  const [slots, setSlots] = useState<(Channel | null)[]>([
-    filteredChannels[0] || null,
-    filteredChannels[1] || null,
-    filteredChannels[2] || null,
-    filteredChannels[3] || null,
-  ]);
+  // Slots start empty: decoding several streams at once is heavy on TV sticks.
+  const [slots, setSlots] = useState<(Channel | null)[]>(() => Array(maxTiles >= 4 ? 4 : 2).fill(null));
   const [pickingSlotIndex, setPickingSlotIndex] = useState<number | null>(null);
 
   const changeLayout = (mode: 2 | 4 | 9) => {
@@ -30,8 +32,7 @@ export const MultiViewScreen: React.FC = () => {
     setSlots((prev) => {
       const next = [...prev];
       while (next.length < mode) {
-        const nextChannel = filteredChannels[next.length % filteredChannels.length] || null;
-        next.push(nextChannel);
+        next.push(null);
       }
       return next.slice(0, mode);
     });
@@ -74,7 +75,10 @@ export const MultiViewScreen: React.FC = () => {
           <span className="text-xs text-[#A8A6C0] font-medium mr-1">Telas:</span>
           <button
             onClick={() => changeLayout(2)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all border ${
+            disabled={2 > maxTiles}
+            title={2 > maxTiles ? 'Este aparelho não decodifica tantas transmissões ao mesmo tempo' : undefined}
+            data-tv-title="2 Telas"
+            className={`tv-card focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all border ${
               layoutMode === 2
                 ? 'bg-[#6B4FE0] text-white border-[#6B4FE0]'
                 : 'bg-[#16162A] text-[#A8A6C0] hover:text-white border-[#2A2A45]'
@@ -84,7 +88,10 @@ export const MultiViewScreen: React.FC = () => {
           </button>
           <button
             onClick={() => changeLayout(4)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all border ${
+            disabled={4 > maxTiles}
+            title={4 > maxTiles ? 'Este aparelho não decodifica tantas transmissões ao mesmo tempo' : undefined}
+            data-tv-title="4 Telas (2x2)"
+            className={`tv-card focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all border ${
               layoutMode === 4
                 ? 'bg-[#6B4FE0] text-white border-[#6B4FE0]'
                 : 'bg-[#16162A] text-[#A8A6C0] hover:text-white border-[#2A2A45]'
@@ -94,7 +101,10 @@ export const MultiViewScreen: React.FC = () => {
           </button>
           <button
             onClick={() => changeLayout(9)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all border ${
+            disabled={9 > maxTiles}
+            title={9 > maxTiles ? 'Este aparelho não decodifica tantas transmissões ao mesmo tempo' : undefined}
+            data-tv-title="9 Telas (3x3)"
+            className={`tv-card focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all border ${
               layoutMode === 9
                 ? 'bg-[#6B4FE0] text-white border-[#6B4FE0]'
                 : 'bg-[#16162A] text-[#A8A6C0] hover:text-white border-[#2A2A45]'
@@ -172,12 +182,27 @@ export const MultiViewScreen: React.FC = () => {
               </button>
             </div>
 
+            <input
+              type="text"
+              value={pickerQuery}
+              onChange={(e) => setPickerQuery(e.target.value)}
+              placeholder="Buscar canal…"
+              className="mt-3 bg-[#07070F] border border-[#2A2A45] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#6B4FE0]"
+            />
             <div className="flex-1 overflow-y-auto py-3 space-y-2 mt-2">
-              {filteredChannels.map((channel) => (
+              {pickerChannels.map((channel) => (
                 <div
                   key={channel.id}
+                  tabIndex={0}
+                  data-tv-title={`Colocar ${channel.name}`}
                   onClick={() => assignChannelToSlot(channel)}
-                  className="p-3 rounded-xl bg-[#07070F] hover:bg-[#1E1E38] border border-[#2A2A45] hover:border-[#6B4FE0] flex items-center justify-between cursor-pointer transition-all"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      assignChannelToSlot(channel);
+                    }
+                  }}
+                  className="tv-card focus:outline-none p-3 rounded-xl bg-[#07070F] hover:bg-[#1E1E38] border border-[#2A2A45] hover:border-[#6B4FE0] flex items-center justify-between cursor-pointer transition-all"
                 >
                   <div className="flex items-center gap-3">
                     {channel.logoUrl ? (

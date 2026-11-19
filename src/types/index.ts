@@ -34,6 +34,10 @@ export interface Playlist {
   password?: string;
   /** XMLTV guide URL (from M3U header url-tvg or Xtream xmltv.php). */
   epgUrl?: string;
+  epgLastSync?: string;
+  /** Account expiry reported by an Xtream server (ISO). */
+  expiresAt?: string;
+  lastError?: string;
   channelCount: number;
   vodCount?: number;
   seriesCount?: number;
