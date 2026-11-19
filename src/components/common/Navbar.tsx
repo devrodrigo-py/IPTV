@@ -11,6 +11,7 @@ import {
   Lock,
   X,
 } from 'lucide-react';
+import { Avatar } from '../profiles/Avatar';
 import { useApp } from '../../context/AppContext';
 
 export const Navbar: React.FC = () => {
@@ -28,7 +29,6 @@ export const Navbar: React.FC = () => {
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [previousTab, setPreviousTab] = useState<string>('home');
-  const [avatarError, setAvatarError] = useState(false);
 
   return (
     <header className="h-16 border-b border-[#2A2A45]/50 bg-[#07070F]/80 backdrop-blur-xl px-6 flex items-center justify-between sticky top-0 z-30">
@@ -91,18 +91,7 @@ export const Navbar: React.FC = () => {
             className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-[#16162A] border border-transparent hover:border-[#2A2A45] transition-all cursor-pointer"
           >
             <div className="relative">
-              {!avatarError && activeProfile?.avatar ? (
-                <img
-                  src={activeProfile.avatar}
-                  alt={activeProfile.name}
-                  className="w-8 h-8 rounded-lg object-cover border border-[#6B4FE0]/50"
-                  onError={() => setAvatarError(true)}
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#6B4FE0] to-[#1FCFAE] flex items-center justify-center text-white font-bold text-xs">
-                  {activeProfile?.name?.charAt(0) || 'U'}
-                </div>
-              )}
+              <Avatar avatar={activeProfile?.avatar} name={activeProfile?.name || 'U'} className="w-8 h-8 rounded-lg" textClassName="text-xs" />
               {activeProfile?.isKids && (
                 <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-[#FF6F91] rounded-full border-2 border-[#07070F] flex items-center justify-center text-[8px] font-bold">
                   K

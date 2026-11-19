@@ -13,12 +13,15 @@ public final class PlayerQueue {
         public final String title;
         public final String url;
         public final String subtitle;
+        /** Channel number shown to the user (grid order); 0 when unknown. */
+        public final int number;
 
-        public Item(String id, String title, String url, String subtitle) {
+        public Item(String id, String title, String url, String subtitle, int number) {
             this.id = id;
             this.title = title;
             this.url = url;
             this.subtitle = subtitle;
+            this.number = number;
         }
     }
 

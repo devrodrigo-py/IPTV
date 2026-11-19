@@ -10,6 +10,8 @@ const config: CapacitorConfig = {
     // Remote controls send key events; keep the WebView focusable and not zoomable.
     captureInput: false,
     webContentsDebuggingEnabled: false,
+    // Lets the page know it runs inside the TV app (see the viewport script in index.html).
+    appendUserAgent: 'NebulaTV/3.0',
   },
   server: {
     androidScheme: 'https',

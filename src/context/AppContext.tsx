@@ -591,6 +591,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     [seriesAll, activePlaylistIds, isKidsProfile]
   );
 
+  // Channel numbers follow the full channel grid order (what the user sees as 01, 02…).
+  const channelNumberById = useMemo(() => new Map(filteredChannels.map((c, i) => [c.id, i])), [filteredChannels]);
+
   const categories = useMemo(
     () => Array.from(new Set(filteredChannels.map((c) => c.groupTitle || 'Geral'))).sort((a, b) => a.localeCompare(b, 'pt-BR')),
     [filteredChannels]
@@ -679,6 +682,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       logoUrl: c.logoUrl,
       // "Now playing" line shown in the native zapping banner.
       subtitle: getChannelCurrentProgram(c.id)?.title,
+      number: (channelNumberById.get(c.id) ?? -1) + 1 || undefined,
     }));
     try {
       const res = await playNative({

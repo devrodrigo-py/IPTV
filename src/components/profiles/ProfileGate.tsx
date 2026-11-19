@@ -1,3 +1,5 @@
+import nebulaIcon from '../../../assets/branding/nebula_icon.png';
+import { AVATAR_PRESETS, Avatar } from './Avatar';
 import React, { useState } from 'react';
 import { Plus, Lock, Shield, User, X, Check, Edit2, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -15,15 +17,8 @@ export const ProfileGate: React.FC = () => {
   const [newName, setNewName] = useState('');
   const [newIsKids, setNewIsKids] = useState(false);
   const [newPin, setNewPin] = useState('');
-  const [newAvatar, setNewAvatar] = useState('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80');
-
-  const avatarOptions = [
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-  ];
+  const [newAvatar, setNewAvatar] = useState(AVATAR_PRESETS[0]);
+  const avatarOptions = AVATAR_PRESETS;
 
   const handleProfileClick = (profile: UserProfile) => {
     if (profile.pin) {
@@ -81,7 +76,7 @@ export const ProfileGate: React.FC = () => {
       <div className="flex flex-col items-center mb-10">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#6B4FE0] via-[#2A1D6B] to-[#1FCFAE] p-2 flex items-center justify-center shadow-xl shadow-[#6B4FE0]/30 mb-3">
           <img
-            src="/assets/branding/nebula_icon.png"
+            src={nebulaIcon}
             alt="Nebula"
             className="w-full h-full object-contain filter drop-shadow"
             onError={(e) => {
@@ -112,11 +107,7 @@ export const ProfileGate: React.FC = () => {
             className="tv-card group flex flex-col items-center cursor-pointer focus:outline-none"
           >
             <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-3xl overflow-hidden border-2 border-transparent group-hover:border-[#6B4FE0] group-hover:scale-105 group-hover:shadow-2xl group-hover:shadow-[#6B4FE0]/40 transition-all duration-300 bg-[#16162A]">
-              <img
-                src={profile.avatar}
-                alt={profile.name}
-                className="w-full h-full object-cover"
-              />
+              <Avatar avatar={profile.avatar} name={profile.name} className="w-full h-full" textClassName="text-5xl" />
 
               {/* Pin indicator */}
               {profile.pin && (
@@ -241,17 +232,17 @@ export const ProfileGate: React.FC = () => {
                 </label>
                 <div className="flex items-center gap-3">
                   {avatarOptions.map((av) => (
-                    <img
+                    <button
+                      type="button"
                       key={av}
-                      src={av}
-                      alt="Avatar"
                       onClick={() => setNewAvatar(av)}
-                      className={`w-12 h-12 rounded-xl object-cover cursor-pointer transition-all ${
-                        newAvatar === av
-                          ? 'border-2 border-[#6B4FE0] scale-110'
-                          : 'opacity-60 hover:opacity-100'
+                      data-tv-title="Escolher avatar"
+                      className={`tv-card rounded-xl overflow-hidden cursor-pointer transition-all focus:outline-none ${
+                        newAvatar === av ? 'ring-2 ring-white scale-110' : 'opacity-60 hover:opacity-100'
                       }`}
-                    />
+                    >
+                      <Avatar avatar={av} name={newName || 'N'} className="w-12 h-12" textClassName="text-lg" />
+                    </button>
                   ))}
                 </div>
               </div>

@@ -80,7 +80,7 @@ export const PosterCard: React.FC<PosterCardProps> = ({
             loading="lazy"
             decoding="async"
             onError={() => setBroken(true)}
-            className={`w-full h-full ${aspect === 'logo' ? 'object-contain p-4' : 'object-cover'} group-hover:scale-105 transition-transform duration-300`}
+            className={`absolute inset-0 w-full h-full ${aspect === 'logo' ? 'object-contain p-4' : 'object-cover'} group-hover:scale-105 transition-transform duration-300`}
           />
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center gap-2">
