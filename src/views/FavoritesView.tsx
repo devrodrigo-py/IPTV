@@ -9,15 +9,14 @@ export const FavoritesView: React.FC = () => {
   const favoriteChannels = filteredChannels.filter((c) => favorites.includes(c.id));
 
   return (
-    <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
+    <div className="px-14 pt-10 pb-12 space-y-6 select-none">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-[#2A2A45]">
+      <div className="flex items-center justify-between pb-6">
         <div>
           <div className="flex items-center gap-2">
-            <Heart className="w-5 h-5 text-[#FF6F91] fill-current" />
-            <h1 className="text-xl font-bold text-white tracking-tight">Meus Favoritos</h1>
+            <h1 className="font-display text-4xl font-bold text-white tracking-tight">Canais favoritos</h1>
           </div>
-          <p className="text-xs text-[#A8A6C0] mt-0.5">
+          <p className="text-base text-white/50 mt-1.5">
             {favoriteChannels.length} canal(is) marcados com estrela/coração para acesso rápido.
           </p>
         </div>
@@ -30,15 +29,15 @@ export const FavoritesView: React.FC = () => {
           ))}
         </div>
       ) : (
-        <div className="p-16 text-center bg-[#16162A]/40 rounded-3xl border border-[#2A2A45] mt-6">
+        <div className="p-16 text-center bg-[#141418]/40 rounded-3xl border border-[#2A2A31] mt-6">
           <Heart className="w-14 h-14 text-[#FF6F91]/40 mx-auto mb-3" />
           <h3 className="text-base font-bold text-white">Nenhum canal favorito ainda</h3>
-          <p className="text-xs text-[#A8A6C0] max-w-sm mx-auto mt-1 mb-6">
+          <p className="text-xs text-[#A1A1AA] max-w-sm mx-auto mt-1 mb-6">
             Clique no ícone de coração em qualquer canal da grade para adicioná-lo à sua lista rápida.
           </p>
           <button
             onClick={() => setActiveTab('channels')}
-            className="px-5 py-2.5 rounded-xl bg-[#6B4FE0] hover:bg-[#6B4FE0]/80 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[#6B4FE0]/30 transition-all"
+            className="px-5 py-2.5 rounded-xl bg-[#7C5CFF] hover:bg-[#7C5CFF]/80 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[#7C5CFF]/30 transition-all"
           >
             Navegar pelos Canais
           </button>

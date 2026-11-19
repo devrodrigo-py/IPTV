@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Plus } from 'lucide-react';
+import { PageHeader } from '../components/common/PageHeader';
 import { useApp } from '../context/AppContext';
 import { PosterCard } from '../components/media/PosterCard';
 
@@ -15,31 +15,25 @@ export const MyListView: React.FC = () => {
   }, [myList, vodItems, seriesItems]);
 
   return (
-    <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
-      <div className="pb-4 border-b border-[#2A2A45]">
-        <div className="flex items-center gap-2">
-          <Plus className="w-5 h-5 text-[#6B4FE0]" />
-          <h1 className="text-xl font-bold text-white tracking-tight">Minha lista</h1>
-        </div>
-        <p className="text-xs text-[#A8A6C0] mt-0.5">Filmes e séries que você salvou para assistir depois.</p>
-      </div>
+    <div className="px-14 pt-10 pb-12 space-y-6 select-none">
+      <PageHeader title="Minha lista" subtitle="Filmes e séries que você salvou para assistir depois." />
 
       {items.length === 0 ? (
-        <div className="p-12 text-center bg-[#16162A]/50 rounded-3xl border border-[#2A2A45] space-y-4">
-          <p className="text-sm text-[#A8A6C0]">
+        <div className="py-16 space-y-6 max-w-xl">
+          <p className="text-lg text-white/60">
             Sua lista está vazia. Abra um filme ou uma série e escolha <strong className="text-white">+ Minha lista</strong>.
           </p>
           <button
             data-autofocus
             onClick={() => setActiveTab('vod')}
             data-tv-title="Explorar filmes"
-            className="tv-card px-5 py-2.5 rounded-xl bg-[#6B4FE0] text-white font-bold text-xs cursor-pointer focus:outline-none"
+            className="tv-card h-12 px-6 rounded-md bg-white text-black font-bold cursor-pointer focus:outline-none"
           >
             Explorar filmes
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-8 gap-4">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 2xl:grid-cols-8 gap-x-4 gap-y-6">
           {items.map((it) =>
             it.kind === 'vod' ? (
               <PosterCard key={it.v.id} title={it.v.title} subtitle={it.v.category} imageUrl={it.v.posterUrl} rating={it.v.rating} progress={getProgressFraction(it.v.id)} onSelect={() => setSelectedVodModal(it.v)} />

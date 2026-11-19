@@ -110,10 +110,10 @@ export const MultiViewTile: React.FC<MultiViewTileProps> = ({
 
   return (
     <div
-      className={`relative bg-[#07070F] rounded-2xl border overflow-hidden flex items-center justify-center group h-full w-full ${
+      className={`relative bg-[#060608] rounded-2xl border overflow-hidden flex items-center justify-center group h-full w-full ${
         isAudible
-          ? 'border-[#1FCFAE] shadow-lg shadow-[#1FCFAE]/20 ring-1 ring-[#1FCFAE]/50'
-          : 'border-[#2A2A45]'
+          ? 'border-[#22D3A6] shadow-lg shadow-[#22D3A6]/20 ring-1 ring-[#22D3A6]/50'
+          : 'border-[#2A2A31]'
       }`}
     >
       <video
@@ -134,13 +134,13 @@ export const MultiViewTile: React.FC<MultiViewTileProps> = ({
       {/* Loading overlay */}
       {isLoading && !hasError && (
         <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center pointer-events-none">
-          <div className="w-8 h-8 rounded-full border-2 border-t-[#1FCFAE] border-r-[#6B4FE0] border-b-transparent border-l-transparent animate-spin" />
+          <div className="w-8 h-8 rounded-full border-2 border-t-[#22D3A6] border-r-[#7C5CFF] border-b-transparent border-l-transparent animate-spin" />
         </div>
       )}
 
       {/* Error overlay */}
       {hasError && (
-        <div className="absolute inset-0 bg-[#07070F]/85 flex flex-col items-center justify-center p-3 text-center z-10">
+        <div className="absolute inset-0 bg-[#060608]/85 flex flex-col items-center justify-center p-3 text-center z-10">
           <AlertCircle className="w-6 h-6 text-[#FF5468] mb-1" />
           <span className="text-xs font-bold text-white">Sinal Indisponível</span>
           <button
@@ -150,7 +150,7 @@ export const MultiViewTile: React.FC<MultiViewTileProps> = ({
               videoRef.current?.load();
               videoRef.current?.play().catch(() => {});
             }}
-            className="mt-2 px-2.5 py-1 rounded-lg bg-[#6B4FE0] text-[11px] font-semibold text-white flex items-center gap-1 cursor-pointer"
+            className="mt-2 px-2.5 py-1 rounded-lg bg-[#7C5CFF] text-[11px] font-semibold text-white flex items-center gap-1 cursor-pointer"
           >
             <RefreshCw className="w-3 h-3" /> Tentar Novamente
           </button>
@@ -160,7 +160,7 @@ export const MultiViewTile: React.FC<MultiViewTileProps> = ({
       {/* Top Overlay Controls */}
       <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/85 via-black/40 to-transparent flex items-center justify-between opacity-80 group-hover:opacity-100 transition-opacity z-20">
         <div className="flex items-center gap-2 min-w-0 pr-2">
-          <span className="w-5 h-5 rounded-md bg-[#6B4FE0] text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+          <span className="w-5 h-5 rounded-md bg-[#7C5CFF] text-white text-[10px] font-bold flex items-center justify-center shrink-0">
             {index + 1}
           </span>
           <span className="text-xs font-bold text-white truncate drop-shadow">
@@ -174,8 +174,8 @@ export const MultiViewTile: React.FC<MultiViewTileProps> = ({
             onClick={onToggleAudio}
             className={`w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer transition-all ${
               isAudible
-                ? 'bg-[#1FCFAE] text-black shadow-md font-bold'
-                : 'bg-black/60 hover:bg-black/80 text-[#A8A6C0] hover:text-white'
+                ? 'bg-[#22D3A6] text-black shadow-md font-bold'
+                : 'bg-black/60 hover:bg-black/80 text-[#A1A1AA] hover:text-white'
             }`}
             title={isAudible ? 'Mutar Áudio' : 'Ouvir este canal'}
           >
@@ -185,7 +185,7 @@ export const MultiViewTile: React.FC<MultiViewTileProps> = ({
           {/* Change channel */}
           <button
             onClick={onChangeChannel}
-            className="w-7 h-7 rounded-lg bg-black/60 hover:bg-black/80 text-[#A8A6C0] hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+            className="w-7 h-7 rounded-lg bg-black/60 hover:bg-black/80 text-[#A1A1AA] hover:text-white flex items-center justify-center cursor-pointer transition-colors"
             title="Trocar Canal"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -194,7 +194,7 @@ export const MultiViewTile: React.FC<MultiViewTileProps> = ({
           {/* Remove channel */}
           <button
             onClick={onRemoveChannel}
-            className="w-7 h-7 rounded-lg bg-black/60 hover:bg-[#FF5468] text-[#A8A6C0] hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+            className="w-7 h-7 rounded-lg bg-black/60 hover:bg-[#FF5468] text-[#A1A1AA] hover:text-white flex items-center justify-center cursor-pointer transition-colors"
             title="Remover Canal"
           >
             <X className="w-3.5 h-3.5" />

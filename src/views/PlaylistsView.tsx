@@ -45,15 +45,14 @@ export const PlaylistsView: React.FC = () => {
   };
 
   return (
-    <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
+    <div className="px-14 pt-10 pb-12 space-y-6 select-none">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#2A2A45]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6">
         <div>
           <div className="flex items-center gap-2">
-            <FolderGit2 className="w-5 h-5 text-[#6B4FE0]" />
-            <h1 className="text-xl font-bold text-white tracking-tight">Minhas listas</h1>
+            <h1 className="font-display text-4xl font-bold text-white tracking-tight">Minhas listas</h1>
           </div>
-          <p className="text-xs text-[#A8A6C0] mt-0.5">
+          <p className="text-base text-white/50 mt-1.5">
             Adicione, sincronize e controle suas fontes de transmissão M3U e servidores Xtream Codes.
           </p>
         </div>
@@ -61,7 +60,7 @@ export const PlaylistsView: React.FC = () => {
         <button
           onClick={() => setIsAddModalOpen(true)}
           data-tv-title="Nova lista"
-          className="tv-card focus:outline-none px-5 py-2.5 rounded-xl bg-[#6B4FE0] hover:bg-[#6B4FE0]/80 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-[#6B4FE0]/30 transition-all cursor-pointer"
+          className="tv-card focus:outline-none px-5 py-2.5 rounded-xl bg-[#7C5CFF] hover:bg-[#7C5CFF]/80 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-[#7C5CFF]/30 transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           Nova Playlist
@@ -69,8 +68,8 @@ export const PlaylistsView: React.FC = () => {
       </div>
 
       {playlists.length === 0 && (
-        <div className="p-10 text-center bg-[#16162A]/50 rounded-3xl border border-[#2A2A45] space-y-4">
-          <p className="text-sm text-[#A8A6C0]">
+        <div className="p-10 text-center bg-[#141418]/50 rounded-3xl border border-[#2A2A31] space-y-4">
+          <p className="text-sm text-[#A1A1AA]">
             Nenhuma lista ainda. Adicione o link M3U ou o login Xtream Codes fornecido pelo seu provedor.
           </p>
           <div className="flex justify-center gap-3">
@@ -78,7 +77,7 @@ export const PlaylistsView: React.FC = () => {
               onClick={() => setIsAddModalOpen(true)}
               autoFocus
               data-tv-title="Adicionar lista"
-              className="tv-card px-5 py-2.5 rounded-xl bg-[#6B4FE0] text-white font-bold text-xs cursor-pointer focus:outline-none"
+              className="tv-card px-5 py-2.5 rounded-xl bg-[#7C5CFF] text-white font-bold text-xs cursor-pointer focus:outline-none"
             >
               Adicionar lista
             </button>
@@ -105,8 +104,8 @@ export const PlaylistsView: React.FC = () => {
               key={pl.id}
               className={`p-5 rounded-2xl border transition-all ${
                 pl.isActive
-                  ? 'bg-[#16162A] border-[#2A2A45] hover:border-[#6B4FE0]/50'
-                  : 'bg-[#0B0B18] border-[#2A2A45]/40 opacity-70'
+                  ? 'bg-[#141418] border-[#2A2A31] hover:border-[#7C5CFF]/50'
+                  : 'bg-[#0B0B0E] border-[#2A2A31]/40 opacity-70'
               }`}
             >
               <div className="flex items-start justify-between mb-3">
@@ -114,8 +113,8 @@ export const PlaylistsView: React.FC = () => {
                   <div
                     className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-sm ${
                       pl.type === 'xtream'
-                        ? 'bg-[#1FCFAE]/20 text-[#1FCFAE] border border-[#1FCFAE]/30'
-                        : 'bg-[#6B4FE0]/20 text-[#6B4FE0] border border-[#6B4FE0]/30'
+                        ? 'bg-[#22D3A6]/20 text-[#22D3A6] border border-[#22D3A6]/30'
+                        : 'bg-[#7C5CFF]/20 text-[#7C5CFF] border border-[#7C5CFF]/30'
                     }`}
                   >
                     {pl.type === 'xtream' ? 'XC' : 'M3U'}
@@ -124,12 +123,12 @@ export const PlaylistsView: React.FC = () => {
                     <h3 className="font-bold text-sm text-white flex items-center gap-2">
                       {pl.name}
                       {pl.isActive ? (
-                        <span className="w-2 h-2 rounded-full bg-[#1FCFAE] animate-pulse" />
+                        <span className="w-2 h-2 rounded-full bg-[#22D3A6] animate-pulse" />
                       ) : (
-                        <span className="w-2 h-2 rounded-full bg-[#A8A6C0]" />
+                        <span className="w-2 h-2 rounded-full bg-[#A1A1AA]" />
                       )}
                     </h3>
-                    <span className="text-[11px] text-[#A8A6C0] font-mono">
+                    <span className="text-[11px] text-[#A1A1AA] font-mono">
                       {pl.type === 'xtream' ? 'Xtream Codes Server' : 'Lista M3U / M3U8'}
                     </span>
                   </div>
@@ -141,8 +140,8 @@ export const PlaylistsView: React.FC = () => {
                   data-tv-title={pl.isActive ? `Desativar ${pl.name}` : `Ativar ${pl.name}`}
                   className={`tv-card focus:outline-none px-3 py-1 rounded-full text-[11px] font-bold cursor-pointer transition-all ${
                     pl.isActive
-                      ? 'bg-[#1FCFAE]/20 text-[#1FCFAE] border border-[#1FCFAE]/40'
-                      : 'bg-[#2A2A45] text-[#A8A6C0]'
+                      ? 'bg-[#22D3A6]/20 text-[#22D3A6] border border-[#22D3A6]/40'
+                      : 'bg-[#2A2A31] text-[#A1A1AA]'
                   }`}
                 >
                   {pl.isActive ? 'Ativa' : 'Desativada'}
@@ -151,26 +150,26 @@ export const PlaylistsView: React.FC = () => {
 
               {/* Source preview */}
               {pl.url && (
-                <p className="text-xs text-[#A8A6C0] font-mono truncate mb-4 bg-[#07070F] p-2 rounded-lg border border-white/5">
+                <p className="text-xs text-[#A1A1AA] font-mono truncate mb-4 bg-[#060608] p-2 rounded-lg border border-white/5">
                   {maskUrl(pl.url)}
                   {pl.username ? ` · ${pl.username}` : ''}
                 </p>
               )}
 
               {/* Stats Bar */}
-              <div className="grid grid-cols-2 gap-2 py-3 border-t border-[#2A2A45]/60 text-xs">
+              <div className="grid grid-cols-2 gap-2 py-3 border-t border-[#2A2A31]/60 text-xs">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-[#A8A6C0] block">Conteúdo</span>
+                  <span className="text-[10px] uppercase font-bold text-[#A1A1AA] block">Conteúdo</span>
                   <span className="font-mono font-bold text-white flex items-center gap-1.5 mt-0.5">
-                    <Tv className="w-3.5 h-3.5 text-[#1FCFAE]" />
+                    <Tv className="w-3.5 h-3.5 text-[#22D3A6]" />
                     {pl.channelCount} canais · {pl.vodCount ?? 0} filmes · {pl.seriesCount ?? 0} séries
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-[#A8A6C0] block">
+                  <span className="text-[10px] uppercase font-bold text-[#A1A1AA] block">
                     Última Sincronização
                   </span>
-                  <span className="font-mono text-[11px] text-[#A8A6C0] flex items-center gap-1 mt-0.5">
+                  <span className="font-mono text-[11px] text-[#A1A1AA] flex items-center gap-1 mt-0.5">
                     <Clock className="w-3.5 h-3.5" />
                     {new Date(pl.lastSync).toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                   </span>
@@ -180,12 +179,12 @@ export const PlaylistsView: React.FC = () => {
               {(expires || pl.epgUrl) && (
                 <div className="flex flex-wrap gap-3 text-[11px] pb-2">
                   {expires && (
-                    <span className={expiresSoon ? 'text-[#FF5468] font-bold' : 'text-[#A8A6C0]'}>
+                    <span className={expiresSoon ? 'text-[#FF5468] font-bold' : 'text-[#A1A1AA]'}>
                       Assinatura até {expires.toLocaleDateString()}
                     </span>
                   )}
                   {pl.epgUrl && (
-                    <span className="text-[#A8A6C0]">
+                    <span className="text-[#A1A1AA]">
                       Guia: {pl.epgLastSync ? `atualizado ${new Date(pl.epgLastSync).toLocaleDateString()}` : 'pendente'}
                     </span>
                   )}
@@ -193,24 +192,24 @@ export const PlaylistsView: React.FC = () => {
               )}
 
               {isRefreshing && syncStatus?.playlistId === pl.id && (
-                <p className="text-[11px] text-[#1FCFAE] pb-2">{syncStatus.step}</p>
+                <p className="text-[11px] text-[#22D3A6] pb-2">{syncStatus.step}</p>
               )}
               {!isRefreshing && refreshMessage?.id === pl.id && (
-                <p className={`text-[11px] pb-2 ${refreshMessage.ok ? 'text-[#1FCFAE]' : 'text-[#FF5468]'}`}>{refreshMessage.text}</p>
+                <p className={`text-[11px] pb-2 ${refreshMessage.ok ? 'text-[#22D3A6]' : 'text-[#FF5468]'}`}>{refreshMessage.text}</p>
               )}
               {!isRefreshing && refreshMessage?.id !== pl.id && pl.lastError && (
                 <p className="text-[11px] pb-2 text-[#FF5468]">Última atualização falhou: {pl.lastError}</p>
               )}
 
               {/* Actions Footer */}
-              <div className="flex items-center justify-between pt-3 border-t border-[#2A2A45]/60 mt-1">
+              <div className="flex items-center justify-between pt-3 border-t border-[#2A2A31]/60 mt-1">
                 <button
                   onClick={() => handleRefresh(pl.id)}
                   disabled={isRefreshing}
                   data-tv-title={`Atualizar ${pl.name}`}
-                  className="tv-card px-2 py-1 rounded-lg focus:outline-none flex items-center gap-1.5 text-xs text-[#A8A6C0] hover:text-[#1FCFAE] font-semibold cursor-pointer transition-colors"
+                  className="tv-card px-2 py-1 rounded-lg focus:outline-none flex items-center gap-1.5 text-xs text-[#A1A1AA] hover:text-[#22D3A6] font-semibold cursor-pointer transition-colors"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-[#1FCFAE]' : ''}`} />
+                  <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-[#22D3A6]' : ''}`} />
                   {isRefreshing ? 'Sincronizando...' : 'Atualizar'}
                 </button>
 

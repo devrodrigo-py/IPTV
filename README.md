@@ -82,6 +82,13 @@ Compatibilidade:
 
 A Amazon Appstore e o Google Play aceitam players de IPTV que **não** incluem nem divulgam canais. Por isso, o app começa vazio, mostra o aviso "traga sua própria lista" e só carrega a demonstração (streams públicos de teste) se o usuário pedir. Não adicione listas, logos de canais ou marcas de terceiros ao material da loja.
 
+## Marca e design
+
+- **Marca**: um planeta com o botão de play no núcleo e uma órbita no degradê nebulosa (violeta → magenta → âmbar), com o nome "nebula" em minúsculas (Outfit Bold). A fonte única do símbolo é `src/components/brand/markSvg.ts`.
+- **Assets gerados** a partir dela (favicon, ícones do launcher, banner da Android TV, telas de abertura, marca do player): `npx vite-node scripts/generate-brand.ts`.
+- **Paleta**: pretos e cinzas neutros com um único acento violeta (`#7C5CFF`). Arte em primeiro lugar: pôsteres sem bordas nem texto, com cartão tipográfico quando o provedor não manda imagem.
+- **TV**: layout lógico de 1280 px, menu lateral recolhido, destaque fixo no topo da Início descrevendo o título em foco, foco por ampliação com anel duplo (fresta escura + borda branca).
+
 ## Estrutura
 
 ```

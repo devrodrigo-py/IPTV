@@ -33,13 +33,13 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({ channel, index }) => {
       onKeyDown={(e) => {
         if (e.key === 'Enter') { e.preventDefault(); playChannel(channel); }
       }}
-      className="tv-card group relative bg-[#16162A] hover:bg-[#1E1E38] rounded-2xl border border-[#2A2A45]/70 hover:border-[#6B4FE0]/60 p-4 transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden shadow-md hover:shadow-xl hover:shadow-[#6B4FE0]/10 focus:outline-none"
+      className="tv-card group relative bg-[#141418] hover:bg-[#1E1E24] rounded-2xl border border-[#2A2A31]/70 hover:border-[#7C5CFF]/60 p-4 transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden shadow-md hover:shadow-xl hover:shadow-[#7C5CFF]/10 focus:outline-none"
     >
       {/* Top row: Number, Resolution, Favorite */}
       <div className="flex items-center justify-between mb-3 z-10">
         <div className="flex items-center gap-2">
           {index !== undefined && (
-            <span className="text-xs font-mono font-bold text-[#A8A6C0] bg-black/40 px-2 py-0.5 rounded-md border border-white/5">
+            <span className="text-xs font-mono font-bold text-[#A1A1AA] bg-black/40 px-2 py-0.5 rounded-md border border-white/5">
               {(index + 1).toString().padStart(2, '0')}
             </span>
           )}
@@ -48,7 +48,7 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({ channel, index }) => {
               className={`text-xs font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
                 channel.resolution === '4K'
                   ? 'bg-[#FF6F91]/20 text-[#FF6F91] border border-[#FF6F91]/40'
-                  : 'bg-[#1FCFAE]/20 text-[#1FCFAE] border border-[#1FCFAE]/40'
+                  : 'bg-[#22D3A6]/20 text-[#22D3A6] border border-[#22D3A6]/40'
               }`}
             >
               {channel.resolution}
@@ -65,7 +65,7 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({ channel, index }) => {
           className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
             isFav
               ? 'bg-[#FF6F91]/20 text-[#FF6F91]'
-              : 'text-[#A8A6C0] hover:text-[#FF6F91] hover:bg-white/10'
+              : 'text-[#A1A1AA] hover:text-[#FF6F91] hover:bg-white/10'
           }`}
           title={isFav ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
         >
@@ -74,7 +74,7 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({ channel, index }) => {
       </div>
 
       {/* Center: Standardized Logo Canvas with matte neutral background and drop shadow */}
-      <div className="relative my-2.5 h-24 flex items-center justify-center rounded-2xl bg-[#0B0B18] p-2.5 overflow-hidden border border-white/10 shadow-inner">
+      <div className="relative my-2.5 h-24 flex items-center justify-center rounded-2xl bg-[#0B0B0E] p-2.5 overflow-hidden border border-white/10 shadow-inner">
         {channel.logoUrl ? (
           <img
             src={channel.logoUrl}
@@ -85,12 +85,12 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({ channel, index }) => {
             }}
           />
         ) : (
-          <Tv className="w-10 h-10 text-[#6B4FE0]/60 group-hover:scale-110 transition-transform" />
+          <Tv className="w-10 h-10 text-[#7C5CFF]/60 group-hover:scale-110 transition-transform" />
         )}
 
         {/* Hover Play Button */}
-        <div className="absolute inset-0 bg-[#07070F]/60 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
-          <div className="w-11 h-11 rounded-full bg-[#6B4FE0] text-white flex items-center justify-center shadow-lg shadow-[#6B4FE0]/50 transform group-hover:scale-105 transition-transform">
+        <div className="absolute inset-0 bg-[#060608]/60 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+          <div className="w-11 h-11 rounded-full bg-[#7C5CFF] text-white flex items-center justify-center shadow-lg shadow-[#7C5CFF]/50 transform group-hover:scale-105 transition-transform">
             <Play className="w-5 h-5 fill-current ml-0.5" />
           </div>
         </div>
@@ -98,26 +98,26 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({ channel, index }) => {
 
       {/* Bottom: Info & EPG progress */}
       <div className="z-10 mt-2">
-        <h3 className="font-bold text-base md:text-lg text-white line-clamp-2 leading-snug group-hover:text-[#F5F3FF] transition-colors h-11">
+        <h3 className="font-bold text-base md:text-lg text-white line-clamp-2 leading-snug group-hover:text-[#F5F5F7] transition-colors h-11">
           {channel.name}
         </h3>
 
         {currentProgram ? (
           <div className="mt-1">
-            <p className="text-xs text-[#1FCFAE] font-semibold truncate flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#1FCFAE] animate-pulse" />
+            <p className="text-xs text-[#22D3A6] font-semibold truncate flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#22D3A6] animate-pulse" />
               {currentProgram.title}
             </p>
             {/* EPG progress bar */}
-            <div className="w-full bg-[#2A2A45] h-1 rounded-full mt-1.5 overflow-hidden">
+            <div className="w-full bg-[#2A2A31] h-1 rounded-full mt-1.5 overflow-hidden">
               <div
-                className="bg-gradient-to-r from-[#6B4FE0] to-[#1FCFAE] h-full rounded-full transition-all duration-300"
+                className="bg-gradient-to-r from-[#7C5CFF] to-[#22D3A6] h-full rounded-full transition-all duration-300"
                 style={{ width: `${progressPct}%` }}
               />
             </div>
           </div>
         ) : (
-          <p className="text-xs text-[#A8A6C0] truncate mt-1">
+          <p className="text-xs text-[#A1A1AA] truncate mt-1">
             {channel.groupTitle || 'Canal Geral'}
           </p>
         )}

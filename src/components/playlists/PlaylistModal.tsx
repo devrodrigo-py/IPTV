@@ -100,31 +100,31 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="w-full max-w-lg bg-[#16162A] border border-[#2A2A45] rounded-3xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
+      <div className="w-full max-w-lg bg-[#141418] border border-[#2A2A31] rounded-3xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-[#1E1E38] hover:bg-[#2A2A45] text-[#A8A6C0] hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-[#1E1E24] hover:bg-[#2A2A31] text-[#A1A1AA] hover:text-white flex items-center justify-center cursor-pointer transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
 
         <div className="flex items-center gap-2 mb-1">
-          <FolderGit2 className="w-5 h-5 text-[#6B4FE0]" />
+          <FolderGit2 className="w-5 h-5 text-[#7C5CFF]" />
           <h2 className="text-lg font-bold text-white">Adicionar Nova Fonte IPTV</h2>
         </div>
-        <p className="text-xs text-[#A8A6C0] mb-5">
+        <p className="text-xs text-[#A1A1AA] mb-5">
           Suporte completo a listas M3U/M3U8 e servidores Xtream Codes API.
         </p>
 
         {/* Type tabs: M3U vs Xtream Codes */}
-        <div className="grid grid-cols-2 gap-2 p-1 bg-[#07070F] rounded-2xl mb-5 border border-[#2A2A45]">
+        <div className="grid grid-cols-2 gap-2 p-1 bg-[#060608] rounded-2xl mb-5 border border-[#2A2A31]">
           <button
             type="button"
             onClick={() => setPlaylistType('m3u')}
             className={`py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
               playlistType === 'm3u'
-                ? 'bg-[#6B4FE0] text-white shadow'
-                : 'text-[#A8A6C0] hover:text-white'
+                ? 'bg-[#7C5CFF] text-white shadow'
+                : 'text-[#A1A1AA] hover:text-white'
             }`}
           >
             <Link2 className="w-3.5 h-3.5" />
@@ -135,8 +135,8 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
             onClick={() => setPlaylistType('xtream')}
             className={`py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
               playlistType === 'xtream'
-                ? 'bg-[#6B4FE0] text-white shadow'
-                : 'text-[#A8A6C0] hover:text-white'
+                ? 'bg-[#7C5CFF] text-white shadow'
+                : 'text-[#A1A1AA] hover:text-white'
             }`}
           >
             <Server className="w-3.5 h-3.5" />
@@ -146,7 +146,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-[#F5F3FF] mb-1.5">
+            <label className="block text-xs font-bold text-[#F5F5F7] mb-1.5">
               Nome da Lista
             </label>
             <input
@@ -154,21 +154,21 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
               placeholder="Ex: Minha Lista Brasil, Grade de Esportes..."
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-[#07070F] border border-[#2A2A45] rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#6B4FE0] outline-none"
+              className="w-full bg-[#060608] border border-[#2A2A31] rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#7C5CFF] outline-none"
             />
           </div>
 
           {playlistType === 'm3u' ? (
             <>
               {/* URL or File toggle */}
-              <div className="flex items-center gap-4 text-xs font-medium text-[#A8A6C0] py-1">
+              <div className="flex items-center gap-4 text-xs font-medium text-[#A1A1AA] py-1">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="radio"
                     name="importMode"
                     checked={importMode === 'url'}
                     onChange={() => setImportMode('url')}
-                    className="accent-[#6B4FE0]"
+                    className="accent-[#7C5CFF]"
                   />
                   <span>URL Web (Link Direto)</span>
                 </label>
@@ -178,7 +178,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
                     name="importMode"
                     checked={importMode === 'file'}
                     onChange={() => setImportMode('file')}
-                    className="accent-[#6B4FE0]"
+                    className="accent-[#7C5CFF]"
                   />
                   <span>Upload de Arquivo Local (.m3u)</span>
                 </label>
@@ -186,7 +186,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
 
               {importMode === 'url' ? (
                 <div>
-                  <label className="block text-xs font-bold text-[#F5F3FF] mb-1.5">
+                  <label className="block text-xs font-bold text-[#F5F5F7] mb-1.5">
                     URL da Lista M3U
                   </label>
                   <input
@@ -194,22 +194,22 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
                     placeholder="https://exemplo.com/lista.m3u8"
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
-                    className="w-full bg-[#07070F] border border-[#2A2A45] rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#6B4FE0] outline-none font-mono"
+                    className="w-full bg-[#060608] border border-[#2A2A31] rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#7C5CFF] outline-none font-mono"
                   />
                 </div>
               ) : (
                 <div>
-                  <label className="block text-xs font-bold text-[#F5F3FF] mb-1.5">
+                  <label className="block text-xs font-bold text-[#F5F5F7] mb-1.5">
                     Arquivo M3U / M3U8
                   </label>
                   <input
                     type="file"
                     accept=".m3u,.m3u8,.txt"
                     onChange={handleFileUpload}
-                    className="w-full text-xs text-[#A8A6C0] file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#6B4FE0] file:text-white hover:file:bg-[#6B4FE0]/80 cursor-pointer"
+                    className="w-full text-xs text-[#A1A1AA] file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#7C5CFF] file:text-white hover:file:bg-[#7C5CFF]/80 cursor-pointer"
                   />
                   {fileName && (
-                    <span className="text-[11px] text-[#1FCFAE] font-medium block mt-1">
+                    <span className="text-[11px] text-[#22D3A6] font-medium block mt-1">
                       Arquivo selecionado: {fileName}
                     </span>
                   )}
@@ -219,7 +219,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
           ) : (
             <>
               <div>
-                <label className="block text-xs font-bold text-[#F5F3FF] mb-1.5">
+                <label className="block text-xs font-bold text-[#F5F5F7] mb-1.5">
                   Endereço do Servidor (com porta)
                 </label>
                 <input
@@ -227,13 +227,13 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
                   placeholder="http://servidor-iptv.net:8080"
                   value={serverUrl}
                   onChange={(e) => setServerUrl(e.target.value)}
-                  className="w-full bg-[#07070F] border border-[#2A2A45] rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#6B4FE0] outline-none font-mono"
+                  className="w-full bg-[#060608] border border-[#2A2A31] rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#7C5CFF] outline-none font-mono"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#F5F3FF] mb-1.5">
+                  <label className="block text-xs font-bold text-[#F5F5F7] mb-1.5">
                     Usuário
                   </label>
                   <input
@@ -241,11 +241,11 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
                     placeholder="Usuário"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full bg-[#07070F] border border-[#2A2A45] rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#6B4FE0] outline-none"
+                    className="w-full bg-[#060608] border border-[#2A2A31] rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#7C5CFF] outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#F5F3FF] mb-1.5">
+                  <label className="block text-xs font-bold text-[#F5F5F7] mb-1.5">
                     Senha
                   </label>
                   <input
@@ -253,7 +253,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
                     placeholder="Senha"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-[#07070F] border border-[#2A2A45] rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#6B4FE0] outline-none"
+                    className="w-full bg-[#060608] border border-[#2A2A31] rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#7C5CFF] outline-none"
                   />
                 </div>
               </div>
@@ -261,7 +261,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
           )}
 
           <div>
-            <label className="block text-xs font-bold text-[#F5F3FF] mb-1.5">
+            <label className="block text-xs font-bold text-[#F5F5F7] mb-1.5">
               URL do guia de programação (opcional)
             </label>
             <input
@@ -269,12 +269,12 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
               value={epgUrl}
               onChange={(e) => setEpgUrl(e.target.value)}
               placeholder={playlistType === 'xtream' ? 'Automático pelo servidor Xtream' : 'Automático se a lista informar url-tvg'}
-              className="w-full bg-[#07070F] border border-[#2A2A45] rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#6B4FE0] outline-none"
+              className="w-full bg-[#060608] border border-[#2A2A31] rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#7C5CFF] outline-none"
             />
           </div>
 
           {isLoading && syncStatus && (
-            <p className="text-xs text-[#1FCFAE] flex items-center gap-2">
+            <p className="text-xs text-[#22D3A6] flex items-center gap-2">
               <Loader2 className="w-3.5 h-3.5 animate-spin" /> {syncStatus.step}
             </p>
           )}
@@ -283,7 +283,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
             <div
               className={`p-3 rounded-xl flex items-center gap-2 text-xs font-medium ${
                 feedback.type === 'success'
-                  ? 'bg-[#1FCFAE]/20 border border-[#1FCFAE]/30 text-[#1FCFAE]'
+                  ? 'bg-[#22D3A6]/20 border border-[#22D3A6]/30 text-[#22D3A6]'
                   : 'bg-[#FF5468]/20 border border-[#FF5468]/30 text-[#FF5468]'
               }`}
             >
@@ -296,12 +296,12 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#2A2A45]">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#2A2A31]">
             <button
               type="button"
               onClick={onClose}
               data-tv-title="Cancelar"
-              className="tv-card focus:outline-none px-4 py-2.5 rounded-xl bg-[#1E1E38] hover:bg-[#2A2A45] text-xs font-semibold text-[#A8A6C0] cursor-pointer"
+              className="tv-card focus:outline-none px-4 py-2.5 rounded-xl bg-[#1E1E24] hover:bg-[#2A2A31] text-xs font-semibold text-[#A1A1AA] cursor-pointer"
             >
               Cancelar
             </button>
@@ -309,7 +309,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
               type="submit"
               disabled={isLoading}
               data-tv-title="Salvar lista"
-              className="tv-card focus:outline-none px-5 py-2.5 rounded-xl bg-[#6B4FE0] hover:bg-[#6B4FE0]/80 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-lg shadow-[#6B4FE0]/30"
+              className="tv-card focus:outline-none px-5 py-2.5 rounded-xl bg-[#7C5CFF] hover:bg-[#7C5CFF]/80 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-lg shadow-[#7C5CFF]/30"
             >
               {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               {isLoading ? 'Importando e Processando...' : 'Salvar e Sincronizar'}

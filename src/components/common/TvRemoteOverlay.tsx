@@ -314,6 +314,12 @@ export const TvRemoteOverlay: React.FC = () => {
       return;
     }
 
+    // 5a. Screens opened from "Mais" go back to "Mais".
+    if (['playlists', 'favorites', 'history', 'multiview', 'stats', 'settings'].includes(activeTab)) {
+      setActiveTab('more');
+      return;
+    }
+
     // 5. If in any other subpage (Canais, VOD, Séries, Favoritos, Histórico, EPG, etc.) -> return to Home
     if (activeTab !== 'home') {
       setActiveTab('home');
@@ -677,7 +683,7 @@ export const TvRemoteOverlay: React.FC = () => {
       {!isRemoteVisible && (
         <button
           onClick={() => setIsRemoteVisible(true)}
-          className="fixed bottom-5 right-5 z-40 w-11 h-11 rounded-2xl bg-[#16162A]/80 hover:bg-[#6B4FE0] text-[#A8A6C0] hover:text-white border border-[#2A2A45] hover:border-[#6B4FE0] shadow-xl backdrop-blur-md flex items-center justify-center transition-all opacity-40 hover:opacity-100 cursor-pointer"
+          className="fixed bottom-5 right-5 z-40 w-11 h-11 rounded-2xl bg-[#141418]/80 hover:bg-[#7C5CFF] text-[#A1A1AA] hover:text-white border border-[#2A2A31] hover:border-[#7C5CFF] shadow-xl backdrop-blur-md flex items-center justify-center transition-all opacity-40 hover:opacity-100 cursor-pointer"
           title="Abrir Simulador de Controle Remoto Firestick"
         >
           <Tv className="w-5 h-5" />
@@ -686,18 +692,18 @@ export const TvRemoteOverlay: React.FC = () => {
 
       {/* Realistic Amazon Fire TV Stick Remote Widget */}
       {isRemoteVisible && (
-        <div className="fixed bottom-6 right-6 z-50 w-72 bg-[#121222] border-2 border-[#2A2A45] rounded-[42px] p-5 shadow-2xl select-none animate-in slide-in-from-bottom duration-200 text-white font-sans flex flex-col items-center">
+        <div className="fixed bottom-6 right-6 z-50 w-72 bg-[#121216] border-2 border-[#2A2A31] rounded-[42px] p-5 shadow-2xl select-none animate-in slide-in-from-bottom duration-200 text-white font-sans flex flex-col items-center">
           {/* Remote Top Bar */}
-          <div className="w-full flex items-center justify-between pb-3 border-b border-[#2A2A45]/80">
+          <div className="w-full flex items-center justify-between pb-3 border-b border-[#2A2A31]/80">
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#1FCFAE]" />
+              <span className="w-2 h-2 rounded-full bg-[#22D3A6]" />
               <span className="text-[11px] font-bold text-white tracking-wider font-['Outfit']">
                 AMAZON FIRE TV
               </span>
             </div>
             <button
               onClick={() => setIsRemoteVisible(false)}
-              className="w-6 h-6 rounded-full hover:bg-[#2A2A45] text-[#A8A6C0] hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+              className="w-6 h-6 rounded-full hover:bg-[#2A2A31] text-[#A1A1AA] hover:text-white flex items-center justify-center cursor-pointer transition-colors"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -707,7 +713,7 @@ export const TvRemoteOverlay: React.FC = () => {
           <div className="my-3 flex justify-center">
             <button
               onClick={triggerVoiceSearch}
-              className="w-10 h-10 rounded-full bg-[#1E1E38] hover:bg-[#2A2A45] text-[#1FCFAE] flex items-center justify-center transition-transform active:scale-90 cursor-pointer border border-[#2A2A45] shadow"
+              className="w-10 h-10 rounded-full bg-[#1E1E24] hover:bg-[#2A2A31] text-[#22D3A6] flex items-center justify-center transition-transform active:scale-90 cursor-pointer border border-[#2A2A31] shadow"
               title="Busca por Voz (Alexa)"
             >
               <Mic className="w-4 h-4" />
@@ -715,14 +721,14 @@ export const TvRemoteOverlay: React.FC = () => {
           </div>
 
           {/* D-PAD Navigational Ring (Netflix / Firestick Style) */}
-          <div className="relative w-44 h-44 rounded-full bg-[#18182E] border border-[#2A2A45] flex items-center justify-center p-2 shadow-inner my-2">
+          <div className="relative w-44 h-44 rounded-full bg-[#17171C] border border-[#2A2A31] flex items-center justify-center p-2 shadow-inner my-2">
             {/* Up Button */}
             <button
               onClick={() => {
                 setLastKeyPressed('D-PAD CIMA');
                 navigateDirectional('up');
               }}
-              className="absolute top-1.5 left-1/2 -translate-x-1/2 w-16 h-10 rounded-t-full hover:bg-[#6B4FE0]/40 flex items-center justify-center text-[#A8A6C0] hover:text-white cursor-pointer active:scale-95 transition-all"
+              className="absolute top-1.5 left-1/2 -translate-x-1/2 w-16 h-10 rounded-t-full hover:bg-[#7C5CFF]/40 flex items-center justify-center text-[#A1A1AA] hover:text-white cursor-pointer active:scale-95 transition-all"
               title="Para Cima (Arrow Up)"
             >
               <ChevronUp className="w-6 h-6" />
@@ -734,7 +740,7 @@ export const TvRemoteOverlay: React.FC = () => {
                 setLastKeyPressed('D-PAD BAIXO');
                 navigateDirectional('down');
               }}
-              className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-16 h-10 rounded-b-full hover:bg-[#6B4FE0]/40 flex items-center justify-center text-[#A8A6C0] hover:text-white cursor-pointer active:scale-95 transition-all"
+              className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-16 h-10 rounded-b-full hover:bg-[#7C5CFF]/40 flex items-center justify-center text-[#A1A1AA] hover:text-white cursor-pointer active:scale-95 transition-all"
               title="Para Baixo (Arrow Down)"
             >
               <ChevronDown className="w-6 h-6" />
@@ -746,7 +752,7 @@ export const TvRemoteOverlay: React.FC = () => {
                 setLastKeyPressed('D-PAD ESQUERDA');
                 navigateDirectional('left');
               }}
-              className="absolute left-1.5 top-1/2 -translate-y-1/2 w-10 h-16 rounded-l-full hover:bg-[#6B4FE0]/40 flex items-center justify-center text-[#A8A6C0] hover:text-white cursor-pointer active:scale-95 transition-all"
+              className="absolute left-1.5 top-1/2 -translate-y-1/2 w-10 h-16 rounded-l-full hover:bg-[#7C5CFF]/40 flex items-center justify-center text-[#A1A1AA] hover:text-white cursor-pointer active:scale-95 transition-all"
               title="Para Esquerda (Arrow Left)"
             >
               <ChevronLeft className="w-6 h-6" />
@@ -758,7 +764,7 @@ export const TvRemoteOverlay: React.FC = () => {
                 setLastKeyPressed('D-PAD DIREITA');
                 navigateDirectional('right');
               }}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-10 h-16 rounded-r-full hover:bg-[#6B4FE0]/40 flex items-center justify-center text-[#A8A6C0] hover:text-white cursor-pointer active:scale-95 transition-all"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-10 h-16 rounded-r-full hover:bg-[#7C5CFF]/40 flex items-center justify-center text-[#A1A1AA] hover:text-white cursor-pointer active:scale-95 transition-all"
               title="Para Direita (Arrow Right)"
             >
               <ChevronRight className="w-6 h-6" />
@@ -767,7 +773,7 @@ export const TvRemoteOverlay: React.FC = () => {
             {/* Center SELECT / OK Button */}
             <button
               onClick={triggerSelect}
-              className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#6B4FE0] to-[#2A1D6B] hover:scale-105 active:scale-95 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-[#6B4FE0]/50 border border-white/20 cursor-pointer transition-transform"
+              className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#7C5CFF] to-[#2B1F66] hover:scale-105 active:scale-95 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-[#7C5CFF]/50 border border-white/20 cursor-pointer transition-transform"
               title="Selecionar / Confirmar (Enter)"
             >
               OK
@@ -778,14 +784,14 @@ export const TvRemoteOverlay: React.FC = () => {
           <div className="grid grid-cols-3 gap-3 w-full my-3 px-2">
             <button
               onClick={triggerBack}
-              className="py-2.5 rounded-xl bg-[#1E1E38] hover:bg-[#2A2A45] flex items-center justify-center text-[#A8A6C0] hover:text-white transition-all active:scale-90 cursor-pointer"
+              className="py-2.5 rounded-xl bg-[#1E1E24] hover:bg-[#2A2A31] flex items-center justify-center text-[#A1A1AA] hover:text-white transition-all active:scale-90 cursor-pointer"
               title="Voltar (Esc / Backspace)"
             >
               <CornerUpLeft className="w-4 h-4" />
             </button>
             <button
               onClick={triggerHome}
-              className="py-2.5 rounded-xl bg-[#1E1E38] hover:bg-[#2A2A45] flex items-center justify-center text-[#A8A6C0] hover:text-white transition-all active:scale-90 cursor-pointer"
+              className="py-2.5 rounded-xl bg-[#1E1E24] hover:bg-[#2A2A31] flex items-center justify-center text-[#A1A1AA] hover:text-white transition-all active:scale-90 cursor-pointer"
               title="Início (Home)"
             >
               <Home className="w-4 h-4" />
@@ -796,7 +802,7 @@ export const TvRemoteOverlay: React.FC = () => {
                 // If in player, opens channel drawer, otherwise opens sidebar
                 window.dispatchEvent(new KeyboardEvent('keydown', { key: 'm' }));
               }}
-              className="py-2.5 rounded-xl bg-[#1E1E38] hover:bg-[#2A2A45] flex items-center justify-center text-[#A8A6C0] hover:text-white transition-all active:scale-90 cursor-pointer"
+              className="py-2.5 rounded-xl bg-[#1E1E24] hover:bg-[#2A2A31] flex items-center justify-center text-[#A1A1AA] hover:text-white transition-all active:scale-90 cursor-pointer"
               title="Menu / Gaveta"
             >
               <Menu className="w-4 h-4" />
@@ -807,21 +813,21 @@ export const TvRemoteOverlay: React.FC = () => {
           <div className="grid grid-cols-3 gap-3 w-full my-1 px-2">
             <button
               onClick={triggerRewind}
-              className="py-2.5 rounded-xl bg-[#1E1E38] hover:bg-[#2A2A45] flex items-center justify-center text-[#A8A6C0] hover:text-white transition-all active:scale-90 cursor-pointer"
+              className="py-2.5 rounded-xl bg-[#1E1E24] hover:bg-[#2A2A31] flex items-center justify-center text-[#A1A1AA] hover:text-white transition-all active:scale-90 cursor-pointer"
               title="Retroceder 10s"
             >
               <Rewind className="w-4 h-4" />
             </button>
             <button
               onClick={triggerPlayPause}
-              className="py-2.5 rounded-xl bg-[#1FCFAE]/20 hover:bg-[#1FCFAE]/30 text-[#1FCFAE] flex items-center justify-center transition-all active:scale-90 cursor-pointer border border-[#1FCFAE]/40"
+              className="py-2.5 rounded-xl bg-[#22D3A6]/20 hover:bg-[#22D3A6]/30 text-[#22D3A6] flex items-center justify-center transition-all active:scale-90 cursor-pointer border border-[#22D3A6]/40"
               title="Play / Pause"
             >
               <Play className="w-4 h-4 fill-current ml-0.5" />
             </button>
             <button
               onClick={triggerFastForward}
-              className="py-2.5 rounded-xl bg-[#1E1E38] hover:bg-[#2A2A45] flex items-center justify-center text-[#A8A6C0] hover:text-white transition-all active:scale-90 cursor-pointer"
+              className="py-2.5 rounded-xl bg-[#1E1E24] hover:bg-[#2A2A31] flex items-center justify-center text-[#A1A1AA] hover:text-white transition-all active:scale-90 cursor-pointer"
               title="Avançar 10s"
             >
               <FastForward className="w-4 h-4" />
@@ -831,18 +837,18 @@ export const TvRemoteOverlay: React.FC = () => {
           {/* Volume and Channel Switchers */}
           <div className="grid grid-cols-2 gap-3 w-full my-3 px-2">
             {/* Volume Rocker */}
-            <div className="flex items-center justify-between p-1 rounded-xl bg-[#18182E] border border-[#2A2A45]">
+            <div className="flex items-center justify-between p-1 rounded-xl bg-[#17171C] border border-[#2A2A31]">
               <button
                 onClick={() => triggerVolume('down')}
-                className="w-7 h-7 rounded-lg hover:bg-[#2A2A45] flex items-center justify-center text-xs text-[#A8A6C0] hover:text-white cursor-pointer font-bold"
+                className="w-7 h-7 rounded-lg hover:bg-[#2A2A31] flex items-center justify-center text-xs text-[#A1A1AA] hover:text-white cursor-pointer font-bold"
                 title="Diminuir Volume"
               >
                 -
               </button>
-              <span className="text-[10px] font-bold text-[#A8A6C0] uppercase">Vol</span>
+              <span className="text-[10px] font-bold text-[#A1A1AA] uppercase">Vol</span>
               <button
                 onClick={() => triggerVolume('up')}
-                className="w-7 h-7 rounded-lg hover:bg-[#2A2A45] flex items-center justify-center text-xs text-[#A8A6C0] hover:text-white cursor-pointer font-bold"
+                className="w-7 h-7 rounded-lg hover:bg-[#2A2A31] flex items-center justify-center text-xs text-[#A1A1AA] hover:text-white cursor-pointer font-bold"
                 title="Aumentar Volume"
               >
                 +
@@ -850,18 +856,18 @@ export const TvRemoteOverlay: React.FC = () => {
             </div>
 
             {/* Channel Rocker */}
-            <div className="flex items-center justify-between p-1 rounded-xl bg-[#18182E] border border-[#2A2A45]">
+            <div className="flex items-center justify-between p-1 rounded-xl bg-[#17171C] border border-[#2A2A31]">
               <button
                 onClick={() => triggerChannelStep(-1)}
-                className="w-7 h-7 rounded-lg hover:bg-[#2A2A45] flex items-center justify-center text-xs text-[#A8A6C0] hover:text-white cursor-pointer font-bold"
+                className="w-7 h-7 rounded-lg hover:bg-[#2A2A31] flex items-center justify-center text-xs text-[#A1A1AA] hover:text-white cursor-pointer font-bold"
                 title="Canal Anterior"
               >
                 ▼
               </button>
-              <span className="text-[10px] font-bold text-[#1FCFAE] uppercase">CH</span>
+              <span className="text-[10px] font-bold text-[#22D3A6] uppercase">CH</span>
               <button
                 onClick={() => triggerChannelStep(1)}
-                className="w-7 h-7 rounded-lg hover:bg-[#2A2A45] flex items-center justify-center text-xs text-[#A8A6C0] hover:text-white cursor-pointer font-bold"
+                className="w-7 h-7 rounded-lg hover:bg-[#2A2A31] flex items-center justify-center text-xs text-[#A1A1AA] hover:text-white cursor-pointer font-bold"
                 title="Próximo Canal"
               >
                 ▲
@@ -870,7 +876,7 @@ export const TvRemoteOverlay: React.FC = () => {
           </div>
 
           {/* Automated Tour Simulation Trigger */}
-          <div className="w-full pt-2 border-t border-[#2A2A45]/80">
+          <div className="w-full pt-2 border-t border-[#2A2A31]/80">
             {isAutoTourRunning ? (
               <button
                 onClick={stopAutoPilotTour}
@@ -882,7 +888,7 @@ export const TvRemoteOverlay: React.FC = () => {
             ) : (
               <button
                 onClick={runAutoPilotTour}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#6B4FE0] to-[#1FCFAE] hover:opacity-90 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#6B4FE0]/30 transition-transform active:scale-95"
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#7C5CFF] to-[#22D3A6] hover:opacity-90 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#7C5CFF]/30 transition-transform active:scale-95"
               >
                 <Zap className="w-4 h-4 fill-current" />
                 Simulação Automática Firestick

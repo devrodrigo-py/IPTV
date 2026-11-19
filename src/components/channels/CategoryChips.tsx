@@ -4,46 +4,28 @@ interface CategoryChipsProps {
   categories: string[];
   selectedCategory: string;
   onSelectCategory: (cat: string) => void;
+  allLabel?: string;
 }
 
-export const CategoryChips: React.FC<CategoryChipsProps> = ({
-  categories,
-  selectedCategory,
-  onSelectCategory,
-}) => {
+/** Pill filters (same style as the season selector). */
+export const CategoryChips: React.FC<CategoryChipsProps> = ({ categories, selectedCategory, onSelectCategory, allLabel = 'Todos' }) => {
+  const pill = (id: string, label: string) => (
+    <button
+      key={id}
+      data-tv-title={`Categoria: ${label}`}
+      onClick={() => onSelectCategory(id)}
+      onFocus={(e) => e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })}
+      className={`tv-card shrink-0 h-10 px-5 rounded-full text-[15px] font-semibold whitespace-nowrap cursor-pointer focus:outline-none ${
+        selectedCategory === id ? 'bg-white text-black' : 'bg-white/10 text-white/75 hover:bg-white/20'
+      }`}
+    >
+      {label}
+    </button>
+  );
   return (
-    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none select-none">
-      <button
-        onClick={() => onSelectCategory('all')}
-        data-tv-title="Categoria: Todos"
-        onFocus={(e) => e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })}
-        className={`tv-card px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer focus:outline-none ${
-          selectedCategory === 'all'
-            ? 'bg-[#6B4FE0] text-white shadow-lg shadow-[#6B4FE0]/30'
-            : 'bg-[#16162A] text-[#A8A6C0] hover:text-white hover:bg-[#1E1E38] border border-[#2A2A45]'
-        }`}
-      >
-        Todos
-      </button>
-
-      {categories.map((cat) => {
-        const isSelected = selectedCategory === cat;
-        return (
-          <button
-            key={cat}
-            data-tv-title={`Categoria: ${cat}`}
-            onClick={() => onSelectCategory(cat)}
-            onFocus={(e) => e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })}
-            className={`tv-card px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer focus:outline-none ${
-              isSelected
-                ? 'bg-[#6B4FE0] text-white shadow-lg shadow-[#6B4FE0]/30'
-                : 'bg-[#16162A] text-[#A8A6C0] hover:text-white hover:bg-[#1E1E38] border border-[#2A2A45]'
-            }`}
-          >
-            {cat}
-          </button>
-        );
-      })}
+    <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1.5 px-1 -mx-1 select-none">
+      {pill('all', allLabel)}
+      {categories.map((c) => pill(c, c))}
     </div>
   );
 };

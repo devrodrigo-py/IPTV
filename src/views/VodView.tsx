@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Film, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
+import { PageHeader } from '../components/common/PageHeader';
 import { useApp } from '../context/AppContext';
 import { PosterCard } from '../components/media/PosterCard';
 import { CategoryChips } from '../components/channels/CategoryChips';
@@ -8,7 +9,7 @@ import { useProgressiveList } from '../hooks/useProgressiveList';
 type SortMode = 'default' | 'recent' | 'rating' | 'title';
 
 export const VodView: React.FC = () => {
-  const { vodItems, setSelectedVodModal, getProgressFraction, enrichArtwork } = useApp();
+  const { vodItems, setSelectedVodModal, getProgressFraction, enrichArtwork, tvMode } = useApp();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortMode>('default');
@@ -30,48 +31,46 @@ export const VodView: React.FC = () => {
   const { visible, hasMore, sentinelRef } = useProgressiveList(filtered, 60);
 
   return (
-    <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#2A2A45]">
-        <div>
-          <div className="flex items-center gap-2">
-            <Film className="w-5 h-5 text-[#6B4FE0]" />
-            <h1 className="text-xl font-bold text-white tracking-tight">Filmes</h1>
-          </div>
-          <p className="text-xs text-[#A8A6C0] mt-0.5">{filtered.length} de {vodItems.length} filmes</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 text-[#A8A6C0] absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Buscar filme…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="bg-[#16162A] text-xs text-white placeholder-[#A8A6C0] pl-8 pr-3 py-2 rounded-xl border border-[#2A2A45] focus:border-[#6B4FE0] outline-none"
-            />
-          </div>
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as SortMode)}
-            data-tv-title="Ordenar filmes"
-            className="bg-[#16162A] text-xs text-white px-3 py-2 rounded-xl border border-[#2A2A45] focus:border-[#6B4FE0] outline-none"
-          >
-            <option value="default">Ordem da lista</option>
-            <option value="recent">Mais recentes</option>
-            <option value="rating">Melhor avaliados</option>
-            <option value="title">A–Z</option>
-          </select>
-        </div>
-      </div>
+    <div className="px-14 pt-10 pb-12 space-y-6 select-none">
+      <PageHeader
+        title="Filmes"
+        subtitle={`${filtered.length} de ${vodItems.length} filmes`}
+        actions={
+          !tvMode && (
+            <>
+              <div className="relative">
+                <Search className="w-4 h-4 text-white/40 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Buscar filme"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="bg-white/5 text-sm text-white placeholder-white/40 pl-9 pr-3 h-10 rounded-md outline-none focus:bg-white/10"
+                />
+              </div>
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as SortMode)}
+                className="bg-white/5 text-sm text-white px-3 h-10 rounded-md outline-none"
+              >
+                <option value="default">Ordem da lista</option>
+                <option value="recent">Mais recentes</option>
+                <option value="rating">Melhor avaliados</option>
+                <option value="title">A–Z</option>
+              </select>
+            </>
+          )
+        }
+      />
 
       <CategoryChips categories={categories} selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
 
       {filtered.length === 0 ? (
-        <div className="p-12 text-center bg-[#16162A]/50 rounded-3xl border border-[#2A2A45] text-sm text-[#A8A6C0]">
+        <div className="py-16 text-white/50 text-lg">
           {vodItems.length === 0 ? 'Nenhum filme nas suas listas ativas.' : 'Nenhum filme encontrado com esse filtro.'}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-8 gap-4">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 2xl:grid-cols-8 gap-x-4 gap-y-6">
           {visible.map((vod) => (
             <PosterCard
               key={vod.id}

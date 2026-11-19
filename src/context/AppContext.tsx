@@ -70,7 +70,8 @@ export type TabType =
   | 'stats'
   | 'settings'
   | 'search'
-  | 'mylist';
+  | 'mylist'
+  | 'more';
 
 export interface ActiveStream {
   id: string;
