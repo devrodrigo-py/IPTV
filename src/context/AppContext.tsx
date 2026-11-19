@@ -69,7 +69,8 @@ export type TabType =
   | 'multiview'
   | 'stats'
   | 'settings'
-  | 'search';
+  | 'search'
+  | 'mylist';
 
 export interface ActiveStream {
   id: string;
@@ -137,6 +138,10 @@ interface AppContextValue {
   filteredChannels: Channel[];
   categories: string[];
   favorites: string[];
+  /** "Minha lista": movie and series ids saved by the active profile. */
+  myList: string[];
+  toggleMyList: (contentId: string) => void;
+  isInMyList: (contentId: string) => boolean;
   toggleFavorite: (channelId: string) => void;
   isFavorite: (channelId: string) => boolean;
 
@@ -590,6 +595,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     [filteredChannels]
   );
 
+  // ---------------------------------------------------------------- my list (per profile)
+  const [myListByProfile, setMyListByProfile] = useState<Record<string, string[]>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('nebula_mylist') || '{}');
+    } catch {
+      return {};
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('nebula_mylist', JSON.stringify(myListByProfile));
+    } catch {
+      /* storage full or unavailable */
+    }
+  }, [myListByProfile]);
+  const profileKey = activeProfile?.id || 'default';
+  const myList = myListByProfile[profileKey] ?? [];
+  const toggleMyList = (contentId: string) => {
+    setMyListByProfile((prev) => {
+      const cur = prev[profileKey] ?? [];
+      const next = cur.includes(contentId) ? cur.filter((id) => id !== contentId) : [contentId, ...cur];
+      return { ...prev, [profileKey]: next };
+    });
+  };
+  const isInMyList = (contentId: string) => myList.includes(contentId);
+
   // ---------------------------------------------------------------- favourites
   const favoriteSet = useMemo(() => new Set(favorites), [favorites]);
   const toggleFavorite = (channelId: string) => {
@@ -962,6 +993,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         filteredChannels: channelsWithFav,
         categories,
         favorites,
+        myList,
+        toggleMyList,
+        isInMyList,
         toggleFavorite,
         isFavorite,
         currentStream,

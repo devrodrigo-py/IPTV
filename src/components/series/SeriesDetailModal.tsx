@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { X, Play, Star, Clock, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { X, Play, Star, Clock, Loader2, AlertCircle, CheckCircle2, Plus, Check } from 'lucide-react';
 import { SeriesItem } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { episodeToResume } from '../../data/progress';
@@ -10,7 +10,8 @@ interface SeriesDetailModalProps {
 }
 
 export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({ series, onClose }) => {
-  const { playEpisode, loadSeriesDetails, getProgressFraction, getResumeSeconds, progressMap } = useApp();
+  const { playEpisode, loadSeriesDetails, getProgressFraction, getResumeSeconds, progressMap, toggleMyList, isInMyList } = useApp();
+  const inList = isInMyList(series.id);
   const [loading, setLoading] = useState(!series.seasonsLoaded && series.seasons.length === 0);
   const [error, setError] = useState<string | null>(null);
   const [selectedSeasonIdx, setSelectedSeasonIdx] = useState<number | null>(null);
@@ -60,6 +61,7 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({ series, on
               {series.seasons.length > 0 && <span>• {series.seasons.length} temporada(s)</span>}
             </div>
             <h2 className="text-2xl md:text-3xl font-black text-white">{series.title}</h2>
+            <div className="flex flex-wrap items-center gap-3">
             {resume && (
               <button
                 autoFocus
@@ -71,6 +73,14 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({ series, on
                 {hasProgress ? 'Continuar' : 'Assistir'} T{resume.seasonNumber}:E{resume.episode.episodeNumber}
               </button>
             )}
+            <button
+              onClick={() => toggleMyList(series.id)}
+              data-tv-title={inList ? 'Remover da minha lista' : 'Adicionar à minha lista'}
+              className="tv-card px-5 py-3 rounded-2xl bg-white/15 text-white font-semibold text-sm flex items-center gap-2 cursor-pointer focus:outline-none"
+            >
+              {inList ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />} Minha lista
+            </button>
+            </div>
           </div>
         </div>
 

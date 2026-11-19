@@ -138,3 +138,8 @@ button.tv-card {
     transform: none !important;
   }
 }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(1.03); }
+  to { opacity: 0.6; transform: scale(1); }
+}

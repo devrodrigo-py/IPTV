@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Play, Star, Clock, Calendar, RotateCcw, Loader2 } from 'lucide-react';
+import { X, Play, Star, Clock, Calendar, RotateCcw, Loader2, Plus, Check } from 'lucide-react';
 import { VodItem } from '../../types';
 import { useApp } from '../../context/AppContext';
 
@@ -15,7 +15,8 @@ function fmt(sec: number): string {
 }
 
 export const VodModal: React.FC<VodModalProps> = ({ vod, onClose }) => {
-  const { playVod, loadVodDetails, getResumeSeconds, getProgressFraction } = useApp();
+  const { playVod, loadVodDetails, getResumeSeconds, getProgressFraction, toggleMyList, isInMyList } = useApp();
+  const inList = isInMyList(vod.id);
   const [loading, setLoading] = useState(false);
   const resumeAt = getResumeSeconds(vod.id);
   const fraction = getProgressFraction(vod.id);
@@ -68,6 +69,13 @@ export const VodModal: React.FC<VodModalProps> = ({ vod, onClose }) => {
                 <RotateCcw className="w-4 h-4" /> Do início
               </button>
             )}
+            <button
+              onClick={() => toggleMyList(vod.id)}
+              data-tv-title={inList ? 'Remover da minha lista' : 'Adicionar à minha lista'}
+              className="tv-card px-5 py-3 rounded-2xl bg-white/15 text-white font-semibold text-sm flex items-center gap-2 cursor-pointer focus:outline-none"
+            >
+              {inList ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />} Minha lista
+            </button>
             {loading && <Loader2 className="w-5 h-5 text-white/70 animate-spin" />}
           </div>
           {fraction > 0 && fraction < 1 && (

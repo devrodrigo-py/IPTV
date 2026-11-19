@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Play, Tv, Film, Heart, History, Radio, Clapperboard, Sparkles, ListPlus, Info, Star, TrendingUp, Layers } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Play, Tv, Film, Heart, History, Radio, Clapperboard, Sparkles, ListPlus, Info, Star, TrendingUp, Layers, Plus, Check } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ChannelCard } from '../components/channels/ChannelCard';
 import { MediaRow } from '../components/media/MediaRow';
@@ -7,6 +7,9 @@ import { PosterCard } from '../components/media/PosterCard';
 import { SeriesItem, VodItem } from '../types';
 
 const ROW_LIMIT = 20;
+
+type Featured = VodItem | SeriesItem;
+const isVod = (x: Featured): x is VodItem => 'streamUrl' in x;
 
 function topCategories<T extends { category: string }>(items: T[], n: number): string[] {
   const counts = new Map<string, number>();
@@ -38,6 +41,10 @@ export const HomeView: React.FC = () => {
     enrichArtwork,
     loadDemoContent,
     syncStatus,
+    myList,
+    toggleMyList,
+    isInMyList,
+    getResumeSeconds,
   } = useApp();
 
   const rows = useMemo(() => {
@@ -55,17 +62,61 @@ export const HomeView: React.FC = () => {
       .slice(0, 8);
     const hero: VodItem | SeriesItem | undefined =
       vodItems.find((v) => v.backdropUrl && v.rating >= 7) || vodItems.find((v) => v.backdropUrl) || seriesItems.find((s) => s.backdropUrl) || vodItems[0];
-    return { recentVod, topRated, recentSeries, vodCats, favChannels, recentChannels, hero };
-  }, [vodItems, seriesItems, filteredChannels, favorites, history]);
+    const vodById = new Map(vodItems.map((v) => [v.id, v]));
+    const serById = new Map(seriesItems.map((x) => [x.id, x]));
+    const myListItems = myList
+      .map((id) => (vodById.get(id) as Featured | undefined) ?? (serById.get(id) as Featured | undefined))
+      .filter((x): x is Featured => !!x)
+      .slice(0, ROW_LIMIT);
+    return { recentVod, topRated, recentSeries, vodCats, favChannels, recentChannels, hero, myListItems };
+  }, [vodItems, seriesItems, filteredChannels, favorites, history, myList]);
+
+  // Billboard: follows the focused title like streaming apps on TV; rotates when idle.
+  const heroCandidates = useMemo(() => {
+    const withArt = [...vodItems.filter((v) => v.backdropUrl), ...seriesItems.filter((s) => s.backdropUrl)]
+      .sort((a, b) => b.rating - a.rating)
+      .slice(0, 6) as Featured[];
+    return withArt.length ? withArt : rows.hero ? [rows.hero as Featured] : [];
+  }, [vodItems, seriesItems, rows.hero]);
+  const [focused, setFocused] = useState<Featured | null>(null);
+  const [rotateIdx, setRotateIdx] = useState(0);
+  const focusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const featureItem = (item: Featured) => {
+    if (focusTimer.current) clearTimeout(focusTimer.current);
+    // Short delay so scrolling quickly through a row does not flash every backdrop.
+    focusTimer.current = setTimeout(() => setFocused(item), 180);
+  };
+  useEffect(() => {
+    if (focused || heroCandidates.length < 2) return;
+    const t = setInterval(() => setRotateIdx((i) => (i + 1) % heroCandidates.length), 9000);
+    return () => clearInterval(t);
+  }, [focused, heroCandidates.length]);
+  useEffect(() => () => {
+    if (focusTimer.current) clearTimeout(focusTimer.current);
+  }, []);
+  const featured: Featured | undefined = focused ?? heroCandidates[rotateIdx % Math.max(1, heroCandidates.length)];
+  useEffect(() => {
+    if (featured) enrichArtwork(isVod(featured) ? 'vod' : 'series', featured.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [featured?.id]);
 
   const openVod = (v: VodItem) => setSelectedVodModal(v);
   const openSeries = (s: SeriesItem) => setSelectedSeriesModal(s);
 
   if (!isHydrated) {
     return (
-      <div className="h-full flex items-center justify-center text-[#A8A6C0] text-sm gap-3">
-        <div className="w-6 h-6 rounded-full border-2 border-t-[#1FCFAE] border-[#6B4FE0]/30 animate-spin" />
-        Carregando sua biblioteca…
+      <div className="px-6 md:px-12 py-8 space-y-8 animate-pulse" aria-label="Carregando sua biblioteca">
+        <div className="h-[42vh] rounded-3xl bg-[#16162A]" />
+        {[0, 1].map((r) => (
+          <div key={r} className="space-y-3">
+            <div className="h-4 w-48 rounded bg-[#16162A]" />
+            <div className="flex gap-4 overflow-hidden">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="w-36 md:w-40 aspect-[2/3] shrink-0 rounded-2xl bg-[#16162A]" />
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
@@ -114,43 +165,77 @@ export const HomeView: React.FC = () => {
     );
   }
 
-  const hero = rows.hero;
-  const heroIsVod = hero && 'streamUrl' in hero;
   const heroChannel = filteredChannels[0];
 
   return (
-    <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-9 select-none">
-      {/* Hero */}
-      {hero ? (
-        <div className="relative rounded-3xl overflow-hidden bg-[#16162A] border border-[#6B4FE0]/30 shadow-2xl min-h-[260px] md:min-h-[380px] flex items-end">
-          {(hero.backdropUrl || hero.posterUrl) && (
-            <img src={hero.backdropUrl || hero.posterUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-70" />
-          )}
-          <div className="absolute inset-0 scrim-hero-tv" />
-          <div className="relative z-10 p-6 md:p-12 max-w-2xl space-y-4">
-            <span className="px-3 py-1 rounded-lg bg-[#FF6F91]/20 text-[#FF6F91] font-bold text-xs uppercase tracking-wider border border-[#FF6F91]/40">
-              {heroIsVod ? 'Filme em destaque' : 'Série em destaque'}
-            </span>
-            <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight drop-shadow-md">{hero.title}</h1>
-            <p className="text-sm md:text-base text-[#D6D4E8] line-clamp-3">{'description' in hero ? hero.description : hero.overview}</p>
-            <div className="flex items-center gap-3 pt-2">
-              <button
-                onClick={() => (heroIsVod ? playVod(hero as VodItem) : openSeries(hero as SeriesItem))}
-                data-tv-title={`Assistir ${hero.title}`}
-                className="tv-card px-7 py-3.5 rounded-2xl bg-white text-[#07070F] font-bold text-sm md:text-base flex items-center gap-2.5 cursor-pointer focus:outline-none"
-              >
-                <Play className="w-5 h-5 fill-current" /> Assistir
-              </button>
-              <button
-                onClick={() => (heroIsVod ? openVod(hero as VodItem) : openSeries(hero as SeriesItem))}
-                data-tv-title={`Mais informações: ${hero.title}`}
-                className="tv-card px-6 py-3.5 rounded-2xl bg-white/15 text-white font-semibold text-sm md:text-base flex items-center gap-2 cursor-pointer focus:outline-none"
-              >
-                <Info className="w-5 h-5" /> Mais informações
-              </button>
-            </div>
+    <div className="relative px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-9 select-none">
+      {/* Backdrop that follows focus (stays put while rows scroll over it) */}
+      {featured && (featured.backdropUrl || featured.posterUrl) && (
+        <div className="sticky top-0 h-0 z-0 pointer-events-none" aria-hidden>
+          <div className="absolute -top-8 -left-6 md:-left-12 w-[calc(100%+3rem)] md:w-[calc(100%+6rem)] h-[78vh] overflow-hidden">
+            <img
+              key={featured.id}
+              src={featured.backdropUrl || featured.posterUrl}
+              alt=""
+              onError={(e) => ((e.target as HTMLElement).style.display = 'none')}
+              className="absolute right-0 top-0 h-full w-full md:w-[72%] object-cover opacity-60 animate-[fadeIn_600ms_ease]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#07070F] via-[#07070F]/80 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#07070F] via-[#07070F]/30 to-transparent" />
           </div>
         </div>
+      )}
+
+      {/* Billboard */}
+      {featured ? (
+        <section className="relative z-10 min-h-[46vh] flex flex-col justify-end max-w-3xl space-y-4 pt-6">
+          <span className="w-fit px-3 py-1 rounded-lg bg-[#FF6F91]/20 text-[#FF6F91] font-bold text-xs uppercase tracking-wider border border-[#FF6F91]/40">
+            {isVod(featured) ? 'Filme' : 'Série'}
+          </span>
+          <h1 className="text-3xl md:text-6xl font-extrabold text-white tracking-tight drop-shadow-lg line-clamp-2">{featured.title}</h1>
+          <div className="flex flex-wrap items-center gap-3 text-sm text-[#D6D4E8]">
+            {featured.rating > 0 && (
+              <span className="text-[#1FCFAE] font-bold">{Math.round(featured.rating * 10)}% relevante</span>
+            )}
+            {isVod(featured) && featured.year > 0 && <span>{featured.year}</span>}
+            {isVod(featured) && featured.durationMinutes > 0 && (
+              <span>
+                {Math.floor(featured.durationMinutes / 60) > 0 ? `${Math.floor(featured.durationMinutes / 60)}h ` : ''}
+                {featured.durationMinutes % 60}min
+              </span>
+            )}
+            {!isVod(featured) && featured.seasons.length > 0 && <span>{featured.seasons.length} temporada(s)</span>}
+            <span className="px-2 py-0.5 rounded border border-white/30 text-xs">{featured.category}</span>
+          </div>
+          <p className="text-sm md:text-lg text-[#D6D4E8] line-clamp-3 max-w-2xl drop-shadow">
+            {isVod(featured) ? featured.description : featured.overview}
+          </p>
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <button
+              data-autofocus
+              onClick={() => (isVod(featured) ? playVod(featured) : openSeries(featured))}
+              data-tv-title={`Assistir ${featured.title}`}
+              className="tv-card px-8 py-3.5 rounded-xl bg-white text-[#07070F] font-bold text-base flex items-center gap-2.5 cursor-pointer focus:outline-none"
+            >
+              <Play className="w-5 h-5 fill-current" /> {getResumeSeconds(featured.id) > 0 ? 'Continuar' : 'Assistir'}
+            </button>
+            <button
+              onClick={() => (isVod(featured) ? openVod(featured) : openSeries(featured))}
+              data-tv-title={`Mais informações: ${featured.title}`}
+              className="tv-card px-6 py-3.5 rounded-xl bg-white/20 text-white font-semibold text-base flex items-center gap-2 cursor-pointer focus:outline-none backdrop-blur-sm"
+            >
+              <Info className="w-5 h-5" /> Mais informações
+            </button>
+            <button
+              onClick={() => toggleMyList(featured.id)}
+              data-tv-title={isInMyList(featured.id) ? 'Remover da minha lista' : 'Adicionar à minha lista'}
+              className="tv-card w-12 h-12 rounded-full border-2 border-white/60 text-white flex items-center justify-center cursor-pointer focus:outline-none"
+              title="Minha lista"
+            >
+              {isInMyList(featured.id) ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+            </button>
+          </div>
+        </section>
       ) : (
         heroChannel && (
           <div className="relative rounded-3xl overflow-hidden bg-[#16162A] border border-[#6B4FE0]/40 p-6 md:p-12 flex items-center justify-between gap-6">
@@ -158,6 +243,7 @@ export const HomeView: React.FC = () => {
               <span className="px-3 py-1 rounded-lg bg-[#1FCFAE]/20 text-[#1FCFAE] font-bold text-xs uppercase tracking-wider border border-[#1FCFAE]/40">Ao vivo</span>
               <h1 className="text-3xl md:text-5xl font-extrabold text-white">{heroChannel.name}</h1>
               <button
+                data-autofocus
                 onClick={() => playChannel(heroChannel)}
                 data-tv-title={`Assistir ${heroChannel.name}`}
                 className="tv-card px-7 py-3.5 rounded-2xl bg-[#6B4FE0] text-white font-bold text-sm flex items-center gap-2.5 cursor-pointer focus:outline-none"
@@ -170,6 +256,7 @@ export const HomeView: React.FC = () => {
         )
       )}
 
+      <div className="relative z-10 space-y-9">
       <MediaRow title="Continuar assistindo" icon={<History className="w-4 h-4 text-[#FF5468]" />} itemWidth="w-56 md:w-64" onSeeAll={() => setActiveTab('history')}>
         {continueWatchingItems.map((item) => (
           <PosterCard
@@ -183,6 +270,16 @@ export const HomeView: React.FC = () => {
             onSelect={() => resumeHistoryItem(item)}
           />
         ))}
+      </MediaRow>
+
+      <MediaRow title="Minha lista" icon={<Plus className="w-4 h-4 text-white" />} onSeeAll={() => setActiveTab('mylist')}>
+        {rows.myListItems.map((it) =>
+          isVod(it) ? (
+            <PosterCard key={it.id} title={it.title} subtitle={it.category} imageUrl={it.posterUrl} rating={it.rating} progress={getProgressFraction(it.id)} onSelect={() => openVod(it)} onFocused={() => featureItem(it)} />
+          ) : (
+            <PosterCard key={it.id} title={it.title} subtitle={it.category} imageUrl={it.posterUrl} rating={it.rating} badge="Série" onSelect={() => openSeries(it)} onFocused={() => featureItem(it)} />
+          )
+        )}
       </MediaRow>
 
       {rows.recentChannels.length > 0 && (
@@ -207,26 +304,35 @@ export const HomeView: React.FC = () => {
 
       <MediaRow title="Adicionados recentemente" icon={<Sparkles className="w-4 h-4 text-[#1FCFAE]" />} onSeeAll={() => setActiveTab('vod')}>
         {rows.recentVod.map((v) => (
-          <PosterCard key={v.id} title={v.title} subtitle={v.year ? String(v.year) : v.category} imageUrl={v.posterUrl} rating={v.rating} progress={getProgressFraction(v.id)} onSelect={() => openVod(v)} onVisible={() => enrichArtwork('vod', v.id)} />
+          <PosterCard key={v.id} title={v.title} subtitle={v.year ? String(v.year) : v.category} imageUrl={v.posterUrl} rating={v.rating} progress={getProgressFraction(v.id)} onSelect={() => openVod(v)} onVisible={() => enrichArtwork('vod', v.id)} onFocused={() => featureItem(v)} />
         ))}
       </MediaRow>
 
-      <MediaRow title="Mais bem avaliados" icon={<Star className="w-4 h-4 text-[#FF6F91]" />} onSeeAll={() => setActiveTab('vod')}>
-        {rows.topRated.map((v) => (
-          <PosterCard key={v.id} title={v.title} subtitle={v.category} imageUrl={v.posterUrl} rating={v.rating} progress={getProgressFraction(v.id)} onSelect={() => openVod(v)} onVisible={() => enrichArtwork('vod', v.id)} />
+      <MediaRow title="Top 10 mais bem avaliados" icon={<Star className="w-4 h-4 text-[#FF6F91]" />} itemWidth="w-52 md:w-56" onSeeAll={() => setActiveTab('vod')}>
+        {rows.topRated.slice(0, 10).map((v, i) => (
+          <div key={v.id} className="relative pl-14">
+            <span
+              aria-hidden
+              className="absolute left-0 bottom-10 text-[110px] leading-none font-black text-[#07070F] select-none pointer-events-none"
+              style={{ WebkitTextStroke: '3px rgba(245,243,255,0.8)', fontFamily: 'Outfit, sans-serif' }}
+            >
+              {i + 1}
+            </span>
+            <PosterCard title={v.title} subtitle={v.category} imageUrl={v.posterUrl} rating={v.rating} progress={getProgressFraction(v.id)} onSelect={() => openVod(v)} onVisible={() => enrichArtwork('vod', v.id)} onFocused={() => featureItem(v)} />
+          </div>
         ))}
       </MediaRow>
 
       <MediaRow title="Séries" icon={<Layers className="w-4 h-4 text-[#6B4FE0]" />} onSeeAll={() => setActiveTab('series')}>
         {rows.recentSeries.map((s) => (
-          <PosterCard key={s.id} title={s.title} subtitle={s.category} imageUrl={s.posterUrl} rating={s.rating} onSelect={() => openSeries(s)} onVisible={() => enrichArtwork('series', s.id)} />
+          <PosterCard key={s.id} title={s.title} subtitle={s.category} imageUrl={s.posterUrl} rating={s.rating} onSelect={() => openSeries(s)} onVisible={() => enrichArtwork('series', s.id)} onFocused={() => featureItem(s)} />
         ))}
       </MediaRow>
 
       {rows.vodCats.map(({ cat, items }) => (
         <MediaRow key={cat} title={cat} icon={<Clapperboard className="w-4 h-4 text-[#A8A6C0]" />} onSeeAll={() => setActiveTab('vod')}>
           {items.map((v) => (
-            <PosterCard key={v.id} title={v.title} subtitle={v.year ? String(v.year) : undefined} imageUrl={v.posterUrl} rating={v.rating} progress={getProgressFraction(v.id)} onSelect={() => openVod(v)} onVisible={() => enrichArtwork('vod', v.id)} />
+            <PosterCard key={v.id} title={v.title} subtitle={v.year ? String(v.year) : undefined} imageUrl={v.posterUrl} rating={v.rating} progress={getProgressFraction(v.id)} onSelect={() => openVod(v)} onVisible={() => enrichArtwork('vod', v.id)} onFocused={() => featureItem(v)} />
           ))}
         </MediaRow>
       ))}
@@ -240,6 +346,7 @@ export const HomeView: React.FC = () => {
             </div>
             <button
               onClick={() => setActiveTab('channels')}
+              data-tv-skip
               data-tv-title="Ver todos os canais"
               className="tv-card text-xs text-[#A8A6C0] hover:text-[#1FCFAE] font-medium flex items-center gap-1 cursor-pointer px-2 py-1 rounded-lg focus:outline-none"
             >
@@ -259,6 +366,7 @@ export const HomeView: React.FC = () => {
           <Film className="w-4 h-4" /> Sua lista não trouxe filmes nem séries. Listas Xtream normalmente incluem os dois.
         </p>
       )}
+      </div>
     </div>
   );
 };

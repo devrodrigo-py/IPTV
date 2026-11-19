@@ -23,6 +23,7 @@ import { MultiViewScreen } from './views/MultiViewScreen';
 import { StatsView } from './views/StatsView';
 import { SettingsView } from './views/SettingsView';
 import { SearchView } from './views/SearchView';
+import { MyListView } from './views/MyListView';
 
 const AppContent: React.FC = () => {
   const {
@@ -68,6 +69,8 @@ const AppContent: React.FC = () => {
         return <SettingsView />;
       case 'search':
         return <SearchView />;
+      case 'mylist':
+        return <MyListView />;
       default:
         return <HomeView />;
     }

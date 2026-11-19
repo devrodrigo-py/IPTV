@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { Film, Play, Star, Tv } from 'lucide-react';
 
+// Hover follows the pointer only when the user is actually using a mouse:
+// scrolling with the remote moves cards under a resting pointer and would
+// otherwise fire mouseenter on whatever card passes beneath it.
+let lastKeyAt = 0;
+if (typeof window !== 'undefined') {
+  window.addEventListener('keydown', () => (lastKeyAt = Date.now()), true);
+}
+const pointerActive = () => Date.now() - lastKeyAt > 1200;
+
 interface PosterCardProps {
   title: string;
   imageUrl?: string;
@@ -14,6 +23,8 @@ interface PosterCardProps {
   onSelect: () => void;
   /** Called once the card is first shown or focused (lazy artwork lookups). */
   onVisible?: () => void;
+  /** Called when the card receives focus (drives the Home billboard). */
+  onFocused?: () => void;
   className?: string;
 }
 
@@ -32,6 +43,7 @@ export const PosterCard: React.FC<PosterCardProps> = ({
   tvTitle,
   onSelect,
   onVisible,
+  onFocused,
   className = '',
 }) => {
   const [broken, setBroken] = useState(false);
@@ -49,11 +61,16 @@ export const PosterCard: React.FC<PosterCardProps> = ({
       }}
       onFocus={(e) => {
         onVisible?.();
+        onFocused?.();
         // Keep the focused card inside horizontally scrolling rows.
         e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' });
       }}
-      onMouseEnter={onVisible}
-      className={`tv-card group bg-[#16162A] rounded-2xl border border-[#2A2A45] hover:border-[#6B4FE0]/60 overflow-hidden cursor-pointer flex flex-col transition-all duration-200 focus:outline-none ${className}`}
+      onMouseEnter={() => {
+        if (!pointerActive()) return;
+        onVisible?.();
+        onFocused?.();
+      }}
+      className={`tv-card group relative bg-[#16162A] rounded-2xl border border-[#2A2A45] hover:border-[#6B4FE0]/60 overflow-hidden cursor-pointer flex flex-col transition-all duration-200 focus:outline-none ${className}`}
     >
       <div className={`relative ${aspectClass} w-full bg-gradient-to-br from-[#1E1E38] to-[#0B0B18] overflow-hidden`}>
         {showImage ? (

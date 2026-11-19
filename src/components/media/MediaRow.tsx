@@ -25,6 +25,8 @@ export const MediaRow: React.FC<MediaRowProps> = ({ title, icon, onSeeAll, seeAl
         {onSeeAll && (
           <button
             onClick={onSeeAll}
+            // Remote users reach the full list from the menu; this keeps D-pad moves row-to-row.
+            data-tv-skip
             data-tv-title={`${seeAllLabel}: ${title}`}
             className="tv-card text-xs text-[#A8A6C0] hover:text-[#1FCFAE] font-medium flex items-center gap-1 cursor-pointer px-2 py-1 rounded-lg focus:outline-none"
           >
