@@ -1,5 +1,7 @@
 apply plugin: 'com.android.application'
 
+def ciVersionCode = (System.getenv('VERSION_CODE') ?: '1') as Integer
+
 android {
     namespace "app.nebula.iptv"
     compileSdk rootProject.ext.compileSdkVersion
@@ -8,7 +10,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // CI passes the run number so each build installs over the previous one.
-        versionCode (System.getenv("VERSION_CODE") ?: "1").toInteger()
+        versionCode ciVersionCode
         versionName "3.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
