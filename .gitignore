@@ -29,3 +29,6 @@ desktop.ini
 .idea/
 .vscode/
 *.iml
+
+# Local test captures
+shots/
