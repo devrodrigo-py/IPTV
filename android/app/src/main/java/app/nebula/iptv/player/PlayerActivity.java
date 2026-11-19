@@ -70,7 +70,7 @@ public class PlayerActivity extends AppCompatActivity {
 
     private static final int MAX_RETRIES = 6;
     private static final long NEXT_EPISODE_LEAD_MS = 25_000;
-    private static final long INFO_VISIBLE_MS = 3_500;
+    private static final long INFO_VISIBLE_MS = 5_000;
     private static final String DEFAULT_USER_AGENT = "NebulaIPTV/3.0 (Linux; Android TV) ExoPlayer";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -144,9 +144,6 @@ public class PlayerActivity extends AppCompatActivity {
                 if (state == Player.STATE_READY) {
                     retries = 0;
                     statusView.setVisibility(View.GONE);
-                } else if (state == Player.STATE_BUFFERING) {
-                    statusView.setText("Carregando…");
-                    statusView.setVisibility(View.VISIBLE);
                 } else if (state == Player.STATE_ENDED && !isLive) {
                     finishWithResult(true, false);
                 }
@@ -248,7 +245,14 @@ public class PlayerActivity extends AppCompatActivity {
             return;
         }
         lastError = error.getErrorCodeName();
-        if (retries < MAX_RETRIES) {
+        // Decoder/format problems do not go away by reconnecting: say so at once.
+        boolean decoderProblem = error.errorCode >= PlaybackException.ERROR_CODE_DECODER_INIT_FAILED
+                && error.errorCode <= PlaybackException.ERROR_CODE_DECODING_RESOURCES_RECLAIMED;
+        boolean formatProblem = error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED
+                || error.errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED
+                || error.errorCode == PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED
+                || error.errorCode == PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES;
+        if (!decoderProblem && !formatProblem && retries < MAX_RETRIES) {
             long delay = Math.min(15_000L, 1000L << retries);
             retries++;
             statusView.setText(String.format(Locale.ROOT, "Reconectando (%d/%d)…", retries, MAX_RETRIES));
@@ -274,8 +278,13 @@ public class PlayerActivity extends AppCompatActivity {
             case PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT:
                 return "Sem conexão com o servidor.";
             case PlaybackException.ERROR_CODE_DECODER_INIT_FAILED:
+            case PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED:
+            case PlaybackException.ERROR_CODE_DECODING_FAILED:
             case PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED:
-                return "Formato de vídeo não suportado por este aparelho.";
+            case PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES:
+                return "Este aparelho não consegue decodificar o vídeo deste conteúdo (formato ou resolução).";
+            case PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED:
+                return "Formato de arquivo não suportado.";
             default:
                 return error.getErrorCodeName();
         }
@@ -301,14 +310,25 @@ public class PlayerActivity extends AppCompatActivity {
         subtitle = item.subtitle;
         retries = 0;
         load(item.url, 0);
-        showInfo(String.format(Locale.ROOT, "%d  %s", index + 1, item.title), item.subtitle);
+        int shown = item.number > 0 ? item.number : index + 1;
+        showInfo(String.format(Locale.ROOT, "%02d  %s", shown, item.title), item.subtitle);
     }
 
     private void jumpToTypedChannel() {
         if (digits.length() == 0) return;
         try {
             int number = Integer.parseInt(digits.toString());
-            switchTo(number - 1);
+            // Jump to the channel with that grid number; fall back to the list position.
+            int target = -1;
+            for (int i = 0; i < queue.size(); i++) {
+                if (queue.get(i).number == number) {
+                    target = i;
+                    break;
+                }
+            }
+            if (target == -1 && number >= 1 && number <= queue.size() && queue.get(0).number == 0) target = number - 1;
+            if (target >= 0) switchTo(target);
+            else showInfo("Canal " + number + " não está nesta categoria", null);
         } catch (NumberFormatException ignored) {
             // Too many digits: ignore.
         }
@@ -385,7 +405,9 @@ public class PlayerActivity extends AppCompatActivity {
                 showInfo(title, subtitle);
                 return true;
             }
-        } else if (!controlsVisible) {
+        } else if (!controlsVisible || focusOnSeekTarget()) {
+            // Left/right keep seeking while focus is on play/pause or the time bar
+            // (streaming-app behaviour); on the other buttons they move focus.
             if (code == KeyEvent.KEYCODE_DPAD_RIGHT || code == KeyEvent.KEYCODE_MEDIA_FAST_FORWARD) {
                 player.seekForward();
                 playerView.showController();
@@ -398,6 +420,16 @@ public class PlayerActivity extends AppCompatActivity {
             }
         }
         return super.dispatchKeyEvent(event);
+    }
+
+    private boolean focusOnSeekTarget() {
+        View f = getCurrentFocus();
+        if (f == null) return true;
+        int id = f.getId();
+        return id == View.NO_ID
+                || id == R.id.player_view
+                || id == androidx.media3.ui.R.id.exo_play_pause
+                || id == androidx.media3.ui.R.id.exo_progress;
     }
 
     // ------------------------------------------------------------------ lifecycle

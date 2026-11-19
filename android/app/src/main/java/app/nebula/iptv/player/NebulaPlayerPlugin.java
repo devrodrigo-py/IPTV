@@ -23,6 +23,27 @@ import org.json.JSONObject;
 @CapacitorPlugin(name = "NebulaPlayer")
 public class NebulaPlayerPlugin extends Plugin {
 
+    /**
+     * Zapping list for the next play(). Sent separately because Capacitor keeps
+     * the play() call's options in the activity's saved state while the player
+     * is open; a large channel list there exceeds Android's ~1 MB Binder limit
+     * (TransactionTooLargeException) and crashes the app.
+     */
+    @PluginMethod
+    public void setQueue(PluginCall call) {
+        List<PlayerQueue.Item> queue = new ArrayList<>();
+        JSArray raw = call.getArray("queue");
+        if (raw != null) {
+            for (int i = 0; i < raw.length(); i++) {
+                JSONObject o = raw.optJSONObject(i);
+                if (o == null) continue;
+                queue.add(new PlayerQueue.Item(o.optString("id"), o.optString("title"), o.optString("url"), o.optString("subtitle", ""), o.optInt("number", 0)));
+            }
+        }
+        PlayerQueue.set(queue);
+        call.resolve();
+    }
+
     @PluginMethod
     public void play(PluginCall call) {
         String url = call.getString("url");
@@ -30,17 +51,6 @@ public class NebulaPlayerPlugin extends Plugin {
             call.reject("URL ausente");
             return;
         }
-
-        List<PlayerQueue.Item> queue = new ArrayList<>();
-        JSArray raw = call.getArray("queue");
-        if (raw != null) {
-            for (int i = 0; i < raw.length(); i++) {
-                JSONObject o = raw.optJSONObject(i);
-                if (o == null) continue;
-                queue.add(new PlayerQueue.Item(o.optString("id"), o.optString("title"), o.optString("url"), o.optString("subtitle", "")));
-            }
-        }
-        PlayerQueue.set(queue);
 
         Intent intent = new Intent(getContext(), PlayerActivity.class);
         intent.putExtra(PlayerActivity.EXTRA_URL, url);

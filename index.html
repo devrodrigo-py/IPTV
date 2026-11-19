@@ -2,8 +2,22 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/assets/branding/nebula_icon.png" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#07070F" />
+    <script>
+      // TV app: TV WebViews report a small logical width (960 px on a 1080p
+      // Fire TV / Google TV), which would trigger the phone layout. Lay the UI
+      // out at 1280 px instead: full TV layout, 1.5x the desktop scale, which
+      // is readable from the sofa. The WebView scales it to the screen.
+      (function () {
+        var ua = navigator.userAgent || '';
+        var landscape = window.innerWidth >= window.innerHeight;
+        if (ua.indexOf('NebulaTV') !== -1 && landscape) {
+          document.querySelector('meta[name=viewport]').setAttribute('content', 'width=1280, user-scalable=no');
+        }
+      })();
+    </script>
     
     <title>Nebula IPTV</title>
     <meta name="description" content="A modern, responsive IPTV streaming platform featuring Live TV, VOD movies, TV series, multi-view grid, EPG timeline, playlist management (M3U & Xtream Codes), profiles, and remote/TV navigation." />
@@ -12,11 +26,6 @@
     <meta property="og:title" content="Nebula IPTV" />
     <meta property="og:description" content="A modern, responsive IPTV streaming platform featuring Live TV, VOD movies, TV series, multi-view grid, EPG timeline, playlist management (M3U & Xtream Codes), profiles, and remote/TV navigation." />
     <meta property="og:type" content="website" />
-    
-    <!-- Google Fonts Inter & Outfit -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   </head>
   <body class="bg-[#07070F] text-[#F5F3FF] antialiased selection:bg-[#6B4FE0] selection:text-white">
     <div id="root"></div>

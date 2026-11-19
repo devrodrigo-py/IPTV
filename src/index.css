@@ -1,4 +1,18 @@
 @tailwind base;
+
+/* Tailwind 3.4's reset writes these with :where(), which WebViews older than
+   Chrome 88 drop entirely (buttons then get the grey system background). */
+button,
+[type='button'],
+[type='reset'],
+[type='submit'] {
+  -webkit-appearance: button;
+  background-color: transparent;
+  background-image: none;
+}
+[hidden] {
+  display: none;
+}
 @tailwind components;
 @tailwind utilities;
 
@@ -176,3 +190,17 @@ button.tv-card {
 .no-flex-gap .flex.flex-col.gap-10 > * + * { margin-top: 2.5rem; }
 .no-flex-gap .flex:not(.flex-col).gap-12 > * + *, .no-flex-gap .inline-flex.gap-12 > * + * { margin-left: 3rem; }
 .no-flex-gap .flex.flex-col.gap-12 > * + * { margin-top: 3rem; }
+
+/* CSS aspect-ratio exists from Chrome 88; older TV WebViews would collapse
+   posters to zero height. Classic padding-top boxes instead (children of
+   these boxes are absolutely positioned). */
+@supports not (aspect-ratio: 1 / 1) {
+  .aspect-\[2\/3\] {
+    height: 0;
+    padding-top: 150%;
+  }
+  .aspect-video {
+    height: 0;
+    padding-top: 56.25%;
+  }
+}

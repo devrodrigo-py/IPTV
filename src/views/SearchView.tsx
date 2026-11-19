@@ -175,7 +175,7 @@ export const SearchView: React.FC = () => {
                   <img
                     src={vod.posterUrl}
                     alt={vod.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform"
                   />
                   <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/70 text-[10px] font-bold text-[#FF6F91]">
                     ★ {vod.rating}

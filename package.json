@@ -16,6 +16,8 @@
     "@capacitor/android": "^7.4.3",
     "@capacitor/app": "^7.1.0",
     "@capacitor/core": "^7.4.3",
+    "@fontsource/outfit": "^5.1.0",
+    "@fontsource/plus-jakarta-sans": "^5.1.0",
     "hls.js": "^1.5.17",
     "lucide-react": "^0.475.0",
     "mpegts.js": "^1.8.0",

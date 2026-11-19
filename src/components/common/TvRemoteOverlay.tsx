@@ -440,6 +440,20 @@ export const TvRemoteOverlay: React.FC = () => {
   // On a real TV the physical remote is used: the on-screen simulator is only for desktop testing.
   const hideSimulator = isNativeApp() || deviceProfile.isAndroidTv;
 
+  // Focus can also arrive without the remote handler (autoFocus, touch, a
+  // modal opening): mirror it so the focus ring is always visible on TV.
+  useEffect(() => {
+    if (!tvMode) return;
+    const onFocusIn = (e: FocusEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (!el || el === document.body || el.classList.contains('tv-focused')) return;
+      document.querySelectorAll('.tv-focused').forEach((prev) => prev.classList.remove('tv-focused'));
+      el.classList.add('tv-focused');
+    };
+    document.addEventListener('focusin', onFocusIn);
+    return () => document.removeEventListener('focusin', onFocusIn);
+  }, [tvMode]);
+
   // A remote has no pointer: whenever nothing is focused (app start, new screen,
   // a focused button that disappeared, closed modal), put focus on the first
   // thing the user can act on. A light watchdog covers every case.
@@ -450,8 +464,10 @@ export const TvRemoteOverlay: React.FC = () => {
       if (active && active !== document.body && document.body.contains(active)) return;
       const modal = document.querySelector<HTMLElement>('.fixed.inset-0.z-50');
       const target = modal
-        ? modal.querySelector<HTMLElement>('[autofocus], .tv-card, button')
+        ? modal.querySelector<HTMLElement>('[data-autofocus]') || modal.querySelector<HTMLElement>('[autofocus], .tv-card, button')
         : document.querySelector<HTMLElement>('main [data-autofocus]') ||
+          // Content first (cards are not <button>s), then any control.
+          document.querySelector<HTMLElement>('main .tv-card:not(button)') ||
           document.querySelector<HTMLElement>('main .tv-card, main button') ||
           // Screens without the main layout (profile picker)
           document.querySelector<HTMLElement>('[data-autofocus], .tv-card');

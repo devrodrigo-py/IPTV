@@ -10,6 +10,10 @@ describe('device profile', () => {
     const p = detectDeviceProfile('Mozilla/5.0 (Linux; Android 9; AFTMM Build/PS7633) AppleWebKit', 1, 4);
     expect(p).toMatchObject({ isFireTv: true, isAndroidTv: true, isLowEnd: true, maxMultiviewTiles: 2 });
   });
+  it('treats the Android app as a TV even when the UA does not say so', () => {
+    const ua = 'Mozilla/5.0 (Linux; Android 12; sabrina) AppleWebKit/537.36 Chrome/120 Safari/537.36 NebulaTV/3.0';
+    expect(detectDeviceProfile(ua, undefined, 4)).toMatchObject({ isAndroidTv: true, isLowEnd: true, maxMultiviewTiles: 2 });
+  });
   it('detects Xiaomi boxes and desktop', () => {
     expect(detectDeviceProfile('Mozilla/5.0 (Linux; Android 11; MIBOX4) AppleWebKit', 2, 4).isAndroidTv).toBe(true);
     const desk = detectDeviceProfile('Mozilla/5.0 (X11; Linux x86_64) Chrome/130', 8, 8);

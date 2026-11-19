@@ -13,6 +13,8 @@ export interface NativeQueueItem {
   url: string;
   logoUrl?: string;
   subtitle?: string;
+  /** Channel number as shown in the channel grid (1-based). */
+  number?: number;
 }
 
 export interface NativePlayOptions {
@@ -43,7 +45,8 @@ export interface NativePlayResult {
 }
 
 interface NebulaPlayerPlugin {
-  play(options: NativePlayOptions): Promise<NativePlayResult>;
+  setQueue(options: { queue: NativeQueueItem[] }): Promise<void>;
+  play(options: Omit<NativePlayOptions, 'queue'>): Promise<NativePlayResult>;
   isVoiceSearchAvailable(): Promise<{ available: boolean }>;
   voiceSearch(): Promise<{ text: string }>;
 }
@@ -54,8 +57,11 @@ export function canUseNativePlayer(): boolean {
   return isNativeApp();
 }
 
-export function playNative(options: NativePlayOptions): Promise<NativePlayResult> {
-  return NebulaPlayer.play(options);
+export async function playNative(options: NativePlayOptions): Promise<NativePlayResult> {
+  const { queue, ...rest } = options;
+  // The channel list travels separately: see setQueue in NebulaPlayerPlugin.java.
+  await NebulaPlayer.setQueue({ queue: queue ?? [] });
+  return NebulaPlayer.play(rest);
 }
 
 /** Speech recognition through the TV's system service (Google TV / Android TV). */

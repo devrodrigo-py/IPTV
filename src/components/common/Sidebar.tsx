@@ -1,3 +1,4 @@
+import nebulaIcon from '../../../assets/branding/nebula_icon.png';
 import React from 'react';
 import {
   Home,
@@ -59,7 +60,7 @@ export const Sidebar: React.FC = () => {
       <div className="h-16 px-5 flex items-center gap-3 border-b border-[#2A2A45]/40">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#6B4FE0] via-[#2A1D6B] to-[#1FCFAE] flex items-center justify-center shadow-lg shadow-[#6B4FE0]/25 overflow-hidden p-1.5">
           <img
-            src="/assets/branding/nebula_icon.png"
+            src={nebulaIcon}
             alt="Nebula"
             className="w-full h-full object-contain filter drop-shadow"
             onError={(e) => {
@@ -88,7 +89,11 @@ export const Sidebar: React.FC = () => {
               key={item.id}
               data-tv-title={`Menu: ${item.label}`}
               data-active={isActive ? 'true' : undefined}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => {
+                setActiveTab(item.id);
+                // TV: choosing a section hands focus to its content and folds the rail.
+                if (rail) (document.activeElement as HTMLElement | null)?.blur();
+              }}
               className={`tv-card w-full flex items-center justify-between rounded-xl font-medium ${rail ? 'px-4 py-3 text-sm' : 'px-3.5 py-2.5 text-xs'} transition-all cursor-pointer group focus:outline-none ${
                 isActive
                   ? 'bg-[#16162A] text-white font-semibold shadow-inner border border-[#6B4FE0]/30'
