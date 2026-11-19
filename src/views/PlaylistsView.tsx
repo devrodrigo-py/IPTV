@@ -45,15 +45,14 @@ export const PlaylistsView: React.FC = () => {
   };
 
   return (
-    <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
+    <div className="px-14 pt-10 pb-12 space-y-6 select-none">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#2A2A31]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6">
         <div>
           <div className="flex items-center gap-2">
-            <FolderGit2 className="w-5 h-5 text-[#7C5CFF]" />
-            <h1 className="text-xl font-bold text-white tracking-tight">Minhas listas</h1>
+            <h1 className="font-display text-4xl font-bold text-white tracking-tight">Minhas listas</h1>
           </div>
-          <p className="text-xs text-[#A1A1AA] mt-0.5">
+          <p className="text-base text-white/50 mt-1.5">
             Adicione, sincronize e controle suas fontes de transmissão M3U e servidores Xtream Codes.
           </p>
         </div>

@@ -60,13 +60,12 @@ export const MultiViewScreen: React.FC = () => {
   return (
     <div className="px-6 md:px-12 py-8 h-[calc(100vh-4rem)] flex flex-col select-none">
       {/* Header Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#2A2A31]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6">
         <div>
           <div className="flex items-center gap-2">
-            <LayoutGrid className="w-5 h-5 text-[#22D3A6]" />
-            <h1 className="text-xl font-bold text-white tracking-tight">Multiview Grid</h1>
+            <h1 className="font-display text-4xl font-bold text-white tracking-tight">Multitela</h1>
           </div>
-          <p className="text-xs text-[#A1A1AA] mt-0.5">
+          <p className="text-base text-white/50 mt-1.5">
             Monitore múltiplos canais ao mesmo tempo. Clique no ícone de som para ouvir o áudio do canal desejado.
           </p>
         </div>
@@ -167,7 +166,7 @@ export const MultiViewScreen: React.FC = () => {
       {pickingSlotIndex !== null && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-[#141418] border border-[#2A2A31] rounded-3xl p-6 shadow-2xl flex flex-col max-h-[80vh]">
-            <div className="flex items-center justify-between pb-4 border-b border-[#2A2A31]">
+            <div className="flex items-center justify-between pb-6">
               <div className="flex items-center gap-2">
                 <Tv className="w-5 h-5 text-[#7C5CFF]" />
                 <h3 className="font-bold text-white text-base">

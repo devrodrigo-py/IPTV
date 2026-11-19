@@ -1,12 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { Tv, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
+import { PageHeader } from '../components/common/PageHeader';
 import { useApp } from '../context/AppContext';
 import { PosterCard } from '../components/media/PosterCard';
 import { CategoryChips } from '../components/channels/CategoryChips';
 import { useProgressiveList } from '../hooks/useProgressiveList';
 
 export const SeriesView: React.FC = () => {
-  const { seriesItems, setSelectedSeriesModal, enrichArtwork } = useApp();
+  const { seriesItems, setSelectedSeriesModal, enrichArtwork, tvMode } = useApp();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [query, setQuery] = useState('');
 
@@ -18,35 +19,34 @@ export const SeriesView: React.FC = () => {
   const { visible, hasMore, sentinelRef } = useProgressiveList(filtered, 60);
 
   return (
-    <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#2A2A31]">
-        <div>
-          <div className="flex items-center gap-2">
-            <Tv className="w-5 h-5 text-[#7C5CFF]" />
-            <h1 className="text-xl font-bold text-white tracking-tight">Séries</h1>
-          </div>
-          <p className="text-xs text-[#A1A1AA] mt-0.5">{filtered.length} de {seriesItems.length} séries</p>
-        </div>
-        <div className="relative">
-          <Search className="w-3.5 h-3.5 text-[#A1A1AA] absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Buscar série…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="bg-[#141418] text-xs text-white placeholder-[#A1A1AA] pl-8 pr-3 py-2 rounded-xl border border-[#2A2A31] focus:border-[#7C5CFF] outline-none"
-          />
-        </div>
-      </div>
+    <div className="px-14 pt-10 pb-12 space-y-6 select-none">
+      <PageHeader
+        title="Séries"
+        subtitle={`${filtered.length} de ${seriesItems.length} séries`}
+        actions={
+          !tvMode && (
+            <div className="relative">
+              <Search className="w-4 h-4 text-white/40 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Buscar série"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="bg-white/5 text-sm text-white placeholder-white/40 pl-9 pr-3 h-10 rounded-md outline-none focus:bg-white/10"
+              />
+            </div>
+          )
+        }
+      />
 
       <CategoryChips categories={categories} selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
 
       {filtered.length === 0 ? (
-        <div className="p-12 text-center bg-[#141418]/50 rounded-3xl border border-[#2A2A31] text-sm text-[#A1A1AA]">
+        <div className="py-16 text-white/50 text-lg">
           {seriesItems.length === 0 ? 'Nenhuma série nas suas listas ativas.' : 'Nenhuma série encontrada com esse filtro.'}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-8 gap-4">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 2xl:grid-cols-8 gap-x-4 gap-y-6">
           {visible.map((s) => (
             <PosterCard
               key={s.id}

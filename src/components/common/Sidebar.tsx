@@ -27,7 +27,8 @@ export const Sidebar: React.FC = () => {
   const { activeTab, setActiveTab, tvMode, activeProfile, lockToProfileGate } = useApp();
   // TV: a slim icon rail that expands over the content when it receives focus.
   const rail = tvMode;
-  const label = rail ? 'hidden group-focus-within/aside:inline group-hover/aside:inline whitespace-nowrap' : '';
+  // Hover only opens the rail where there is a real pointer; touch leaves a sticky :hover behind.
+  const label = rail ? 'hidden group-focus-within/aside:inline [@media(hover:hover)]:group-hover/aside:inline whitespace-nowrap' : '';
 
   const go = (id: TabType) => {
     setActiveTab(id);
@@ -55,17 +56,17 @@ export const Sidebar: React.FC = () => {
     <aside
       className={`group/aside flex flex-col h-screen select-none shrink-0 ${
         rail
-          ? 'absolute inset-y-0 left-0 z-40 w-[84px] focus-within:w-80 hover:w-80 transition-[width] duration-200 bg-gradient-to-r from-[#060608] via-[#060608]/95 to-transparent focus-within:to-[#060608]/90 focus-within:shadow-[60px_0_120px_rgba(0,0,0,0.9)]'
+          ? 'absolute inset-y-0 left-0 z-40 w-[84px] focus-within:w-80 [@media(hover:hover)]:hover:w-80 transition-[width] duration-200 bg-gradient-to-r from-[#060608] via-[#060608]/95 to-transparent focus-within:to-[#060608]/90 focus-within:shadow-[60px_0_120px_rgba(0,0,0,0.9)]'
           : 'w-64 bg-[#060608] border-r border-white/5'
       }`}
     >
       <div className={`flex items-center ${rail ? 'h-24 px-[22px]' : 'h-20 px-5'}`}>
         {rail ? (
           <>
-            <span className="group-focus-within/aside:hidden group-hover/aside:hidden">
+            <span className="group-focus-within/aside:hidden [@media(hover:hover)]:group-hover/aside:hidden">
               <NebulaMark size={40} title="Nebula" />
             </span>
-            <span className="hidden group-focus-within/aside:inline-flex group-hover/aside:inline-flex">
+            <span className="hidden group-focus-within/aside:inline-flex [@media(hover:hover)]:group-hover/aside:inline-flex">
               <NebulaLogo size={36} />
             </span>
           </>

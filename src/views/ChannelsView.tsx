@@ -88,7 +88,7 @@ export const ChannelsView: React.FC = () => {
         <div className="absolute inset-0 bg-[radial-gradient(60%_90%_at_80%_0%,rgba(124,92,255,0.18),transparent_70%)] pointer-events-none" />
         {focused && (
           <>
-            <Logo channel={focused} className="relative w-56 aspect-video shrink-0 shadow-2xl" />
+            <Logo channel={focused} className="relative w-56 h-[126px] shrink-0 shadow-2xl" />
             <div className="relative min-w-0 flex-1 space-y-2">
               <div className="flex items-center gap-3 text-sm font-semibold text-white/70">
                 <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#FF3B4E] text-white text-xs font-bold tracking-wider">AO VIVO</span>
@@ -185,7 +185,7 @@ export const ChannelsView: React.FC = () => {
                 className="tv-card flex items-center gap-5 h-[84px] px-4 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] focus:bg-white/[0.1] cursor-pointer focus:outline-none"
               >
                 <span className="w-10 text-right font-mono text-sm text-white/40 shrink-0">{(numberOf.get(ch.id) ?? 0).toString().padStart(2, '0')}</span>
-                <Logo channel={ch} className="w-[104px] aspect-video shrink-0" />
+                <Logo channel={ch} className="w-[104px] h-[58px] shrink-0" />
                 <div className="min-w-0 w-44 shrink-0">
                   <p className="text-white font-semibold truncate flex items-center gap-2">
                     {ch.name}

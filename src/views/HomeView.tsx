@@ -120,7 +120,7 @@ export const HomeView: React.FC = () => {
         </div>
         <div className="flex gap-4 overflow-hidden pt-16">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="w-44 aspect-[2/3] shrink-0 rounded-lg bg-white/5" />
+            <div key={i} className="w-44 h-[264px] shrink-0 rounded-lg bg-white/5" />
           ))}
         </div>
       </div>

@@ -78,7 +78,7 @@ export const Billboard: React.FC<BillboardProps> = ({ item, resumeSeconds, inMyL
       <div key={`${item.id}-info`} className={`absolute left-14 ${tv ? 'bottom-[3vh] space-y-4' : 'bottom-[24vh] space-y-5'} max-w-[46%] animate-[billboardTextIn_600ms_ease]`}>
         <span className="flex items-center gap-2.5 text-[13px] font-bold tracking-[0.28em] text-white/80">
           <NebulaMark size={22} />
-          {vod ? 'FILME' : 'SÉRIE'}
+          <span>{vod ? 'FILME' : 'SÉRIE'}</span>
         </span>
         <h1 className={`font-display ${tv ? 'text-[56px]' : 'text-[64px]'} font-extrabold text-white leading-[0.98] tracking-tight line-clamp-2 drop-shadow-[0_4px_24px_rgba(0,0,0,0.6)]`}>
           {item.title}

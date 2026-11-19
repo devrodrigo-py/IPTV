@@ -18,15 +18,14 @@ export const StatsView: React.FC = () => {
   const sortedGenres = Object.entries(stats.genreCounts).sort((a, b) => b[1] - a[1]);
 
   return (
-    <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-6 select-none">
+    <div className="px-14 pt-10 pb-12 space-y-6 select-none">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#2A2A31]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6">
         <div>
           <div className="flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-[#7C5CFF]" />
-            <h1 className="text-xl font-bold text-white tracking-tight">Estatísticas de Consumo</h1>
+            <h1 className="font-display text-4xl font-bold text-white tracking-tight">Estatísticas</h1>
           </div>
-          <p className="text-xs text-[#A1A1AA] mt-0.5">
+          <p className="text-base text-white/50 mt-1.5">
             Métricas de tempo de tela, canais mais acessados e gêneros favoritos.
           </p>
         </div>

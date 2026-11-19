@@ -74,7 +74,7 @@ export const DetailHero: React.FC<DetailHeroProps> = ({
         <div className="max-w-[48%] space-y-5">
           <span className="flex items-center gap-2.5 text-[13px] font-bold tracking-[0.28em] text-white/80">
             <NebulaMark size={22} />
-            {kind}
+            <span>{kind}</span>
           </span>
           <h1 className="font-display text-[60px] font-extrabold text-white leading-[0.98] tracking-tight drop-shadow-[0_4px_24px_rgba(0,0,0,0.6)]">
             {title}
