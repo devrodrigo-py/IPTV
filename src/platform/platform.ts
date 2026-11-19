@@ -29,7 +29,10 @@ export function detectDeviceProfile(
 ): DeviceProfile {
   const isFireTv = /\bAFT[A-Z0-9]*\b/.test(ua) || /Fire ?TV/i.test(ua);
   const isAndroidTv =
-    isFireTv || /Android TV|GoogleTV|BRAVIA|MiTV|MIBOX|Mi Box|SHIELD|Chromecast|\bTV\b/i.test(ua);
+    isFireTv ||
+    // NebulaTV is appended by the Android app itself (capacitor.config.ts): many
+    // Google TV user agents do not mention "TV" at all.
+    /NebulaTV|Android TV|GoogleTV|BRAVIA|MiTV|MIBOX|Mi Box|SHIELD|Chromecast|\bTV\b/i.test(ua);
   const isLowEnd = (memoryGb !== undefined && memoryGb <= 2) || (cores !== undefined && cores <= 4 && isAndroidTv);
   return {
     isFireTv,

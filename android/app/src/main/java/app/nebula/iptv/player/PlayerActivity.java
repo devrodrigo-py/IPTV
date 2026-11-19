@@ -405,7 +405,9 @@ public class PlayerActivity extends AppCompatActivity {
                 showInfo(title, subtitle);
                 return true;
             }
-        } else if (!controlsVisible) {
+        } else if (!controlsVisible || focusOnSeekTarget()) {
+            // Left/right keep seeking while focus is on play/pause or the time bar
+            // (streaming-app behaviour); on the other buttons they move focus.
             if (code == KeyEvent.KEYCODE_DPAD_RIGHT || code == KeyEvent.KEYCODE_MEDIA_FAST_FORWARD) {
                 player.seekForward();
                 playerView.showController();
@@ -418,6 +420,16 @@ public class PlayerActivity extends AppCompatActivity {
             }
         }
         return super.dispatchKeyEvent(event);
+    }
+
+    private boolean focusOnSeekTarget() {
+        View f = getCurrentFocus();
+        if (f == null) return true;
+        int id = f.getId();
+        return id == View.NO_ID
+                || id == R.id.player_view
+                || id == androidx.media3.ui.R.id.exo_play_pause
+                || id == androidx.media3.ui.R.id.exo_progress;
     }
 
     // ------------------------------------------------------------------ lifecycle
