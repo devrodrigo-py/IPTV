@@ -248,3 +248,16 @@ button.tv-card {
 .no-flex-gap .flex.gap-x-2 > * + * { margin-left: 0.5rem; }
 .no-flex-gap .flex.gap-x-3 > * + * { margin-left: 0.75rem; }
 .no-flex-gap .flex.gap-x-4 > * + * { margin-left: 1rem; }
+
+/* Top 10 numerals: solid glyphs filled with a white-to-transparent fade. */
+.nebula-rank {
+  font-size: 150px;
+  line-height: 0.74;
+  letter-spacing: -0.07em;
+  padding-right: 0.04em;
+  background: linear-gradient(180deg, #ffffff 0%, rgba(255, 255, 255, 0.55) 48%, rgba(255, 255, 255, 0.05) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}

@@ -237,17 +237,14 @@ export const HomeView: React.FC = () => {
         </MediaRow>
 
         {rows.topRated.length >= 3 && (
-          <MediaRow title="Top 10 no Nebula" itemWidth="w-52">
+          <MediaRow title="Top 10 no Nebula" itemWidth="w-auto">
             {rows.topRated.slice(0, 10).map((v, i) => (
-              <div key={v.id} className="relative pl-[64px]">
-                <span
-                  aria-hidden
-                  className="absolute left-0 bottom-0 font-display font-black leading-[0.8] text-[132px] text-[#060608] select-none pointer-events-none"
-                  style={{ WebkitTextStroke: '3px rgba(255,255,255,0.55)', letterSpacing: '-0.08em' }}
-                >
+              <div key={v.id} className="flex items-end">
+                {/* Solid numeral with a fading fill: no outline (outlines show the font's inner contours) */}
+                <span aria-hidden className="nebula-rank font-display font-black select-none pointer-events-none">
                   {i + 1}
                 </span>
-                {poster(v)}
+                <div className="relative z-10 w-32 md:w-36 shrink-0 ml-1">{poster(v)}</div>
               </div>
             ))}
           </MediaRow>
