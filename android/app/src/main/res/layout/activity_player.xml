@@ -12,52 +12,221 @@
         android:focusable="true"
         app:show_buffering="when_playing"
         app:use_controller="true"
-        app:resize_mode="fit" />
+        app:resize_mode="fit"
+        app:played_color="#8B6CFF"
+        app:scrubber_color="#FFFFFF"
+        app:buffered_color="#66FFFFFF"
+        app:unplayed_color="#33FFFFFF"
+        app:show_shuffle_button="false" />
 
-    <!-- Channel name / number shown while zapping -->
-    <TextView
+    <!-- Top bar: brand, title and subtitle; shown together with the controls -->
+    <LinearLayout
+        android:id="@+id/player_top"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:background="@drawable/player_top_scrim"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="48dp"
+        android:paddingTop="32dp"
+        android:paddingEnd="48dp"
+        android:paddingBottom="56dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:contentDescription="@null"
+            android:src="@drawable/nebula_mark" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="18dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/player_top_live"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="10dp"
+                    android:background="@drawable/player_live_pill"
+                    android:fontFamily="@font/outfit_bold"
+                    android:paddingStart="8dp"
+                    android:paddingTop="2dp"
+                    android:paddingEnd="8dp"
+                    android:paddingBottom="2dp"
+                    android:text="AO VIVO"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/player_top_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/outfit_extrabold"
+                    android:maxLines="1"
+                    android:textColor="#FFFFFF"
+                    android:textSize="26sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/player_top_subtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:fontFamily="@font/outfit_medium"
+                android:maxLines="1"
+                android:textColor="#B3FFFFFF"
+                android:textSize="16sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Zapping banner: number, channel and programme on air -->
+    <LinearLayout
         android:id="@+id/player_info"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="top|start"
-        android:layout_margin="48dp"
-        android:background="#CC16162A"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="48dp"
+        android:layout_marginBottom="48dp"
+        android:background="@drawable/player_card_bg"
+        android:gravity="center_vertical"
+        android:minWidth="360dp"
+        android:orientation="horizontal"
         android:paddingStart="24dp"
-        android:paddingTop="14dp"
-        android:paddingEnd="24dp"
-        android:paddingBottom="14dp"
-        android:textColor="#FFFFFF"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:visibility="gone" />
+        android:paddingTop="18dp"
+        android:paddingEnd="32dp"
+        android:paddingBottom="18dp"
+        android:visibility="gone">
 
-    <!-- Buffering / reconnect / error messages -->
+        <TextView
+            android:id="@+id/player_info_number"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="20dp"
+            android:fontFamily="@font/outfit_extrabold"
+            android:textColor="#FFFFFF"
+            android:textSize="40sp" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/player_info_kicker"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/player_live_pill"
+                android:fontFamily="@font/outfit_bold"
+                android:paddingStart="7dp"
+                android:paddingTop="1dp"
+                android:paddingEnd="7dp"
+                android:paddingBottom="1dp"
+                android:text="AO VIVO"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/player_info_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:ellipsize="end"
+                android:fontFamily="@font/outfit_bold"
+                android:maxLines="1"
+                android:maxWidth="520dp"
+                android:textColor="#FFFFFF"
+                android:textSize="22sp" />
+
+            <TextView
+                android:id="@+id/player_info_sub"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFamily="@font/outfit_medium"
+                android:maxLines="1"
+                android:maxWidth="520dp"
+                android:textColor="#A6FFFFFF"
+                android:textSize="15sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Reconnect / error messages -->
     <TextView
         android:id="@+id/player_status"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:background="#B307070F"
+        android:background="@drawable/player_card_bg"
+        android:fontFamily="@font/outfit_medium"
         android:gravity="center"
-        android:padding="20dp"
-        android:textColor="#F5F3FF"
+        android:lineSpacingExtra="4dp"
+        android:maxWidth="640dp"
+        android:padding="24dp"
+        android:textColor="#F5F5F7"
         android:textSize="18sp"
         android:visibility="gone" />
 
-    <Button
-        android:id="@+id/next_button"
+    <!-- Next episode -->
+    <LinearLayout
+        android:id="@+id/next_card"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="48dp"
         android:layout_marginBottom="120dp"
-        android:backgroundTint="#FFFFFF"
-        android:focusable="true"
-        android:paddingStart="24dp"
-        android:paddingEnd="24dp"
-        android:textAllCaps="false"
-        android:textColor="#07070F"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:visibility="gone" />
+        android:background="@drawable/player_card_bg"
+        android:orientation="vertical"
+        android:padding="20dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/outfit_bold"
+            android:letterSpacing="0.15"
+            android:text="PRÓXIMO EPISÓDIO"
+            android:textColor="#99FFFFFF"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/next_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:ellipsize="end"
+            android:fontFamily="@font/outfit_bold"
+            android:maxLines="2"
+            android:maxWidth="380dp"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp" />
+
+        <Button
+            android:id="@+id/next_button"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/player_next_button"
+            android:focusable="true"
+            android:fontFamily="@font/outfit_bold"
+            android:paddingStart="28dp"
+            android:paddingEnd="28dp"
+            android:text="▶  Assistir agora"
+            android:textAllCaps="false"
+            android:textColor="#060608"
+            android:textSize="17sp" />
+    </LinearLayout>
 </FrameLayout>

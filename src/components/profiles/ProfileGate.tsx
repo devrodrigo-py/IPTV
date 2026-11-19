@@ -1,4 +1,4 @@
-import nebulaIcon from '../../../assets/branding/nebula_icon.png';
+import { NebulaLogo } from '../brand/NebulaLogo';
 import { AVATAR_PRESETS, Avatar } from './Avatar';
 import React, { useState } from 'react';
 import { Plus, Lock, Shield, User, X, Check, Edit2, Trash2 } from 'lucide-react';
@@ -61,39 +61,29 @@ export const ProfileGate: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#060608] flex flex-col items-center justify-center p-6 select-none relative">
+    <div className="fixed inset-0 z-50 bg-[#060608] flex flex-col items-center justify-center p-6 select-none">
       {/* Return button if already logged into a profile */}
       {activeProfile && !activeProfile.pin && (
         <button
           onClick={() => selectProfile(activeProfile)}
-          className="absolute top-6 right-6 px-4 py-2 rounded-xl bg-[#141418] hover:bg-[#1E1E24] text-xs font-semibold text-[#A1A1AA] hover:text-white border border-[#2A2A31] cursor-pointer transition-colors"
+          data-tv-skip
+          tabIndex={-1}
+          className="absolute top-12 right-14 px-4 py-2 rounded-md text-sm font-medium text-white/50 hover:text-white cursor-pointer transition-colors"
         >
           Voltar ao App
         </button>
       )}
 
-      {/* Brand Icon Header */}
-      <div className="flex flex-col items-center mb-10">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#7C5CFF] via-[#2B1F66] to-[#22D3A6] p-2 flex items-center justify-center shadow-xl shadow-[#7C5CFF]/30 mb-3">
-          <img
-            src={nebulaIcon}
-            alt="Nebula"
-            className="w-full h-full object-contain filter drop-shadow"
-            onError={(e) => {
-              (e.target as HTMLElement).style.display = 'none';
-            }}
-          />
-        </div>
-        <h1 className="text-3xl font-extrabold text-white tracking-tight font-['Outfit']">
-          Quem está assistindo?
-        </h1>
-        <p className="text-xs text-[#A1A1AA] mt-1">
-          Escolha um perfil para carregar preferências, favoritos e histórico.
-        </p>
+      {/* Brand + title */}
+      <div className="absolute top-10 left-14">
+        <NebulaLogo size={40} />
+      </div>
+      <div className="flex flex-col items-center mb-14">
+        <h1 className="font-display text-5xl md:text-6xl font-bold text-white tracking-tight">Quem está assistindo?</h1>
       </div>
 
       {/* Profiles Grid */}
-      <div className="flex flex-wrap items-center justify-center gap-6 max-w-4xl">
+      <div className="flex flex-wrap items-start justify-center gap-10 max-w-6xl">
         {profiles.map((profile, idx) => (
           <div
             key={profile.id}
@@ -104,10 +94,10 @@ export const ProfileGate: React.FC = () => {
             onKeyDown={(e) => {
               if (e.key === 'Enter') { e.preventDefault(); handleProfileClick(profile); }
             }}
-            className="tv-card group flex flex-col items-center cursor-pointer focus:outline-none"
+            className="tv-card group flex flex-col items-center cursor-pointer focus:outline-none rounded-xl p-2"
           >
-            <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-3xl overflow-hidden border-2 border-transparent group-hover:border-[#7C5CFF] group-hover:scale-105 group-hover:shadow-2xl group-hover:shadow-[#7C5CFF]/40 transition-all duration-300 bg-[#141418]">
-              <Avatar avatar={profile.avatar} name={profile.name} className="w-full h-full" textClassName="text-5xl" />
+            <div className="relative w-36 h-36 md:w-40 md:h-40 rounded-xl overflow-hidden bg-[#141418]">
+              <Avatar avatar={profile.avatar} name={profile.name} className="w-full h-full" textClassName="text-6xl" />
 
               {/* Pin indicator */}
               {profile.pin && (
@@ -124,7 +114,7 @@ export const ProfileGate: React.FC = () => {
               )}
             </div>
 
-            <span className="text-sm font-bold text-[#A1A1AA] group-hover:text-white mt-3 text-center transition-colors">
+            <span className="text-lg font-medium text-white/60 group-hover:text-white mt-4 text-center transition-colors">
               {profile.name}
             </span>
           </div>
@@ -138,12 +128,12 @@ export const ProfileGate: React.FC = () => {
           onKeyDown={(e) => {
             if (e.key === 'Enter') { e.preventDefault(); setIsAddingProfile(true); }
           }}
-          className="tv-card group flex flex-col items-center cursor-pointer focus:outline-none"
+          className="tv-card group flex flex-col items-center cursor-pointer focus:outline-none rounded-xl p-2"
         >
           <div className="w-28 h-28 md:w-32 md:h-32 rounded-3xl border-2 border-dashed border-[#2A2A31] group-hover:border-[#22D3A6] group-hover:scale-105 transition-all flex items-center justify-center bg-[#141418]/30">
             <Plus className="w-10 h-10 text-[#A1A1AA] group-hover:text-[#22D3A6] transition-colors" />
           </div>
-          <span className="text-sm font-bold text-[#A1A1AA] group-hover:text-white mt-3 text-center">
+          <span className="text-lg font-medium text-white/60 group-hover:text-white mt-4 text-center">
             Adicionar Perfil
           </span>
         </div>

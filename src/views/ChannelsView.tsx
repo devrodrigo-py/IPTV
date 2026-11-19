@@ -158,7 +158,7 @@ export const ChannelsView: React.FC = () => {
         </nav>
 
         {/* Guide */}
-        <div className="flex-1 min-w-0 overflow-y-auto scrollbar-none pb-10 space-y-2">
+        <div className="flex-1 min-w-0 overflow-y-auto scrollbar-none pb-10 pt-1 px-1 -mx-1 space-y-2">
           {list.length === 0 && <p className="text-white/50 pt-6">{category === FAVS ? 'Marque canais como favoritos no player para vê-los aqui.' : 'Nenhum canal encontrado.'}</p>}
           {visible.map((ch, idx) => {
             const epg = nowAndNext(getChannelPrograms(ch.id));

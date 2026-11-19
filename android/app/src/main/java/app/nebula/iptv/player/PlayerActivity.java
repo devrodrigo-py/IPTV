@@ -77,8 +77,18 @@ public class PlayerActivity extends AppCompatActivity {
 
     private ExoPlayer player;
     private PlayerView playerView;
-    private TextView infoView;
+    private View infoView;
+    private TextView infoNumber;
+    private TextView infoKicker;
+    private TextView infoTitle;
+    private TextView infoSub;
+    private View topBar;
+    private TextView topTitle;
+    private TextView topSubtitle;
+    private TextView topLive;
     private TextView statusView;
+    private View nextCard;
+    private TextView nextTitleView;
     private Button nextButton;
 
     private boolean isLive;
@@ -112,7 +122,17 @@ public class PlayerActivity extends AppCompatActivity {
 
         playerView = findViewById(R.id.player_view);
         infoView = findViewById(R.id.player_info);
+        infoNumber = findViewById(R.id.player_info_number);
+        infoKicker = findViewById(R.id.player_info_kicker);
+        infoTitle = findViewById(R.id.player_info_title);
+        infoSub = findViewById(R.id.player_info_sub);
+        topBar = findViewById(R.id.player_top);
+        topTitle = findViewById(R.id.player_top_title);
+        topSubtitle = findViewById(R.id.player_top_subtitle);
+        topLive = findViewById(R.id.player_top_live);
         statusView = findViewById(R.id.player_status);
+        nextCard = findViewById(R.id.next_card);
+        nextTitleView = findViewById(R.id.next_title);
         nextButton = findViewById(R.id.next_button);
 
         Intent in = getIntent();
@@ -138,6 +158,12 @@ public class PlayerActivity extends AppCompatActivity {
 
         nextButton.setOnClickListener(v -> finishWithResult(false, true));
 
+        // The branded top bar follows the controls' visibility.
+        playerView.setControllerVisibilityListener((PlayerView.ControllerVisibilityListener) visibility -> {
+            updateTopBar();
+            topBar.setVisibility(visibility == View.VISIBLE ? View.VISIBLE : View.GONE);
+        });
+
         player.addListener(new Player.Listener() {
             @Override
             public void onPlaybackStateChanged(int state) {
@@ -158,7 +184,8 @@ public class PlayerActivity extends AppCompatActivity {
         String url = in.getStringExtra(EXTRA_URL);
         long startMs = in.getLongExtra(EXTRA_START_MS, 0);
         load(url, startMs);
-        showInfo(title, subtitle);
+        updateTopBar();
+        if (isLive) showChannelBanner(queueIndex);
         handler.post(tick);
     }
 
@@ -310,8 +337,8 @@ public class PlayerActivity extends AppCompatActivity {
         subtitle = item.subtitle;
         retries = 0;
         load(item.url, 0);
-        int shown = item.number > 0 ? item.number : index + 1;
-        showInfo(String.format(Locale.ROOT, "%02d  %s", shown, item.title), item.subtitle);
+        updateTopBar();
+        showChannelBanner(index);
     }
 
     private void jumpToTypedChannel() {
@@ -328,38 +355,67 @@ public class PlayerActivity extends AppCompatActivity {
             }
             if (target == -1 && number >= 1 && number <= queue.size() && queue.get(0).number == 0) target = number - 1;
             if (target >= 0) switchTo(target);
-            else showInfo("Canal " + number + " não está nesta categoria", null);
+            else showInfo("", "Canal " + number, "não está nesta categoria", false);
         } catch (NumberFormatException ignored) {
             // Too many digits: ignore.
         }
         digits.setLength(0);
     }
 
-    private void showInfo(String line1, String line2) {
-        String text = line2 == null || line2.isEmpty() ? line1 : line1 + "\n" + line2;
-        if (text == null || text.isEmpty()) return;
-        infoView.setText(text);
+    private int channelNumber(int index) {
+        if (queue == null || index < 0 || index >= queue.size()) return 0;
+        PlayerQueue.Item item = queue.get(index);
+        return item.number > 0 ? item.number : index + 1;
+    }
+
+    private void showChannelBanner(int index) {
+        if (queue != null && index >= 0 && index < queue.size()) {
+            PlayerQueue.Item item = queue.get(index);
+            showInfo(String.format(Locale.ROOT, "%02d", channelNumber(index)), item.title, item.subtitle, true);
+        } else {
+            showInfo("", title, subtitle, true);
+        }
+    }
+
+    /** Bottom-left card: big number, live pill, channel and what is on air. */
+    private void showInfo(String number, String line1, String line2, boolean live) {
+        if ((line1 == null || line1.isEmpty()) && (number == null || number.isEmpty())) return;
+        infoNumber.setText(number == null ? "" : number);
+        infoNumber.setVisibility(number == null || number.isEmpty() ? View.GONE : View.VISIBLE);
+        infoKicker.setVisibility(live ? View.VISIBLE : View.GONE);
+        infoTitle.setText(line1 == null ? "" : line1);
+        infoSub.setText(line2 == null ? "" : line2);
+        infoSub.setVisibility(line2 == null || line2.isEmpty() ? View.GONE : View.VISIBLE);
         infoView.setVisibility(View.VISIBLE);
         handler.removeCallbacks(hideInfo);
         handler.postDelayed(hideInfo, INFO_VISIBLE_MS);
+    }
+
+    private void updateTopBar() {
+        topLive.setVisibility(isLive ? View.VISIBLE : View.GONE);
+        String t = title == null ? "" : title;
+        if (isLive && queueIndex >= 0) t = String.format(Locale.ROOT, "%02d  %s", channelNumber(queueIndex), t);
+        topTitle.setText(t);
+        topSubtitle.setText(subtitle == null ? "" : subtitle);
+        topSubtitle.setVisibility(subtitle == null || subtitle.isEmpty() ? View.GONE : View.VISIBLE);
     }
 
     // ------------------------------------------------------------------ next episode
 
     private void updateNextButton() {
         if (player == null || isLive || nextTitle == null || nextTitle.isEmpty() || nextDismissed) {
-            nextButton.setVisibility(View.GONE);
+            nextCard.setVisibility(View.GONE);
             return;
         }
         long duration = player.getDuration();
         long position = player.getCurrentPosition();
         boolean show = duration != C.TIME_UNSET && duration > 0 && duration - position <= NEXT_EPISODE_LEAD_MS;
-        if (show && nextButton.getVisibility() != View.VISIBLE) {
-            nextButton.setText("Próximo: " + nextTitle);
-            nextButton.setVisibility(View.VISIBLE);
+        if (show && nextCard.getVisibility() != View.VISIBLE) {
+            nextTitleView.setText(nextTitle);
+            nextCard.setVisibility(View.VISIBLE);
             nextButton.requestFocus();
         } else if (!show) {
-            nextButton.setVisibility(View.GONE);
+            nextCard.setVisibility(View.GONE);
         }
     }
 
@@ -372,9 +428,9 @@ public class PlayerActivity extends AppCompatActivity {
         boolean controlsVisible = playerView.isControllerFullyVisible();
 
         if (code == KeyEvent.KEYCODE_BACK || code == KeyEvent.KEYCODE_ESCAPE) {
-            if (nextButton.getVisibility() == View.VISIBLE) {
+            if (nextCard.getVisibility() == View.VISIBLE) {
                 nextDismissed = true;
-                nextButton.setVisibility(View.GONE);
+                nextCard.setVisibility(View.GONE);
                 return true;
             }
             if (controlsVisible) {
@@ -396,13 +452,13 @@ public class PlayerActivity extends AppCompatActivity {
             }
             if (code >= KeyEvent.KEYCODE_0 && code <= KeyEvent.KEYCODE_9 && canZap()) {
                 if (digits.length() < 5) digits.append((char) ('0' + (code - KeyEvent.KEYCODE_0)));
-                showInfo(digits.toString(), null);
+                showInfo(digits.toString(), "Digite o número do canal", null, false);
                 handler.removeCallbacks(commitDigits);
                 handler.postDelayed(commitDigits, 1500);
                 return true;
             }
             if (!controlsVisible && (code == KeyEvent.KEYCODE_INFO || code == KeyEvent.KEYCODE_GUIDE)) {
-                showInfo(title, subtitle);
+                showChannelBanner(queueIndex);
                 return true;
             }
         } else if (!controlsVisible || focusOnSeekTarget()) {

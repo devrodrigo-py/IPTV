@@ -67,6 +67,9 @@ async function main() {
     await render(join(res, `mipmap-${d}/ic_launcher_foreground.png`), fg, fg, `<div class="c">${markSvg('a', Math.round(fg * 0.5))}</div>`, true);
   }
 
+  // Mark used inside the native player (top bar)
+  await render(join(res, 'drawable-xhdpi/nebula_mark.png'), 96, 96, `<div class="c">${markSvg('p', 96)}</div>`, true);
+
   // Android TV home-screen banner (320x180 at xhdpi)
   const banner = `<div class="c"><div class="glow"></div>${lockup(64, 18)}</div>`;
   await render(join(res, 'drawable-xhdpi/banner.png'), 320, 180, banner);
