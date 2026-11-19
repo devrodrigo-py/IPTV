@@ -662,7 +662,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       const watchedMin = Math.round(res.positionMs / 60000);
       if (watchedMin > 0) trackWatchTime(stream.series?.title || stream.title, opts.genre, Math.min(watchedMin, 240));
-      saveProgress(stream.episode?.id || stream.id, res.positionMs / 1000, res.durationMs / 1000);
+      // An empty result (player killed by the system) must not wipe saved progress.
+      if (res.positionMs > 0) saveProgress(stream.episode?.id || stream.id, res.positionMs / 1000, res.durationMs / 1000);
       return res;
     } catch (e) {
       console.error('Player nativo falhou, usando o player web:', e);
