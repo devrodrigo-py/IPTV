@@ -32,6 +32,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   parentalControlEnabled: true,
   masterPin: '0000',
   streamAutoplay: true,
+  corsProxyUrl: '',
+  tmdbApiKey: '',
+  liteMode: 'auto',
+  useNativePlayer: true,
+  autoplayNextEpisode: true,
 };
 
 export const INITIAL_PLAYLISTS: Playlist[] = [

@@ -32,7 +32,11 @@ export interface Playlist {
   url?: string;
   username?: string;
   password?: string;
+  /** XMLTV guide URL (from M3U header url-tvg or Xtream xmltv.php). */
+  epgUrl?: string;
   channelCount: number;
+  vodCount?: number;
+  seriesCount?: number;
   lastSync: string;
   isActive: boolean;
   autoSyncMinutes?: number;
@@ -40,6 +44,10 @@ export interface Playlist {
 
 export interface VodItem {
   id: string;
+  playlistId?: string;
+  /** Provider id (Xtream stream_id) used for get_vod_info. */
+  sourceId?: string;
+  tmdbId?: string;
   title: string;
   posterUrl: string;
   backdropUrl?: string;
@@ -51,6 +59,7 @@ export interface VodItem {
   streamUrl: string;
   director?: string;
   cast?: string[];
+  addedAt?: number; // epoch seconds, used for "Adicionados recentemente"
 }
 
 export interface Episode {
@@ -71,6 +80,12 @@ export interface Season {
 
 export interface SeriesItem {
   id: string;
+  playlistId?: string;
+  /** Provider id (Xtream series_id) used for lazy get_series_info. */
+  sourceId?: string;
+  tmdbId?: string;
+  year?: number;
+  addedAt?: number;
   title: string;
   posterUrl: string;
   backdropUrl?: string;
@@ -78,6 +93,8 @@ export interface SeriesItem {
   rating: number;
   category: string;
   seasons: Season[];
+  /** False when seasons must still be fetched from the provider. */
+  seasonsLoaded?: boolean;
 }
 
 export interface WatchHistoryItem {
@@ -91,6 +108,19 @@ export interface WatchHistoryItem {
   timestamp: string; // ISO
   positionSeconds: number;
   durationSeconds?: number;
+  /** For episodes: the series id, so "Continuar" can reopen the series. */
+  seriesId?: string;
+  seasonNumber?: number;
+  episodeNumber?: number;
+}
+
+/** Playback progress for on-demand content (movies and episodes). */
+export interface ProgressEntry {
+  contentId: string;
+  positionSeconds: number;
+  durationSeconds: number;
+  updatedAt: string; // ISO
+  finished: boolean;
 }
 
 export interface UserProfile {
@@ -117,4 +147,14 @@ export interface AppSettings {
   parentalControlEnabled: boolean;
   masterPin: string;
   streamAutoplay: boolean;
+  /** Prefix used by the browser build to reach servers without CORS, e.g. https://proxy.example/?url= */
+  corsProxyUrl: string;
+  /** Optional TMDB v3 API key or v4 read token for posters, backdrops and synopses. */
+  tmdbApiKey: string;
+  /** Lighter visuals and fewer simultaneous decoders for low-end TV sticks. */
+  liteMode: 'auto' | 'on' | 'off';
+  /** Android: play through the native Media3 player instead of the WebView. */
+  useNativePlayer: boolean;
+  /** Start the next episode automatically when one ends. */
+  autoplayNextEpisode: boolean;
 }
