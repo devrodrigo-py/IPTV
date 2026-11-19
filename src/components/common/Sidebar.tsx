@@ -59,7 +59,7 @@ export const Sidebar: React.FC = () => {
             NEBULA <span className="text-[#1FCFAE] text-xs font-mono font-bold ml-0.5">IPTV</span>
           </span>
           <p className="text-[10px] text-[#A8A6C0] font-medium tracking-wider uppercase">
-            Streaming Hub v2.1
+            Streaming Hub v3.0
           </p>
         </div>
       </div>

@@ -151,7 +151,6 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({ onClose }) => {
             </label>
             <input
               type="text"
-              required
               placeholder="Ex: Minha Lista Brasil, Grade de Esportes..."
               value={name}
               onChange={(e) => setName(e.target.value)}

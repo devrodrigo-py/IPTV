@@ -46,7 +46,7 @@ export const VodModal: React.FC<VodModalProps> = ({ vod, onClose }) => {
 
         <div className="relative h-56 md:h-72 w-full bg-black shrink-0">
           {(vod.backdropUrl || vod.posterUrl) && (
-            <img src={vod.backdropUrl || vod.posterUrl} alt="" className="w-full h-full object-cover opacity-60" />
+            <img src={vod.backdropUrl || vod.posterUrl} alt="" onError={(e) => ((e.target as HTMLElement).style.display = 'none')} className="w-full h-full object-cover opacity-60" />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-[#16162A] via-[#16162A]/40 to-transparent" />
           <div className="absolute bottom-5 left-6 right-6 flex flex-wrap items-center gap-3">
