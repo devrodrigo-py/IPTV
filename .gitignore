@@ -32,3 +32,6 @@ desktop.ini
 
 # Local test captures
 shots/
+
+# Locally built APKs
+release/
