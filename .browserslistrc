@@ -1,0 +1,3 @@
+# Oldest TV WebViews the app supports (Android 9 / Fire OS 6 without updates).
+chrome >= 64
+safari >= 12

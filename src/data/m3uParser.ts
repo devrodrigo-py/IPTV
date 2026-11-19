@@ -2,6 +2,8 @@ import { Channel } from '../types';
 
 export interface M3uParseResult {
   channels: Channel[];
+  /** Guide URL from the #EXTM3U header (url-tvg / x-tvg-url), if any. */
+  epgUrl?: string;
   totalLines: number;
   validCount: number;
   errorCount: number;
@@ -18,11 +20,16 @@ export function parseM3u(content: string, playlistId: string): M3uParseResult {
   let errorCount = 0;
 
   let pendingExtinf: string | null = null;
+  let epgUrl: string | undefined;
 
   for (let i = 0; i < lines.length; i++) {
     const rawLine = lines[i].trim();
     if (!rawLine) continue;
-    if (rawLine.startsWith('#EXTM3U')) continue;
+    if (rawLine.startsWith('#EXTM3U')) {
+      const tvg = extractAttribute(rawLine, 'url-tvg') || extractAttribute(rawLine, 'x-tvg-url');
+      if (tvg) epgUrl = tvg.split(',')[0].trim();
+      continue;
+    }
 
     if (rawLine.startsWith('#EXTINF:')) {
       pendingExtinf = rawLine;
@@ -61,6 +68,7 @@ export function parseM3u(content: string, playlistId: string): M3uParseResult {
 
   return {
     channels,
+    epgUrl,
     totalLines: lines.length,
     validCount: channels.length,
     errorCount,

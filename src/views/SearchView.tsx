@@ -1,27 +1,44 @@
-import React, { useState } from 'react';
-import { Search, Tv, Film, Play, Star } from 'lucide-react';
+import React, { useDeferredValue, useEffect, useState } from 'react';
+import { Search, Tv, Film, Play, Star, Mic } from 'lucide-react';
+import { isVoiceSearchAvailable, voiceSearch } from '../platform/nativePlayer';
 import { useApp } from '../context/AppContext';
 import { ChannelCard } from '../components/channels/ChannelCard';
-import { VodModal } from '../components/vod/VodModal';
-import { SeriesDetailModal } from '../components/series/SeriesDetailModal';
 import { VodItem, SeriesItem } from '../types';
+
+const RESULT_LIMIT = 60;
 
 export const SearchView: React.FC = () => {
   const {
     searchQuery,
     setSearchQuery,
+    tvMode,
     filteredChannels,
     vodItems,
     seriesItems,
-    selectedVodModal,
     setSelectedVodModal,
-    selectedSeriesModal,
     setSelectedSeriesModal,
   } = useApp();
 
   const [activeFilter, setActiveFilter] = useState<'all' | 'channels' | 'vod' | 'series'>('all');
+  const [voiceAvailable, setVoiceAvailable] = useState(false);
+  const [listening, setListening] = useState(false);
+  useEffect(() => {
+    void isVoiceSearchAvailable().then(setVoiceAvailable);
+  }, []);
+  const startVoice = async () => {
+    setListening(true);
+    try {
+      const text = await voiceSearch();
+      if (text) setSearchQuery(text);
+    } catch {
+      setVoiceAvailable(false);
+    } finally {
+      setListening(false);
+    }
+  };
 
-  const q = searchQuery.toLowerCase().trim();
+  // Typing stays responsive on TV sticks while big lists are filtered.
+  const q = useDeferredValue(searchQuery).toLowerCase().trim();
 
   const matchedChannels = filteredChannels.filter((c) => {
     if (!q) return true;
@@ -63,9 +80,20 @@ export const SearchView: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-[#16162A] text-sm text-white placeholder-[#A8A6C0] pl-12 pr-4 py-3 rounded-2xl border border-[#2A2A45] focus:border-[#6B4FE0] outline-none shadow-inner"
-            autoFocus
+            // On TV the on-screen keyboard would cover the screen as soon as the page opens.
+            autoFocus={!tvMode}
           />
         </div>
+        {voiceAvailable && (
+          <button
+            data-autofocus
+            onClick={startVoice}
+            data-tv-title="Buscar por voz"
+            className="tv-card w-fit px-5 py-3 rounded-2xl bg-[#6B4FE0] text-white text-sm font-bold flex items-center gap-2 cursor-pointer focus:outline-none"
+          >
+            <Mic className="w-5 h-5" /> {listening ? 'Ouvindo…' : 'Buscar por voz'}
+          </button>
+        )}
 
         {/* Filter Pills */}
         <div className="flex items-center gap-2">
@@ -119,7 +147,7 @@ export const SearchView: React.FC = () => {
             Canais Ao Vivo ({matchedChannels.length})
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {matchedChannels.map((ch, idx) => (
+            {matchedChannels.slice(0, RESULT_LIMIT).map((ch, idx) => (
               <ChannelCard key={ch.id} channel={ch} index={idx} />
             ))}
           </div>
@@ -132,14 +160,14 @@ export const SearchView: React.FC = () => {
             Filmes (VOD) ({matchedVod.length})
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-            {matchedVod.map((vod) => (
+            {matchedVod.slice(0, RESULT_LIMIT).map((vod) => (
               <div
                 key={vod.id}
                 tabIndex={0}
                 data-tv-title={`Filme: ${vod.title}`}
                 onClick={() => setSelectedVodModal(vod)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') setSelectedVodModal(vod);
+                  if (e.key === 'Enter') { e.preventDefault(); setSelectedVodModal(vod); }
                 }}
                 className="tv-card group bg-[#16162A] rounded-2xl border border-[#2A2A45] hover:border-[#6B4FE0] overflow-hidden cursor-pointer transition-all focus:outline-none"
               >
@@ -169,14 +197,14 @@ export const SearchView: React.FC = () => {
             Séries ({matchedSeries.length})
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {matchedSeries.map((series) => (
+            {matchedSeries.slice(0, RESULT_LIMIT).map((series) => (
               <div
                 key={series.id}
                 tabIndex={0}
                 data-tv-title={`Série: ${series.title}`}
                 onClick={() => setSelectedSeriesModal(series)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') setSelectedSeriesModal(series);
+                  if (e.key === 'Enter') { e.preventDefault(); setSelectedSeriesModal(series); }
                 }}
                 className="tv-card group bg-[#16162A] rounded-2xl border border-[#2A2A45] hover:border-[#6B4FE0] p-3 cursor-pointer transition-all focus:outline-none"
               >
@@ -188,16 +216,6 @@ export const SearchView: React.FC = () => {
         </section>
       )}
 
-      {selectedVodModal && (
-        <VodModal vod={selectedVodModal} onClose={() => setSelectedVodModal(null)} />
-      )}
-
-      {selectedSeriesModal && (
-        <SeriesDetailModal
-          series={selectedSeriesModal}
-          onClose={() => setSelectedSeriesModal(null)}
-        />
-      )}
     </div>
   );
 };

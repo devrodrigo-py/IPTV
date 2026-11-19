@@ -3,7 +3,7 @@ import { Channel, EpgProgram, Playlist, UserProfile, VodItem, SeriesItem, AppSet
 export const DEFAULT_PROFILES: UserProfile[] = [
   {
     id: 'prof_master',
-    name: 'Rodrigo (Principal)',
+    name: 'Principal',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     isKids: false,
     createdAt: new Date().toISOString(),
@@ -17,10 +17,9 @@ export const DEFAULT_PROFILES: UserProfile[] = [
   },
   {
     id: 'prof_kids',
-    name: 'Espaço Kids',
+    name: 'Kids',
     avatar: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
     isKids: true,
-    pin: '1234',
     createdAt: new Date().toISOString(),
   },
 ];
@@ -32,28 +31,23 @@ export const DEFAULT_SETTINGS: AppSettings = {
   parentalControlEnabled: true,
   masterPin: '0000',
   streamAutoplay: true,
+  corsProxyUrl: '',
+  tmdbApiKey: '',
+  liteMode: 'auto',
+  useNativePlayer: true,
+  autoplayNextEpisode: true,
 };
 
+export const DEMO_PLAYLIST_ID = 'pl_demo';
+
+/** Demo list with public test streams; only added when the user asks for it. */
 export const INITIAL_PLAYLISTS: Playlist[] = [
   {
-    id: 'pl_default',
-    name: 'Nebula Global Discovery',
+    id: DEMO_PLAYLIST_ID,
+    name: 'Demonstração (streams públicos de teste)',
     type: 'm3u',
-    url: 'https://iptv-org.github.io/iptv/index.m3u',
-    channelCount: 12,
+    channelCount: 0,
     lastSync: new Date().toISOString(),
-    isActive: true,
-    autoSyncMinutes: 1440,
-  },
-  {
-    id: 'pl_demo_xtream',
-    name: 'Servidor Demonstração Xtream',
-    type: 'xtream',
-    url: 'http://demo.iptv-server.net:8080',
-    username: 'nebula_user',
-    password: '••••••••',
-    channelCount: 8,
-    lastSync: new Date(Date.now() - 3600000 * 2).toISOString(),
     isActive: true,
   },
 ];
@@ -61,7 +55,7 @@ export const INITIAL_PLAYLISTS: Playlist[] = [
 export const INITIAL_CHANNELS: Channel[] = [
   {
     id: 'ch_1',
-    playlistId: 'pl_default',
+    playlistId: DEMO_PLAYLIST_ID,
     name: 'NASA TV HD (Ciência & Espaço)',
     streamUrl: 'https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8',
     logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/e5/NASA_logo.svg',
@@ -72,7 +66,7 @@ export const INITIAL_CHANNELS: Channel[] = [
   },
   {
     id: 'ch_2',
-    playlistId: 'pl_default',
+    playlistId: DEMO_PLAYLIST_ID,
     name: 'Bloomberg Television',
     streamUrl: 'https://liveproduseast.akamaized.net/us/Channel-HD-AWS-virginia-1/fastly.m3u8',
     logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Bloomberg_Television_logo.svg',
@@ -83,7 +77,7 @@ export const INITIAL_CHANNELS: Channel[] = [
   },
   {
     id: 'ch_3',
-    playlistId: 'pl_default',
+    playlistId: DEMO_PLAYLIST_ID,
     name: 'Euronews English Live',
     streamUrl: 'https://euronews-euronews-world-1-au.samsung.wurl.tv/playlist.m3u8',
     logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/47/Euronews_logo_2016.svg',
@@ -94,7 +88,7 @@ export const INITIAL_CHANNELS: Channel[] = [
   },
   {
     id: 'ch_4',
-    playlistId: 'pl_default',
+    playlistId: DEMO_PLAYLIST_ID,
     name: 'Red Bull TV Extreme Sports',
     streamUrl: 'https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8',
     logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/f/f5/Red_Bull_TV_logo.svg/512px-Red_Bull_TV_logo.svg.png',
@@ -105,7 +99,7 @@ export const INITIAL_CHANNELS: Channel[] = [
   },
   {
     id: 'ch_5',
-    playlistId: 'pl_default',
+    playlistId: DEMO_PLAYLIST_ID,
     name: 'DW English World News',
     streamUrl: 'https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8',
     logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/7/75/Deutsche_Welle_Logo.svg',
@@ -116,7 +110,7 @@ export const INITIAL_CHANNELS: Channel[] = [
   },
   {
     id: 'ch_6',
-    playlistId: 'pl_default',
+    playlistId: DEMO_PLAYLIST_ID,
     name: 'France 24 English Direct',
     streamUrl: 'https://stream.france24.com/hls/live/2037593/F24_EN_LO_HLS/master.m3u8',
     logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/ec/France_24_logo.svg',
@@ -127,7 +121,7 @@ export const INITIAL_CHANNELS: Channel[] = [
   },
   {
     id: 'ch_7',
-    playlistId: 'pl_default',
+    playlistId: DEMO_PLAYLIST_ID,
     name: 'Retro Toons & Cartoons Classic',
     streamUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
     logoUrl: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&auto=format&fit=crop&q=80',
@@ -138,7 +132,7 @@ export const INITIAL_CHANNELS: Channel[] = [
   },
   {
     id: 'ch_8',
-    playlistId: 'pl_default',
+    playlistId: DEMO_PLAYLIST_ID,
     name: 'CineMax Nebula 4K Showcase',
     streamUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
     logoUrl: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=100&auto=format&fit=crop&q=80',
@@ -149,7 +143,7 @@ export const INITIAL_CHANNELS: Channel[] = [
   },
   {
     id: 'ch_9',
-    playlistId: 'pl_default',
+    playlistId: DEMO_PLAYLIST_ID,
     name: 'Wild Planet 4K Documentary',
     streamUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
     logoUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=100&auto=format&fit=crop&q=80',
@@ -160,7 +154,7 @@ export const INITIAL_CHANNELS: Channel[] = [
   },
   {
     id: 'ch_10',
-    playlistId: 'pl_default',
+    playlistId: DEMO_PLAYLIST_ID,
     name: 'Ultra Beats Club & Música',
     streamUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
     logoUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&auto=format&fit=crop&q=80',
@@ -171,7 +165,7 @@ export const INITIAL_CHANNELS: Channel[] = [
   },
   {
     id: 'ch_11',
-    playlistId: 'pl_default',
+    playlistId: DEMO_PLAYLIST_ID,
     name: 'Sua TV Ao Vivo (Local Brasil)',
     streamUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
     logoUrl: 'https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=100&auto=format&fit=crop&q=80',
@@ -182,7 +176,7 @@ export const INITIAL_CHANNELS: Channel[] = [
   },
   {
     id: 'ch_12',
-    playlistId: 'pl_default',
+    playlistId: DEMO_PLAYLIST_ID,
     name: 'Motorsport & Turbo TV',
     streamUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackSeeTheWorld.mp4',
     logoUrl: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=100&auto=format&fit=crop&q=80',
@@ -421,6 +415,14 @@ export const INITIAL_SERIES: SeriesItem[] = [
   },
 ];
 
+export const EMPTY_STATS: WatchStats = {
+  totalMinutesWatched: 0,
+  channelPlayCounts: {},
+  genreCounts: {},
+  daysActive: 0,
+};
+
+/** Sample statistics shown with the demo content. */
 export const INITIAL_STATS: WatchStats = {
   totalMinutesWatched: 1420, // ~23.6 hours
   channelPlayCounts: {

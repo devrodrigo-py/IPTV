@@ -12,9 +12,13 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { EpgProgram, Channel } from '../types';
+import { useProgressiveList } from '../hooks/useProgressiveList';
 
 export const EpgView: React.FC = () => {
-  const { filteredChannels, epgPrograms, getChannelPrograms, playChannel, importXmltv } = useApp();
+  const { filteredChannels, getChannelPrograms, playChannel, importXmltv, importEpgFromUrl, playlists } = useApp();
+  const [epgUrlInput, setEpgUrlInput] = useState(() => playlists.find((p) => p.epgUrl)?.epgUrl || '');
+  const [isImporting, setIsImporting] = useState(false);
+  const { visible: visibleChannels, hasMore, sentinelRef } = useProgressiveList(filteredChannels, 40);
 
   const [selectedProgram, setSelectedProgram] = useState<{
     program: EpgProgram;
@@ -25,9 +29,18 @@ export const EpgView: React.FC = () => {
   const [xmltvInput, setXmltvInput] = useState('');
   const [importStatus, setImportStatus] = useState<string | null>(null);
 
-  const handleXmltvImport = () => {
+  const handleUrlImport = async () => {
+    if (!epgUrlInput.trim()) return;
+    setIsImporting(true);
+    setImportStatus('Baixando e processando o guia…');
+    const res = await importEpgFromUrl(epgUrlInput.trim());
+    setIsImporting(false);
+    setImportStatus(res.success ? `Sucesso! ${res.programCount} programas importados.` : res.message || 'Falha ao importar o guia.');
+  };
+
+  const handleXmltvImport = async () => {
     if (!xmltvInput.trim()) return;
-    const res = importXmltv(xmltvInput);
+    const res = await importXmltv(xmltvInput);
     if (res.success) {
       setImportStatus(`Sucesso! ${res.programCount} programas importados do XMLTV.`);
       setTimeout(() => {
@@ -44,10 +57,10 @@ export const EpgView: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         const text = event.target?.result as string;
         if (text) {
-          const res = importXmltv(text);
+          const res = await importXmltv(text);
           if (res.success) {
             setImportStatus(`Sucesso! ${res.programCount} programas importados do arquivo XMLTV.`);
             setTimeout(() => {
@@ -106,7 +119,12 @@ export const EpgView: React.FC = () => {
 
       {/* Channel Rows Timeline */}
       <div className="space-y-4">
-        {filteredChannels.map((channel) => {
+        {filteredChannels.length === 0 && (
+          <div className="p-10 text-center text-sm text-[#A8A6C0] bg-[#16162A]/50 rounded-2xl border border-[#2A2A45]">
+            Adicione uma lista em “Listas” para ver a programação dos seus canais.
+          </div>
+        )}
+        {visibleChannels.map((channel) => {
           const programs = getChannelPrograms(channel.id);
 
           return (
@@ -121,7 +139,7 @@ export const EpgView: React.FC = () => {
                   tabIndex={0}
                   data-tv-title={`EPG: Sintonizar ${channel.name}`}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') playChannel(channel);
+                    if (e.key === 'Enter') { e.preventDefault(); playChannel(channel); }
                   }}
                   className="tv-card w-full md:w-56 shrink-0 flex items-center gap-3 cursor-pointer group p-2 rounded-xl border border-transparent hover:border-[#6B4FE0]/30 focus:outline-none"
                 >
@@ -156,7 +174,7 @@ export const EpgView: React.FC = () => {
                           data-tv-title={`EPG: ${channel.name} - ${prog.title}`}
                           onClick={() => setSelectedProgram({ program: prog, channel })}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') setSelectedProgram({ program: prog, channel });
+                            if (e.key === 'Enter') { e.preventDefault(); setSelectedProgram({ program: prog, channel }); }
                           }}
                           className={`tv-card min-w-[200px] max-w-[240px] p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between shrink-0 focus:outline-none ${
                             active
@@ -198,6 +216,7 @@ export const EpgView: React.FC = () => {
             </div>
           );
         })}
+        {hasMore && <div ref={sentinelRef} className="h-10" aria-hidden />}
       </div>
 
       {/* Program Details Modal */}
@@ -291,6 +310,27 @@ export const EpgView: React.FC = () => {
             <p className="text-xs text-[#A8A6C0] mb-4">
               Carregue um arquivo .xml ou cole o XML com tags &lt;tv&gt;, &lt;channel&gt; e &lt;programme&gt;.
             </p>
+
+            <div className="mb-4">
+              <label className="block text-xs font-bold text-[#F5F3FF] mb-1.5">URL do guia (XMLTV, aceita .xml.gz)</label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={epgUrlInput}
+                  onChange={(e) => setEpgUrlInput(e.target.value)}
+                  placeholder="http://servidor/xmltv.php?username=…&password=…"
+                  className="flex-1 bg-[#07070F] border border-[#2A2A45] rounded-xl px-3 py-2 text-xs text-[#F5F3FF] outline-none focus:border-[#6B4FE0]"
+                />
+                <button
+                  onClick={handleUrlImport}
+                  disabled={isImporting || !epgUrlInput.trim()}
+                  data-tv-title="Baixar guia pela URL"
+                  className="tv-card px-4 py-2 rounded-xl bg-[#6B4FE0] disabled:opacity-50 text-white text-xs font-bold cursor-pointer focus:outline-none"
+                >
+                  {isImporting ? 'Baixando…' : 'Baixar'}
+                </button>
+              </div>
+            </div>
 
             <div className="mb-4">
               <label className="block text-xs font-bold text-[#F5F3FF] mb-1.5">

@@ -15,14 +15,15 @@ export const CategoryChips: React.FC<CategoryChipsProps> = ({
     <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none select-none">
       <button
         onClick={() => onSelectCategory('all')}
-        data-tv-title="Categoria: Todos os Canais"
+        data-tv-title="Categoria: Todos"
+        onFocus={(e) => e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })}
         className={`tv-card px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer focus:outline-none ${
           selectedCategory === 'all'
             ? 'bg-[#6B4FE0] text-white shadow-lg shadow-[#6B4FE0]/30'
             : 'bg-[#16162A] text-[#A8A6C0] hover:text-white hover:bg-[#1E1E38] border border-[#2A2A45]'
         }`}
       >
-        Todos os Canais
+        Todos
       </button>
 
       {categories.map((cat) => {
@@ -32,6 +33,7 @@ export const CategoryChips: React.FC<CategoryChipsProps> = ({
             key={cat}
             data-tv-title={`Categoria: ${cat}`}
             onClick={() => onSelectCategory(cat)}
+            onFocus={(e) => e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })}
             className={`tv-card px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer focus:outline-none ${
               isSelected
                 ? 'bg-[#6B4FE0] text-white shadow-lg shadow-[#6B4FE0]/30'

@@ -31,7 +31,7 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({ channel, index }) => {
       tabIndex={0}
       data-tv-title={`Canal: ${channel.name}`}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') playChannel(channel);
+        if (e.key === 'Enter') { e.preventDefault(); playChannel(channel); }
       }}
       className="tv-card group relative bg-[#16162A] hover:bg-[#1E1E38] rounded-2xl border border-[#2A2A45]/70 hover:border-[#6B4FE0]/60 p-4 transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden shadow-md hover:shadow-xl hover:shadow-[#6B4FE0]/10 focus:outline-none"
     >

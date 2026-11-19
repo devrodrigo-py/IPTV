@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @layer base {
   :root {
@@ -91,3 +93,86 @@
   mask-image: linear-gradient(to right, black 75%, transparent 100%);
   -webkit-mask-image: linear-gradient(to right, black 75%, transparent 100%);
 }
+
+/* Hide scrollbars on horizontal shelves (still scrollable by D-pad and touch) */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Long grids: let the browser skip layout/paint of off-screen cards */
+.tv-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 220px;
+}
+.tv-card.tv-focused,
+button.tv-card {
+  content-visibility: visible;
+}
+
+/*
+ * Lite mode (Fire TV Stick and other low-end boxes): blur, large shadows and
+ * transitions are what drop frames on their GPUs, so they are switched off.
+ */
+.lite *,
+.lite *::before,
+.lite *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  animation-duration: 0s !important;
+  transition-duration: 0s !important;
+}
+.lite [class*='shadow'] {
+  box-shadow: none !important;
+}
+.lite .tv-focused {
+  transform: scale(1.04) !important;
+  box-shadow: 0 0 0 4px #1fcfae !important;
+}
+.lite img {
+  image-rendering: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tv-focused {
+    transform: none !important;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(1.03); }
+  to { opacity: 0.6; transform: scale(1); }
+}
+
+/*
+ * Flexbox `gap` only exists from Chrome 84. Older TV WebViews get the same
+ * spacing from margins (html.no-flex-gap is set in main.tsx after a feature test).
+ */
+.no-flex-gap .flex:not(.flex-col).gap-0\.5 > * + *, .no-flex-gap .inline-flex.gap-0\.5 > * + * { margin-left: 0.125rem; }
+.no-flex-gap .flex.flex-col.gap-0\.5 > * + * { margin-top: 0.125rem; }
+.no-flex-gap .flex:not(.flex-col).gap-1 > * + *, .no-flex-gap .inline-flex.gap-1 > * + * { margin-left: 0.25rem; }
+.no-flex-gap .flex.flex-col.gap-1 > * + * { margin-top: 0.25rem; }
+.no-flex-gap .flex:not(.flex-col).gap-1\.5 > * + *, .no-flex-gap .inline-flex.gap-1\.5 > * + * { margin-left: 0.375rem; }
+.no-flex-gap .flex.flex-col.gap-1\.5 > * + * { margin-top: 0.375rem; }
+.no-flex-gap .flex:not(.flex-col).gap-2 > * + *, .no-flex-gap .inline-flex.gap-2 > * + * { margin-left: 0.5rem; }
+.no-flex-gap .flex.flex-col.gap-2 > * + * { margin-top: 0.5rem; }
+.no-flex-gap .flex:not(.flex-col).gap-2\.5 > * + *, .no-flex-gap .inline-flex.gap-2\.5 > * + * { margin-left: 0.625rem; }
+.no-flex-gap .flex.flex-col.gap-2\.5 > * + * { margin-top: 0.625rem; }
+.no-flex-gap .flex:not(.flex-col).gap-3 > * + *, .no-flex-gap .inline-flex.gap-3 > * + * { margin-left: 0.75rem; }
+.no-flex-gap .flex.flex-col.gap-3 > * + * { margin-top: 0.75rem; }
+.no-flex-gap .flex:not(.flex-col).gap-3\.5 > * + *, .no-flex-gap .inline-flex.gap-3\.5 > * + * { margin-left: 0.875rem; }
+.no-flex-gap .flex.flex-col.gap-3\.5 > * + * { margin-top: 0.875rem; }
+.no-flex-gap .flex:not(.flex-col).gap-4 > * + *, .no-flex-gap .inline-flex.gap-4 > * + * { margin-left: 1rem; }
+.no-flex-gap .flex.flex-col.gap-4 > * + * { margin-top: 1rem; }
+.no-flex-gap .flex:not(.flex-col).gap-5 > * + *, .no-flex-gap .inline-flex.gap-5 > * + * { margin-left: 1.25rem; }
+.no-flex-gap .flex.flex-col.gap-5 > * + * { margin-top: 1.25rem; }
+.no-flex-gap .flex:not(.flex-col).gap-6 > * + *, .no-flex-gap .inline-flex.gap-6 > * + * { margin-left: 1.5rem; }
+.no-flex-gap .flex.flex-col.gap-6 > * + * { margin-top: 1.5rem; }
+.no-flex-gap .flex:not(.flex-col).gap-8 > * + *, .no-flex-gap .inline-flex.gap-8 > * + * { margin-left: 2rem; }
+.no-flex-gap .flex.flex-col.gap-8 > * + * { margin-top: 2rem; }
+.no-flex-gap .flex:not(.flex-col).gap-10 > * + *, .no-flex-gap .inline-flex.gap-10 > * + * { margin-left: 2.5rem; }
+.no-flex-gap .flex.flex-col.gap-10 > * + * { margin-top: 2.5rem; }
+.no-flex-gap .flex:not(.flex-col).gap-12 > * + *, .no-flex-gap .inline-flex.gap-12 > * + * { margin-left: 3rem; }
+.no-flex-gap .flex.flex-col.gap-12 > * + * { margin-top: 3rem; }

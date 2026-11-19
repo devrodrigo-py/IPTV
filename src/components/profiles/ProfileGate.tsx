@@ -99,14 +99,15 @@ export const ProfileGate: React.FC = () => {
 
       {/* Profiles Grid */}
       <div className="flex flex-wrap items-center justify-center gap-6 max-w-4xl">
-        {profiles.map((profile) => (
+        {profiles.map((profile, idx) => (
           <div
             key={profile.id}
             tabIndex={0}
+            data-autofocus={idx === 0 ? true : undefined}
             data-tv-title={`Perfil: ${profile.name}`}
             onClick={() => handleProfileClick(profile)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') handleProfileClick(profile);
+              if (e.key === 'Enter') { e.preventDefault(); handleProfileClick(profile); }
             }}
             className="tv-card group flex flex-col items-center cursor-pointer focus:outline-none"
           >
@@ -144,7 +145,7 @@ export const ProfileGate: React.FC = () => {
           data-tv-title="Adicionar Novo Perfil"
           onClick={() => setIsAddingProfile(true)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') setIsAddingProfile(true);
+            if (e.key === 'Enter') { e.preventDefault(); setIsAddingProfile(true); }
           }}
           className="tv-card group flex flex-col items-center cursor-pointer focus:outline-none"
         >

@@ -1,244 +1,372 @@
-import React from 'react';
-import {
-  Play,
-  Tv,
-  Film,
-  Sparkles,
-  Heart,
-  History,
-  TrendingUp,
-  Clock,
-  Radio,
-  ChevronRight,
-} from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Play, Tv, Film, Heart, History, Radio, Clapperboard, Sparkles, ListPlus, Info, Star, TrendingUp, Layers, Plus, Check } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ChannelCard } from '../components/channels/ChannelCard';
-import { VodItem } from '../types';
+import { MediaRow } from '../components/media/MediaRow';
+import { PosterCard } from '../components/media/PosterCard';
+import { SeriesItem, VodItem } from '../types';
+
+const ROW_LIMIT = 20;
+
+type Featured = VodItem | SeriesItem;
+const isVod = (x: Featured): x is VodItem => 'streamUrl' in x;
+
+function topCategories<T extends { category: string }>(items: T[], n: number): string[] {
+  const counts = new Map<string, number>();
+  for (const it of items) counts.set(it.category, (counts.get(it.category) ?? 0) + 1);
+  return Array.from(counts.entries())
+    .filter(([, c]) => c >= 4)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, n)
+    .map(([k]) => k);
+}
 
 export const HomeView: React.FC = () => {
   const {
+    isHydrated,
+    playlists,
     filteredChannels,
+    favorites,
     history,
     vodItems,
     seriesItems,
+    continueWatchingItems,
+    getProgressFraction,
+    resumeHistoryItem,
     playChannel,
     playVod,
     setActiveTab,
-    setIsWrappedOpen,
     setSelectedVodModal,
+    setSelectedSeriesModal,
+    enrichArtwork,
+    loadDemoContent,
+    syncStatus,
+    myList,
+    toggleMyList,
+    isInMyList,
+    getResumeSeconds,
   } = useApp();
 
-  const heroChannel = filteredChannels[0];
-  const featuredVod = vodItems[0];
-  const topChannels = filteredChannels.slice(0, 8);
+  const rows = useMemo(() => {
+    const recentVod = [...vodItems].filter((v) => v.addedAt).sort((a, b) => (b.addedAt ?? 0) - (a.addedAt ?? 0)).slice(0, ROW_LIMIT);
+    const topRated = [...vodItems].filter((v) => v.rating >= 7).sort((a, b) => b.rating - a.rating).slice(0, ROW_LIMIT);
+    const recentSeries = [...seriesItems].sort((a, b) => (b.addedAt ?? 0) - (a.addedAt ?? 0)).slice(0, ROW_LIMIT);
+    const vodCats = topCategories(vodItems, 6).map((cat) => ({ cat, items: vodItems.filter((v) => v.category === cat).slice(0, ROW_LIMIT) }));
+    const favSet = new Set(favorites);
+    const favChannels = filteredChannels.filter((c) => favSet.has(c.id)).slice(0, ROW_LIMIT);
+    const byId = new Map(filteredChannels.map((c) => [c.id, c]));
+    const recentChannels = history
+      .filter((h) => h.contentType === 'channel')
+      .map((h) => byId.get(h.contentId))
+      .filter((c): c is NonNullable<typeof c> => !!c)
+      .slice(0, 8);
+    const hero: VodItem | SeriesItem | undefined =
+      vodItems.find((v) => v.backdropUrl && v.rating >= 7) || vodItems.find((v) => v.backdropUrl) || seriesItems.find((s) => s.backdropUrl) || vodItems[0];
+    const vodById = new Map(vodItems.map((v) => [v.id, v]));
+    const serById = new Map(seriesItems.map((x) => [x.id, x]));
+    const myListItems = myList
+      .map((id) => (vodById.get(id) as Featured | undefined) ?? (serById.get(id) as Featured | undefined))
+      .filter((x): x is Featured => !!x)
+      .slice(0, ROW_LIMIT);
+    return { recentVod, topRated, recentSeries, vodCats, favChannels, recentChannels, hero, myListItems };
+  }, [vodItems, seriesItems, filteredChannels, favorites, history, myList]);
 
-  return (
-    <div className="px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-8 select-none">
-      {/* Hero Showcase Banner with Netflix Multi-Stop Scrim Protection */}
-      {heroChannel && (
-        <div className="relative rounded-3xl overflow-hidden bg-[#16162A] border border-[#6B4FE0]/40 shadow-2xl p-6 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8">
-          {/* Background Scrim */}
-          <div className="absolute inset-0 scrim-hero-tv z-0 pointer-events-none" />
+  // Billboard: follows the focused title like streaming apps on TV; rotates when idle.
+  const heroCandidates = useMemo(() => {
+    const withArt = [...vodItems.filter((v) => v.backdropUrl), ...seriesItems.filter((s) => s.backdropUrl)]
+      .sort((a, b) => b.rating - a.rating)
+      .slice(0, 6) as Featured[];
+    return withArt.length ? withArt : rows.hero ? [rows.hero as Featured] : [];
+  }, [vodItems, seriesItems, rows.hero]);
+  const [focused, setFocused] = useState<Featured | null>(null);
+  const [rotateIdx, setRotateIdx] = useState(0);
+  const focusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const featureItem = (item: Featured) => {
+    if (focusTimer.current) clearTimeout(focusTimer.current);
+    // Short delay so scrolling quickly through a row does not flash every backdrop.
+    focusTimer.current = setTimeout(() => setFocused(item), 180);
+  };
+  useEffect(() => {
+    if (focused || heroCandidates.length < 2) return;
+    const t = setInterval(() => setRotateIdx((i) => (i + 1) % heroCandidates.length), 9000);
+    return () => clearInterval(t);
+  }, [focused, heroCandidates.length]);
+  useEffect(() => () => {
+    if (focusTimer.current) clearTimeout(focusTimer.current);
+  }, []);
+  const featured: Featured | undefined = focused ?? heroCandidates[rotateIdx % Math.max(1, heroCandidates.length)];
+  useEffect(() => {
+    if (featured) enrichArtwork(isVod(featured) ? 'vod' : 'series', featured.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [featured?.id]);
 
-          <div className="relative z-10 max-w-2xl">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="px-3 py-1 rounded-lg bg-[#1FCFAE]/20 text-[#1FCFAE] font-bold text-xs uppercase tracking-wider border border-[#1FCFAE]/40 flex items-center gap-1.5 shadow-sm">
-                <span className="w-2 h-2 rounded-full bg-[#1FCFAE] animate-ping" />
-                Destaque Ao Vivo
-              </span>
-              <span className="text-xs text-[#A8A6C0] font-semibold tracking-wide">Transmissão Oficial</span>
-            </div>
+  const openVod = (v: VodItem) => setSelectedVodModal(v);
+  const openSeries = (s: SeriesItem) => setSelectedSeriesModal(s);
 
-            <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight font-['Outfit'] drop-shadow-md">
-              {heroChannel.name}
-            </h1>
-            <p className="text-sm md:text-base text-[#A8A6C0] mt-3 leading-relaxed max-w-xl">
-              Assista à transmissão ao vivo com alta resolução, latência otimizada e guia de programação em tempo real no Nebula IPTV.
-            </p>
-
-            <div className="flex items-center gap-4 mt-7">
-              <button
-                onClick={() => playChannel(heroChannel)}
-                tabIndex={0}
-                data-tv-title={`Destaque: Assistir ${heroChannel.name}`}
-                className="tv-card px-7 py-3.5 rounded-2xl bg-[#6B4FE0] hover:bg-[#6B4FE0]/90 text-white font-bold text-sm md:text-base flex items-center gap-2.5 shadow-xl shadow-[#6B4FE0]/40 transition-transform active:scale-95 cursor-pointer focus:outline-none"
-              >
-                <Play className="w-5 h-5 fill-current" />
-                Assistir Ao Vivo
-              </button>
-
-              <button
-                onClick={() => setActiveTab('channels')}
-                tabIndex={0}
-                data-tv-title="Menu: Ver Grade Completa"
-                className="tv-card px-6 py-3.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-semibold text-sm md:text-base flex items-center gap-2 backdrop-blur-sm cursor-pointer transition-colors focus:outline-none border border-white/5"
-              >
-                Ver Grade Completa
-                <ChevronRight className="w-4 h-4 text-[#A8A6C0]" />
-              </button>
+  if (!isHydrated) {
+    return (
+      <div className="px-6 md:px-12 py-8 space-y-8 animate-pulse" aria-label="Carregando sua biblioteca">
+        <div className="h-[42vh] rounded-3xl bg-[#16162A]" />
+        {[0, 1].map((r) => (
+          <div key={r} className="space-y-3">
+            <div className="h-4 w-48 rounded bg-[#16162A]" />
+            <div className="flex gap-4 overflow-hidden">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="w-36 md:w-40 aspect-[2/3] shrink-0 rounded-2xl bg-[#16162A]" />
+              ))}
             </div>
           </div>
+        ))}
+      </div>
+    );
+  }
 
-          <div className="relative z-10 w-full md:w-96 h-48 md:h-60 rounded-3xl bg-[#0B0B18]/90 border border-white/10 flex items-center justify-center p-6 overflow-hidden group shadow-2xl">
-            {heroChannel.logoUrl ? (
-              <img
-                src={heroChannel.logoUrl}
-                alt={heroChannel.name}
-                className="max-h-28 max-w-full object-contain filter drop-shadow-xl group-hover:scale-105 transition-transform duration-300"
-              />
-            ) : (
-              <Tv className="w-20 h-20 text-[#6B4FE0]" />
-            )}
-            <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-md bg-black/80 text-xs font-bold text-[#1FCFAE] border border-[#1FCFAE]/40">
-              {heroChannel.resolution || 'HD'}
-            </div>
+  const isEmpty = playlists.length === 0 || (filteredChannels.length === 0 && vodItems.length === 0 && seriesItems.length === 0);
+
+  if (isEmpty) {
+    return (
+      <div className="px-6 md:px-12 py-10 max-w-4xl mx-auto">
+        <div className="rounded-3xl bg-[#16162A] border border-[#6B4FE0]/40 p-8 md:p-12 space-y-6 shadow-2xl">
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-7 h-7 text-[#1FCFAE]" />
+            <h1 className="text-2xl md:text-4xl font-extrabold text-white">Bem-vindo ao Nebula</h1>
+          </div>
+          <p className="text-sm md:text-base text-[#A8A6C0] leading-relaxed">
+            O Nebula é um <strong className="text-white">player</strong>: ele organiza e reproduz as listas que você já possui
+            (M3U/M3U8 ou login Xtream Codes do seu provedor). Canais ao vivo, filmes e séries aparecem aqui assim que você adicionar
+            uma lista.
+          </p>
+          {syncStatus && (
+            <div className="p-3 rounded-xl bg-[#6B4FE0]/20 border border-[#6B4FE0]/40 text-xs text-white">{syncStatus.step}</div>
+          )}
+          <div className="flex flex-wrap gap-3">
+            <button
+              autoFocus
+              onClick={() => setActiveTab('playlists')}
+              data-tv-title="Adicionar minha lista"
+              className="tv-card px-6 py-3.5 rounded-2xl bg-[#6B4FE0] text-white font-bold text-sm flex items-center gap-2 cursor-pointer focus:outline-none"
+            >
+              <ListPlus className="w-5 h-5" /> Adicionar minha lista
+            </button>
+            <button
+              onClick={loadDemoContent}
+              data-tv-title="Explorar com conteúdo de demonstração"
+              className="tv-card px-6 py-3.5 rounded-2xl bg-white/10 text-white font-semibold text-sm flex items-center gap-2 cursor-pointer focus:outline-none"
+            >
+              <Play className="w-5 h-5" /> Ver demonstração
+            </button>
+          </div>
+          <p className="text-[11px] text-[#A8A6C0]/80 flex items-start gap-2">
+            <Info className="w-4 h-4 shrink-0" />
+            O Nebula não fornece, vende nem hospeda canais ou filmes. Use apenas listas e conteúdos que você tem direito de acessar.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const heroChannel = filteredChannels[0];
+
+  return (
+    <div className="relative px-6 md:px-12 py-8 max-w-[1920px] mx-auto space-y-9 select-none">
+      {/* Backdrop that follows focus (stays put while rows scroll over it) */}
+      {featured && (featured.backdropUrl || featured.posterUrl) && (
+        <div className="sticky top-0 h-0 z-0 pointer-events-none" aria-hidden>
+          <div className="absolute -top-8 -left-6 md:-left-12 w-[calc(100%+3rem)] md:w-[calc(100%+6rem)] h-[78vh] overflow-hidden">
+            <img
+              key={featured.id}
+              src={featured.backdropUrl || featured.posterUrl}
+              alt=""
+              onError={(e) => ((e.target as HTMLElement).style.display = 'none')}
+              className="absolute right-0 top-0 h-full w-full md:w-[72%] object-cover opacity-60 animate-[fadeIn_600ms_ease]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#07070F] via-[#07070F]/80 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#07070F] via-[#07070F]/30 to-transparent" />
           </div>
         </div>
       )}
 
-      {/* Continue Watching / History */}
-      {history.length > 0 && (
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <History className="w-4 h-4 text-[#6B4FE0]" />
-              <h2 className="text-base font-bold text-white tracking-wide">Continuar Assistindo</h2>
-            </div>
+      {/* Billboard */}
+      {featured ? (
+        <section className="relative z-10 min-h-[46vh] flex flex-col justify-end max-w-3xl space-y-4 pt-6">
+          <span className="w-fit px-3 py-1 rounded-lg bg-[#FF6F91]/20 text-[#FF6F91] font-bold text-xs uppercase tracking-wider border border-[#FF6F91]/40">
+            {isVod(featured) ? 'Filme' : 'Série'}
+          </span>
+          <h1 className="text-3xl md:text-6xl font-extrabold text-white tracking-tight drop-shadow-lg line-clamp-2">{featured.title}</h1>
+          <div className="flex flex-wrap items-center gap-3 text-sm text-[#D6D4E8]">
+            {featured.rating > 0 && (
+              <span className="text-[#1FCFAE] font-bold">{Math.round(featured.rating * 10)}% relevante</span>
+            )}
+            {isVod(featured) && featured.year > 0 && <span>{featured.year}</span>}
+            {isVod(featured) && featured.durationMinutes > 0 && (
+              <span>
+                {Math.floor(featured.durationMinutes / 60) > 0 ? `${Math.floor(featured.durationMinutes / 60)}h ` : ''}
+                {featured.durationMinutes % 60}min
+              </span>
+            )}
+            {!isVod(featured) && featured.seasons.length > 0 && <span>{featured.seasons.length} temporada(s)</span>}
+            <span className="px-2 py-0.5 rounded border border-white/30 text-xs">{featured.category}</span>
+          </div>
+          <p className="text-sm md:text-lg text-[#D6D4E8] line-clamp-3 max-w-2xl drop-shadow">
+            {isVod(featured) ? featured.description : featured.overview}
+          </p>
+          <div className="flex flex-wrap items-center gap-3 pt-2">
             <button
-              onClick={() => setActiveTab('history')}
-              className="text-xs text-[#A8A6C0] hover:text-[#1FCFAE] font-medium flex items-center gap-1 cursor-pointer"
+              data-autofocus
+              onClick={() => (isVod(featured) ? playVod(featured) : openSeries(featured))}
+              data-tv-title={`Assistir ${featured.title}`}
+              className="tv-card px-8 py-3.5 rounded-xl bg-white text-[#07070F] font-bold text-base flex items-center gap-2.5 cursor-pointer focus:outline-none"
             >
-              Ver Histórico <ChevronRight className="w-3.5 h-3.5" />
+              <Play className="w-5 h-5 fill-current" /> {getResumeSeconds(featured.id) > 0 ? 'Continuar' : 'Assistir'}
+            </button>
+            <button
+              onClick={() => (isVod(featured) ? openVod(featured) : openSeries(featured))}
+              data-tv-title={`Mais informações: ${featured.title}`}
+              className="tv-card px-6 py-3.5 rounded-xl bg-white/20 text-white font-semibold text-base flex items-center gap-2 cursor-pointer focus:outline-none backdrop-blur-sm"
+            >
+              <Info className="w-5 h-5" /> Mais informações
+            </button>
+            <button
+              onClick={() => toggleMyList(featured.id)}
+              data-tv-title={isInMyList(featured.id) ? 'Remover da minha lista' : 'Adicionar à minha lista'}
+              className="tv-card w-12 h-12 rounded-full border-2 border-white/60 text-white flex items-center justify-center cursor-pointer focus:outline-none"
+              title="Minha lista"
+            >
+              {isInMyList(featured.id) ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
             </button>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {history.slice(0, 4).map((item) => (
-              <div
-                key={item.id}
-                tabIndex={0}
-                data-tv-title={`Continuar: ${item.title}`}
-                onClick={() => {
-                  const ch = filteredChannels.find((c) => c.id === item.contentId);
-                  if (ch) playChannel(ch);
-                  else if (item.contentType === 'vod') {
-                    const vod = vodItems.find((v) => v.id === item.contentId);
-                    if (vod) playVod(vod);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const ch = filteredChannels.find((c) => c.id === item.contentId);
-                    if (ch) playChannel(ch);
-                    else if (item.contentType === 'vod') {
-                      const vod = vodItems.find((v) => v.id === item.contentId);
-                      if (vod) playVod(vod);
-                    }
-                  }
-                }}
-                className="tv-card group p-3.5 rounded-2xl bg-[#16162A] hover:bg-[#1E1E38] border border-[#2A2A45] hover:border-[#6B4FE0] flex items-center gap-3 cursor-pointer transition-all shadow-sm focus:outline-none"
+        </section>
+      ) : (
+        heroChannel && (
+          <div className="relative rounded-3xl overflow-hidden bg-[#16162A] border border-[#6B4FE0]/40 p-6 md:p-12 flex items-center justify-between gap-6">
+            <div className="space-y-4">
+              <span className="px-3 py-1 rounded-lg bg-[#1FCFAE]/20 text-[#1FCFAE] font-bold text-xs uppercase tracking-wider border border-[#1FCFAE]/40">Ao vivo</span>
+              <h1 className="text-3xl md:text-5xl font-extrabold text-white">{heroChannel.name}</h1>
+              <button
+                data-autofocus
+                onClick={() => playChannel(heroChannel)}
+                data-tv-title={`Assistir ${heroChannel.name}`}
+                className="tv-card px-7 py-3.5 rounded-2xl bg-[#6B4FE0] text-white font-bold text-sm flex items-center gap-2.5 cursor-pointer focus:outline-none"
               >
-                <div className="w-12 h-12 rounded-xl bg-black/40 overflow-hidden relative shrink-0 flex items-center justify-center border border-white/5">
-                  {item.posterUrl ? (
-                    <img
-                      src={item.posterUrl}
-                      alt={item.title}
-                      className="w-full h-full object-contain p-1"
-                    />
-                  ) : (
-                    <Tv className="w-5 h-5 text-[#6B4FE0]" />
-                  )}
-                  <div className="absolute inset-0 bg-[#6B4FE0]/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                    <Play className="w-4 h-4 text-white fill-current" />
-                  </div>
-                </div>
+                <Play className="w-5 h-5 fill-current" /> Assistir ao vivo
+              </button>
+            </div>
+            {heroChannel.logoUrl && <img src={heroChannel.logoUrl} alt="" className="hidden md:block max-h-32 max-w-[240px] object-contain" />}
+          </div>
+        )
+      )}
 
-                <div className="min-w-0 flex-1">
-                  <h4 className="font-bold text-xs text-white truncate group-hover:text-[#1FCFAE]">
-                    {item.title}
-                  </h4>
-                  <p className="text-[11px] text-[#A8A6C0] truncate mt-0.5">
-                    {item.subtitle || 'Última reprodução'}
-                  </p>
-                  <span className="text-[10px] text-[#A8A6C0]/70 font-mono mt-0.5 block">
-                    {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-              </div>
+      <div className="relative z-10 space-y-9">
+      <MediaRow title="Continuar assistindo" icon={<History className="w-4 h-4 text-[#FF5468]" />} itemWidth="w-56 md:w-64" onSeeAll={() => setActiveTab('history')}>
+        {continueWatchingItems.map((item) => (
+          <PosterCard
+            key={item.id}
+            aspect="landscape"
+            title={item.title}
+            subtitle={item.subtitle}
+            imageUrl={item.posterUrl}
+            progress={getProgressFraction(item.contentId)}
+            tvTitle={`Continuar: ${item.title}`}
+            onSelect={() => resumeHistoryItem(item)}
+          />
+        ))}
+      </MediaRow>
+
+      <MediaRow title="Minha lista" icon={<Plus className="w-4 h-4 text-white" />} onSeeAll={() => setActiveTab('mylist')}>
+        {rows.myListItems.map((it) =>
+          isVod(it) ? (
+            <PosterCard key={it.id} title={it.title} subtitle={it.category} imageUrl={it.posterUrl} rating={it.rating} progress={getProgressFraction(it.id)} onSelect={() => openVod(it)} onFocused={() => featureItem(it)} />
+          ) : (
+            <PosterCard key={it.id} title={it.title} subtitle={it.category} imageUrl={it.posterUrl} rating={it.rating} badge="Série" onSelect={() => openSeries(it)} onFocused={() => featureItem(it)} />
+          )
+        )}
+      </MediaRow>
+
+      {rows.recentChannels.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Radio className="w-4 h-4 text-[#1FCFAE]" />
+            <h2 className="text-base font-bold text-white tracking-wide">Assistidos recentemente</h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {rows.recentChannels.slice(0, 4).map((ch) => (
+              <ChannelCard key={ch.id} channel={ch} />
             ))}
           </div>
         </section>
       )}
 
-      {/* Top Channels Grid */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Radio className="w-4 h-4 text-[#1FCFAE]" />
-            <h2 className="text-base font-bold text-white tracking-wide">Canais em Destaque</h2>
-          </div>
-          <button
-            onClick={() => setActiveTab('channels')}
-            className="text-xs text-[#A8A6C0] hover:text-[#1FCFAE] font-medium flex items-center gap-1 cursor-pointer"
-          >
-            Ver Todos ({filteredChannels.length}) <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
+      <MediaRow title="Canais favoritos" icon={<Heart className="w-4 h-4 text-[#FF6F91]" />} itemWidth="w-40" onSeeAll={() => setActiveTab('favorites')}>
+        {rows.favChannels.map((ch) => (
+          <PosterCard key={ch.id} aspect="logo" title={ch.name} subtitle={ch.groupTitle} imageUrl={ch.logoUrl} onSelect={() => playChannel(ch)} />
+        ))}
+      </MediaRow>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {topChannels.map((ch, idx) => (
-            <ChannelCard key={ch.id} channel={ch} index={idx} />
-          ))}
-        </div>
-      </section>
+      <MediaRow title="Adicionados recentemente" icon={<Sparkles className="w-4 h-4 text-[#1FCFAE]" />} onSeeAll={() => setActiveTab('vod')}>
+        {rows.recentVod.map((v) => (
+          <PosterCard key={v.id} title={v.title} subtitle={v.year ? String(v.year) : v.category} imageUrl={v.posterUrl} rating={v.rating} progress={getProgressFraction(v.id)} onSelect={() => openVod(v)} onVisible={() => enrichArtwork('vod', v.id)} onFocused={() => featureItem(v)} />
+        ))}
+      </MediaRow>
 
-      {/* Popular Movies (VOD) Row */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Film className="w-4 h-4 text-[#FF6F91]" />
-            <h2 className="text-base font-bold text-white tracking-wide">Filmes em Alta (VOD)</h2>
-          </div>
-          <button
-            onClick={() => setActiveTab('vod')}
-            className="text-xs text-[#A8A6C0] hover:text-[#FF6F91] font-medium flex items-center gap-1 cursor-pointer"
-          >
-            Explorar Filmes <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-          {vodItems.slice(0, 5).map((vod) => (
-            <div
-              key={vod.id}
-              tabIndex={0}
-              data-tv-title={`Filme: ${vod.title}`}
-              onClick={() => setSelectedVodModal(vod)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') setSelectedVodModal(vod);
-              }}
-              className="tv-card group bg-[#16162A] rounded-2xl border border-[#2A2A45] hover:border-[#6B4FE0] overflow-hidden cursor-pointer transition-all duration-200 focus:outline-none"
+      <MediaRow title="Top 10 mais bem avaliados" icon={<Star className="w-4 h-4 text-[#FF6F91]" />} itemWidth="w-52 md:w-56" onSeeAll={() => setActiveTab('vod')}>
+        {rows.topRated.slice(0, 10).map((v, i) => (
+          <div key={v.id} className="relative pl-14">
+            <span
+              aria-hidden
+              className="absolute left-0 bottom-10 text-[110px] leading-none font-black text-[#07070F] select-none pointer-events-none"
+              style={{ WebkitTextStroke: '3px rgba(245,243,255,0.8)', fontFamily: 'Outfit, sans-serif' }}
             >
-              <div className="relative aspect-[2/3] w-full bg-black/40 overflow-hidden">
-                <img
-                  src={vod.posterUrl}
-                  alt={vod.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/70 text-[10px] font-bold text-[#FF6F91]">
-                  ★ {vod.rating}
-                </div>
-              </div>
-              <div className="p-2.5">
-                <h4 className="font-bold text-xs text-white truncate group-hover:text-[#1FCFAE]">
-                  {vod.title}
-                </h4>
-                <p className="text-[10px] text-[#A8A6C0] mt-0.5">{vod.category}</p>
-              </div>
-            </div>
+              {i + 1}
+            </span>
+            <PosterCard title={v.title} subtitle={v.category} imageUrl={v.posterUrl} rating={v.rating} progress={getProgressFraction(v.id)} onSelect={() => openVod(v)} onVisible={() => enrichArtwork('vod', v.id)} onFocused={() => featureItem(v)} />
+          </div>
+        ))}
+      </MediaRow>
+
+      <MediaRow title="Séries" icon={<Layers className="w-4 h-4 text-[#6B4FE0]" />} onSeeAll={() => setActiveTab('series')}>
+        {rows.recentSeries.map((s) => (
+          <PosterCard key={s.id} title={s.title} subtitle={s.category} imageUrl={s.posterUrl} rating={s.rating} onSelect={() => openSeries(s)} onVisible={() => enrichArtwork('series', s.id)} onFocused={() => featureItem(s)} />
+        ))}
+      </MediaRow>
+
+      {rows.vodCats.map(({ cat, items }) => (
+        <MediaRow key={cat} title={cat} icon={<Clapperboard className="w-4 h-4 text-[#A8A6C0]" />} onSeeAll={() => setActiveTab('vod')}>
+          {items.map((v) => (
+            <PosterCard key={v.id} title={v.title} subtitle={v.year ? String(v.year) : undefined} imageUrl={v.posterUrl} rating={v.rating} progress={getProgressFraction(v.id)} onSelect={() => openVod(v)} onVisible={() => enrichArtwork('vod', v.id)} onFocused={() => featureItem(v)} />
           ))}
-        </div>
-      </section>
+        </MediaRow>
+      ))}
+
+      {filteredChannels.length > 0 && (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-[#1FCFAE]" />
+              <h2 className="text-base font-bold text-white tracking-wide">Canais ao vivo</h2>
+            </div>
+            <button
+              onClick={() => setActiveTab('channels')}
+              data-tv-skip
+              data-tv-title="Ver todos os canais"
+              className="tv-card text-xs text-[#A8A6C0] hover:text-[#1FCFAE] font-medium flex items-center gap-1 cursor-pointer px-2 py-1 rounded-lg focus:outline-none"
+            >
+              <Tv className="w-3.5 h-3.5" /> Ver todos ({filteredChannels.length})
+            </button>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {filteredChannels.slice(0, 8).map((ch, idx) => (
+              <ChannelCard key={ch.id} channel={ch} index={idx} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {vodItems.length === 0 && seriesItems.length === 0 && (
+        <p className="text-xs text-[#A8A6C0] flex items-center gap-2">
+          <Film className="w-4 h-4" /> Sua lista não trouxe filmes nem séries. Listas Xtream normalmente incluem os dois.
+        </p>
+      )}
+      </div>
     </div>
   );
 };

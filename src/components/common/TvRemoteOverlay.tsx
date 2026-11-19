@@ -22,6 +22,8 @@ import {
   Zap,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { EXIT_EVENT } from '../../platform/useNativeBridge';
+import { isNativeApp } from '../../platform/platform';
 
 export const TvRemoteOverlay: React.FC = () => {
   const {
@@ -38,6 +40,8 @@ export const TvRemoteOverlay: React.FC = () => {
     setSelectedVodModal,
     selectedSeriesModal,
     setSelectedSeriesModal,
+    deviceProfile,
+    isHydrated,
   } = useApp();
 
   const [isRemoteVisible, setIsRemoteVisible] = useState(false);
@@ -54,8 +58,9 @@ export const TvRemoteOverlay: React.FC = () => {
     const all = Array.from(document.querySelectorAll<HTMLElement>(selector));
 
     return all.filter((el) => {
-      // Must be visible and not disabled
+      // Must be visible, enabled and not explicitly excluded from remote focus
       if (el.hasAttribute('disabled')) return false;
+      if (el.getAttribute('tabindex') === '-1' || el.hasAttribute('data-tv-skip')) return false;
       const style = window.getComputedStyle(el);
       if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
         return false;
@@ -145,8 +150,8 @@ export const TvRemoteOverlay: React.FC = () => {
         let weightedDistance = Infinity;
 
         if (direction === 'right') {
-          // Must be to the right
-          if (rect.left >= currentRect.left + 5) {
+          // Must be to the right (centers: the focused card is scaled up)
+          if (dx > Math.min(currentRect.width, rect.width) * 0.5) {
             isValid = true;
             const horizontalGap = Math.max(0, rect.left - currentRect.right);
             const verticalDist = Math.abs(dy);
@@ -157,8 +162,8 @@ export const TvRemoteOverlay: React.FC = () => {
             weightedDistance = horizontalGap * 1.0 + verticalDist * 1.5 + (isSameRow ? 0 : 800);
           }
         } else if (direction === 'left') {
-          // Must be to the left
-          if (rect.right <= currentRect.right - 5) {
+          // Must be to the left (centers: the focused card is scaled up)
+          if (-dx > Math.min(currentRect.width, rect.width) * 0.5) {
             isValid = true;
             const horizontalGap = Math.max(0, currentRect.left - rect.right);
             const verticalDist = Math.abs(dy);
@@ -168,8 +173,9 @@ export const TvRemoteOverlay: React.FC = () => {
             weightedDistance = horizontalGap * 1.0 + verticalDist * 1.5 + (isSameRow ? 0 : 800);
           }
         } else if (direction === 'down') {
-          // Must be below
-          if (rect.top >= currentRect.top + 5) {
+          // Must be below. Centers are compared because the focused card is
+          // scaled up, which would make same-row neighbours look "lower".
+          if (dy > Math.min(currentRect.height, rect.height) * 0.5) {
             isValid = true;
             const verticalGap = Math.max(0, rect.top - currentRect.bottom);
             const horizontalDist = Math.abs(dx);
@@ -180,8 +186,8 @@ export const TvRemoteOverlay: React.FC = () => {
             weightedDistance = verticalGap * 1.0 + horizontalDist * 1.5 + (isSameColumn ? 0 : 400);
           }
         } else if (direction === 'up') {
-          // Must be above
-          if (rect.bottom <= currentRect.bottom - 5) {
+          // Must be above (see note on scaling above)
+          if (-dy > Math.min(currentRect.height, rect.height) * 0.5) {
             isValid = true;
             const verticalGap = Math.max(0, currentRect.top - rect.bottom);
             const horizontalDist = Math.abs(dx);
@@ -197,17 +203,39 @@ export const TvRemoteOverlay: React.FC = () => {
         }
       });
 
-      if (candidates.length > 0) {
-        // Sort by distance and focus the closest match
+      if (candidates.length > 0 && (direction === 'up' || direction === 'down')) {
+        // Row-first (streaming-app style): go to the nearest row, then to the
+        // card in that row closest to the current horizontal position.
+        const gapOf = (el: HTMLElement) => {
+          const r = el.getBoundingClientRect();
+          return direction === 'down' ? Math.max(0, r.top - currentRect.bottom) : Math.max(0, currentRect.top - r.bottom);
+        };
+        // Up/Down never cross between the menu rail and the content.
+        const sameRegion = candidates.filter((c) => !!c.el.closest('aside') === isInSidebar);
+        if (sameRegion.length === 0) return;
+        const minGap = Math.min(...sameRegion.map((c) => gapOf(c.el)));
+        const row = sameRegion.filter((c) => gapOf(c.el) <= minGap + 24);
+        row.sort((a, b) => {
+          const ra = a.el.getBoundingClientRect();
+          const rb = b.el.getBoundingClientRect();
+          return Math.abs(ra.left + ra.width / 2 - currentCenter.x) - Math.abs(rb.left + rb.width / 2 - currentCenter.x);
+        });
+        applyTvFocus(row[0].el);
+      } else if (candidates.length > 0) {
         candidates.sort((a, b) => a.distance - b.distance);
-        applyTvFocus(candidates[0].el);
+        const best = candidates[0].el;
+        // Entering the menu from the content lands on the current screen's item.
+        if (direction === 'left' && !isInSidebar && best.closest('aside')) {
+          applyTvFocus(document.querySelector<HTMLElement>('aside nav button[data-active="true"]') || best);
+        } else {
+          applyTvFocus(best);
+        }
       } else {
         // Netflix signature edge transition:
         // When pressing LEFT from the leftmost item of any content view, smoothly slide focus into the Sidebar
         if (direction === 'left' && !isInSidebar) {
           const activeSidebarBtn =
-            document.querySelector<HTMLElement>('aside nav button.tv-focused') ||
-            document.querySelector<HTMLElement>('aside nav button[class*="bg-[#16162A]"]') ||
+            document.querySelector<HTMLElement>('aside nav button[data-active="true"]') ||
             document.querySelector<HTMLElement>('aside nav button');
           if (activeSidebarBtn) {
             applyTvFocus(activeSidebarBtn);
@@ -298,9 +326,15 @@ export const TvRemoteOverlay: React.FC = () => {
 
     // 6. If already on Home and focus is inside main content -> Netflix behavior: Back moves focus to the Sidebar Menu!
     const active = document.activeElement as HTMLElement;
+    // 7. Already in the menu on Home, or on a screen without the menu (profile
+    // picker): leave the app (Android TV).
+    if ((active && active.closest('aside')) || !document.querySelector('aside')) {
+      window.dispatchEvent(new CustomEvent(EXIT_EVENT));
+      return;
+    }
     if (active && !active.closest('aside')) {
       const activeSidebarBtn =
-        document.querySelector<HTMLElement>('aside nav button[class*="bg-[#16162A]"]') ||
+        document.querySelector<HTMLElement>('aside nav button[data-active="true"]') ||
         document.querySelector<HTMLElement>('aside nav button');
       if (activeSidebarBtn) {
         applyTvFocus(activeSidebarBtn);
@@ -403,18 +437,54 @@ export const TvRemoteOverlay: React.FC = () => {
     }
   }, [setActiveTab]);
 
+  // On a real TV the physical remote is used: the on-screen simulator is only for desktop testing.
+  const hideSimulator = isNativeApp() || deviceProfile.isAndroidTv;
+
+  // A remote has no pointer: whenever nothing is focused (app start, new screen,
+  // a focused button that disappeared, closed modal), put focus on the first
+  // thing the user can act on. A light watchdog covers every case.
+  useEffect(() => {
+    if (!tvMode || isPlayerOpen) return;
+    const ensureFocus = () => {
+      const active = document.activeElement as HTMLElement | null;
+      if (active && active !== document.body && document.body.contains(active)) return;
+      const modal = document.querySelector<HTMLElement>('.fixed.inset-0.z-50');
+      const target = modal
+        ? modal.querySelector<HTMLElement>('[autofocus], .tv-card, button')
+        : document.querySelector<HTMLElement>('main [data-autofocus]') ||
+          document.querySelector<HTMLElement>('main .tv-card, main button') ||
+          // Screens without the main layout (profile picker)
+          document.querySelector<HTMLElement>('[data-autofocus], .tv-card');
+      if (target) applyTvFocus(target);
+    };
+    const first = setTimeout(ensureFocus, 300);
+    const timer = setInterval(ensureFocus, 700);
+    return () => {
+      clearTimeout(first);
+      clearInterval(timer);
+    };
+  }, [tvMode, isPlayerOpen, applyTvFocus]);
+
   // Keyboard Event Listener for Firestick / Android TV remote keys
   const lastKeyTimeRef = useRef<number>(0);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Guard: do not intercept if user is typing in form inputs
+      // Text fields keep Left/Right (caret) and typing; Up/Down leave the field
+      // so a remote can never get stuck inside the search box.
       const target = e.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
-      ) {
-        return;
+      const isField =
+        !!target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable);
+      if (isField) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          target!.blur();
+          return;
+        }
+        const isTextInput = target!.tagName === 'TEXTAREA' || (target!.tagName === 'INPUT' && !['checkbox', 'radio', 'range', 'file', 'button', 'submit'].includes((target as HTMLInputElement).type));
+        if (!(e.key === 'ArrowUp' || e.key === 'ArrowDown') || target!.tagName === 'SELECT' || (target!.tagName === 'TEXTAREA' && isTextInput)) {
+          return;
+        }
       }
 
       // 45ms Debounce for 60fps smooth scrolling during D-pad long-press
@@ -447,6 +517,8 @@ export const TvRemoteOverlay: React.FC = () => {
           navigateDirectional('right');
         }
       } else if (e.key === 'Enter') {
+        // The focused card already handled Enter itself (and prevented default).
+        if (e.defaultPrevented) return;
         e.preventDefault();
         triggerSelect();
       } else if (e.key === 'Escape' || e.key === 'Backspace') {
@@ -580,6 +652,8 @@ export const TvRemoteOverlay: React.FC = () => {
     setIsAutoTourRunning(false);
     setLastKeyPressed('Simulação Interrompida');
   };
+
+  if (hideSimulator) return null;
 
   return (
     <>

@@ -25,22 +25,23 @@ export function parseXmltv(content: string): XmltvParseResult {
       channels[id] = name;
     }
 
-    // Extract programmes
-    const programmeRegex = /<programme\s+start="([^"]+)"\s+stop="([^"]+)"\s+channel="([^"]+)"[^>]*>([\s\S]*?)<\/programme>/gi;
+    // Extract programmes (attribute order varies between providers)
+    const programmeRegex = /<programme\b([^>]*)>([\s\S]*?)<\/programme>/gi;
     let progMatch;
     let idx = 0;
 
     while ((progMatch = programmeRegex.exec(content)) !== null) {
       try {
-        const startStr = progMatch[1];
-        const stopStr = progMatch[2];
-        const channelId = progMatch[3];
-        const body = progMatch[4];
+        const attrs = progMatch[1];
+        const startStr = attr(attrs, 'start');
+        const stopStr = attr(attrs, 'stop');
+        const channelId = attr(attrs, 'channel');
+        const body = progMatch[2];
 
-        const startUtc = parseXmltvTime(startStr);
-        const endUtc = parseXmltvTime(stopStr);
+        const startUtc = startStr ? parseXmltvTime(startStr) : null;
+        const endUtc = stopStr ? parseXmltvTime(stopStr) : null;
 
-        if (!startUtc || !endUtc) {
+        if (!startUtc || !endUtc || !channelId) {
           errorCount++;
           continue;
         }
@@ -78,6 +79,11 @@ export function parseXmltv(content: string): XmltvParseResult {
   return { channels, programs, errorCount };
 }
 
+function attr(attrs: string, name: string): string | null {
+  const m = attrs.match(new RegExp(`\\b${name}\\s*=\\s*"([^"]*)"`, 'i')) || attrs.match(new RegExp(`\\b${name}\\s*=\\s*'([^']*)'`, 'i'));
+  return m ? decodeXml(m[1]) : null;
+}
+
 function extractTag(xml: string, tag: string): string | null {
   const regex = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i');
   const match = xml.match(regex);
@@ -90,7 +96,11 @@ function decodeXml(str: string): string {
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1');
 }
 
 /**

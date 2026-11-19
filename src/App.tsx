@@ -7,6 +7,9 @@ import { TvRemoteOverlay } from './components/common/TvRemoteOverlay';
 import { VideoPlayer } from './components/player/VideoPlayer';
 import { ProfileGate } from './components/profiles/ProfileGate';
 import { NebulaWrappedModal } from './components/wrapped/NebulaWrappedModal';
+import { VodModal } from './components/vod/VodModal';
+import { SeriesDetailModal } from './components/series/SeriesDetailModal';
+import { useNativeBridge } from './platform/useNativeBridge';
 
 import { HomeView } from './views/HomeView';
 import { ChannelsView } from './views/ChannelsView';
@@ -20,12 +23,29 @@ import { MultiViewScreen } from './views/MultiViewScreen';
 import { StatsView } from './views/StatsView';
 import { SettingsView } from './views/SettingsView';
 import { SearchView } from './views/SearchView';
+import { MyListView } from './views/MyListView';
 
 const AppContent: React.FC = () => {
-  const { activeProfile, isGateLocked, activeTab, isWrappedOpen, setIsWrappedOpen } = useApp();
+  const {
+    activeProfile,
+    isGateLocked,
+    activeTab,
+    isWrappedOpen,
+    setIsWrappedOpen,
+    selectedVodModal,
+    setSelectedVodModal,
+    selectedSeriesModal,
+    setSelectedSeriesModal,
+  } = useApp();
+  useNativeBridge();
 
   if (!activeProfile || isGateLocked) {
-    return <ProfileGate />;
+    return (
+      <>
+        <ProfileGate />
+        <TvRemoteOverlay />
+      </>
+    );
   }
 
   const renderActiveTab = () => {
@@ -54,6 +74,8 @@ const AppContent: React.FC = () => {
         return <SettingsView />;
       case 'search':
         return <SearchView />;
+      case 'mylist':
+        return <MyListView />;
       default:
         return <HomeView />;
     }
@@ -77,6 +99,10 @@ const AppContent: React.FC = () => {
         {/* Mobile Navigation */}
         <MobileNav />
       </div>
+
+      {/* Detail modals (shared by every screen) */}
+      {selectedVodModal && <VodModal vod={selectedVodModal} onClose={() => setSelectedVodModal(null)} />}
+      {selectedSeriesModal && <SeriesDetailModal series={selectedSeriesModal} onClose={() => setSelectedSeriesModal(null)} />}
 
       {/* Embedded / Fullscreen Video Player */}
       <VideoPlayer />
