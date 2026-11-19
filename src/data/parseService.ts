@@ -28,7 +28,7 @@ function getWorker(): Worker | null {
   if (worker) return worker;
   if (typeof Worker === 'undefined') return null;
   try {
-    worker = new Worker(new URL('./parse.worker.ts', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./parse.worker.ts', import.meta.url));
     worker.onmessage = (ev: MessageEvent<ParseResponse>) => {
       const cb = pending.get(ev.data.id);
       pending.delete(ev.data.id);
