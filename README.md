@@ -37,7 +37,15 @@ O projeto Android fica em `android/` (Capacitor 7). O player nativo está em `an
 
 ### Baixar o APK pronto
 
-Cada pull request e cada push na `main` gera um APK de depuração: **GitHub → Actions → CI → execução → Artifacts → `nebula-iptv-debug-apk`**.
+Cada push na `main` publica uma versão em **GitHub → Releases**. O link abaixo sempre aponta para a mais recente e pode ser digitado direto no app *Downloader* da TV:
+
+```
+https://github.com/devrodrigo-py/IPTV/releases/latest/download/nebula-iptv.apk
+```
+
+Pull requests também geram o APK, disponível por 14 dias em **Actions → CI → execução → Artifacts → `nebula-iptv-debug-apk`**.
+
+Todos os APKs de teste (CI, Releases e builds locais) são assinados com a mesma chave (`android/app/nebula-debug.keystore`), então uma versão nova instala por cima da anterior sem perder listas e progresso. Essa chave é pública: para publicar em loja, use a assinatura de produção descrita abaixo.
 
 ### Compilar localmente
 
